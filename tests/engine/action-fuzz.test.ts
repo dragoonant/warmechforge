@@ -124,7 +124,7 @@ describe('action fuzz', () => {
     }
     expect(decisions).toBeGreaterThan(MANY_GAMES * 20)
     expect(moves).toBeGreaterThan(MANY_GAMES)
-  }, 30_000)
+  }, 120_000) // ~15 s locally; GitHub runners took 36 s and failed two deploys at 30 s
 
   it('FUZZ-03 random composite fire selections: validate and step agree', () => {
     let tried = 0, accepted = 0

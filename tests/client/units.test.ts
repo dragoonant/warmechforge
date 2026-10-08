@@ -205,7 +205,10 @@ describe('GLB assets', () => {
     setGlbManifestForTest(slugs)
     expect(glbSlugFor('solitaire')).toBe('bt-solitaire')
     expect(glbSlugFor('regent')).toBe('bt-regent')
-    expect(glbSlugFor('eris')).toBeUndefined() // no file yet: procedural
+    // every Core Box chassis has a generated figure (owner approved the look 2026-10-08)
+    for (const chassis of Object.keys(GLB_SLUG_BY_MODEL)) expect(glbSlugFor(chassis), chassis).toBe(`bt-${chassis}`)
+    setGlbManifestForTest(['bt-solitaire'])
+    expect(glbSlugFor('eris')).toBeUndefined() // a chassis left out of the manifest stays procedural
     setGlbManifestForTest([])
   })
 

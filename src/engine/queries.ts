@@ -5,11 +5,14 @@ import type {
   LosOptions, LosVerdict, SheetView, TerrainInfo, UnitAt,
 } from './index'
 import { bundleFor } from './bundles'
-import { ammoRec, binExplosionRaw, caseAt, CASE_CAP, EXPLOSION_CAP, effectiveProfile, equipRec, hasFlag, weaponRec } from './ammo'
-import { artemisClusterMod, expectedClusterHits } from './cluster'
-import { damagePer, TRANSFER } from './damage'
+import { ammoRec, binExplosionRaw, caseAt, CASE_CAP, EXPLOSION_CAP, effectiveProfile, equipRec, hasFlag, unusedPod, weaponRec } from './ammo'
 import {
-  ammoAvoidTn, baseDissipation, heatMpLoss, heatToHitMod, hitCount, lifeSupportHits, projectHeat, shutdownAvoidTn,
+  COOLANT_POD_EXPLOSION, avoidNumber, capacitorCharging, capacitorReady, escalatingOf, mascActive, mountsWithHook, podUsed, workingMasc,
+} from './equipment'
+import { artemisClusterMod, expectedClusterHits } from './cluster'
+import { damagePer, TRANSFER, weaponDamageBonus } from './damage'
+import {
+  ammoAvoidTn, baseDissipation, dissipation, waterBonus, hookDissipation, heatMpLoss, heatToHitMod, hitCount, lifeSupportHits, projectHeat, shutdownAvoidTn,
 } from './heat'
 import { distance, firingArc, hexKey, hexToWorld, mountCoversArc, onBoard, torsoFacing } from './hex'
 import { computeLos } from './los'
@@ -126,7 +129,7 @@ export function attackPreviewQuery(state: GameState, req: AttackPreviewRequest):
   }
   const legal = rejection === null
   const pHit = legal ? p2d6AtLeast(tn) : 0
-  const damage = prof ? damagePer(prof, band === 'out' ? 'long' : band) : 0
+  const damage = prof ? damagePer(prof, band === 'out' ? 'long' : band) + weaponDamageBonus(s, data, req.attackerId, req.mountId) : 0
   const rapid = req.rapidShots ?? 1
   const heat = (prof?.heat ?? 0) * rapid
   let cluster: AttackPreview['cluster'] = null
@@ -159,7 +162,10 @@ export function firePreviewQuery(state: GameState, unitId: UnitId, plan: FirePla
   }))
   const rapidShots: Record<LocalId, number> = {}
   for (const sh of plan.shots) if (sh.rapidShots !== undefined) rapidShots[sh.mountId] = sh.rapidShots
-  const proj = projectHeat(s, unitId, { mounts: plan.shots.map((x) => x.mountId), rapidShots })
+  const proj = projectHeat(s, unitId, {
+    mounts: plan.shots.map((x) => x.mountId), rapidShots,
+    ...(plan.charge ? { charge: plan.charge } : {}), ...(plan.coolantPod ? { coolantPod: plan.coolantPod } : {}),
+  })
   const move = proj.entries.filter((e) => e.source === 'movement').reduce((n, e) => n + e.amount, 0)
   const weaponsHeat = proj.entries.filter((e) => e.source === 'weapon').reduce((n, e) => n + e.amount, 0)
   return { weapons, primaryTargetId: primary, heat: { ...proj, move, weapons: weaponsHeat } }
@@ -218,10 +224,11 @@ export function explosionPreviewQuery(state: GameState, unitId: UnitId, slot: Sl
   if (id && u.bins[id]) { raw = binExplosionRaw(data, u, id); explodes = raw > 0 }
   else if (id && u.mounts[id]) {
     const m = u.mounts[id]!
-    explodes = !m.destroyed && !!(weaponRec(data, m.item)?.flags?.includes('explodes') || equipRec(data, m.item)?.explodes)
+    const pod = unusedPod(data, m)
+    explodes = !m.destroyed && (!!(weaponRec(data, m.item)?.flags?.includes('explodes') || equipRec(data, m.item)?.explodes) || pod)
     let n = 0
     for (const sl of Object.values(u.slots)) for (const s of sl) if (s.token === token) n++
-    raw = explodes ? 2 * Math.max(1, n) : 0
+    raw = explodes ? (pod ? COOLANT_POD_EXPLOSION : 2 * Math.max(1, n)) : 0
   }
   const cs = caseAt(data, u, slot.location)
   const damage = explodes ? Math.min(raw, cs === 'case' ? CASE_CAP : EXPLOSION_CAP) : 0
@@ -304,13 +311,36 @@ export function sheetQuery(state: GameState, unitId: UnitId): SheetView {
   const sinkMounts = Object.values(u.mounts).filter((m) => m.item.includes('heat-sink'))
   const operable = u.sinks.count - sinkMounts.filter((m) => m.destroyed || u.locs[m.location].destroyed).length
   const tns: number[] = [1, 2, 3, 4, 5].map((h) => consciousnessTn(h) ?? 0)
+  // equipment with a state of its own (M6)
+  const equipment: NonNullable<SheetView['equipment']> = []
+  const label = (id: string): string => ((data.byId[id] as { name?: string } | undefined)?.name ?? id)
+  const gone = (m: { destroyed: boolean; location: Loc }): boolean => m.destroyed || u.locs[m.location].destroyed
+  for (const m of mountsWithHook(data, u, 'ppcCapacitor')) {
+    const st = gone(m) ? 'destroyed' : capacitorCharging(state, m) ? 'charging' : capacitorReady(state, m) ? 'charged' : 'ready'
+    equipment.push({ mountId: m.id, name: label(m.item), location: m.location, kind: 'capacitor', state: st })
+  }
+  for (const m of mountsWithHook(data, u, 'coolantPod')) {
+    equipment.push({ mountId: m.id, name: label(m.item), location: m.location, kind: 'coolantPod', state: gone(m) ? 'destroyed' : podUsed(m) ? 'used' : 'ready' })
+  }
+  for (const m of mountsWithHook(data, u, 'masc')) {
+    const working = workingMasc(data, u)?.id === m.id
+    const walkNow = mp.walk
+    equipment.push({
+      mountId: m.id, name: label(m.item), location: m.location, kind: 'masc',
+      state: !working ? 'destroyed' : mascActive(data, u) ? 'active' : 'ready', avoidTn: avoidNumber(escalatingOf(u, m.id)), mascRun: 2 * walkNow,
+    })
+  }
+  for (const m of Object.values(u.mounts)) {
+    if (m.jammed && !gone(m)) equipment.push({ mountId: m.id, name: label(m.item), location: m.location, kind: 'rapidFire', state: 'jammed' })
+  }
   return {
     unitId, name: u.name, tonnage: u.tonnage, bv, adjustedBv: Math.floor(bv * mult + 0.5 + 1e-9),
     locations, slots, weapons, ammo,
     mp: { baseWalk: u.baseMp.walk, baseRun: Math.ceil(u.baseMp.walk * 1.5), baseJump: u.baseMp.jump, walk: mp.walk, run: mp.run, jump: mp.jump, walkMods },
-    sinks: { count: u.sinks.count, type: u.sinks.type, operable, dissipation: baseDissipation(u) },
+    sinks: { count: u.sinks.count, type: u.sinks.type, operable, dissipation: dissipation(state, u), dissipationParts: { base: baseDissipation(u), water: waterBonus(state, u), hooks: hookDissipation(state, u) } },
     status: { prone: u.prone, shutdown: u.shutdown !== null, immobile: state.ledger.immobileAtStart.includes(unitId), jumped: u.move.jumped, twist: u.attacks.twist, flipped: u.attacks.flipped },
     heat: u.heat,
+    ...(equipment.length ? { equipment } : {}),
     pilot: {
       name: u.pilot.name, gunnery: u.pilot.gunnery, piloting: u.pilot.piloting, hits: u.pilot.hits, conscious: u.pilot.conscious,
       consciousnessTn: consciousnessTn(u.pilot.hits), consciousnessTns: tns,

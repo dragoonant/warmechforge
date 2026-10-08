@@ -108,12 +108,15 @@ export function describeAction(s: GameState, a: Action): string {
     case 'move': {
       if (a.mode === 'standStill') return `${name(s, a.unitId)} stands still`
       if (a.mode === 'jump') return `${name(s, a.unitId)} jumps to ${hex(s, a.jumpTo)}`
-      return `${name(s, a.unitId)} ${a.mode === 'run' ? 'runs' : 'walks'} ${a.steps.length} steps, ending facing ${FACING[a.facing]}`
+      return `${name(s, a.unitId)} ${a.mode === 'run' ? (a.masc ? 'runs on MASC' : 'runs') : 'walks'} ${a.steps.length} steps, ending facing ${FACING[a.facing]}`
     }
     case 'standUp': return a.attempt ? `${name(s, a.unitId)} tries to stand` : `${name(s, a.unitId)} stays prone`
     case 'torsoTwist': return a.flip ? `${name(s, a.unitId)} flips its arms` : a.twist === 0 ? `${name(s, a.unitId)} keeps its torso forward` : `${name(s, a.unitId)} twists ${a.twist < 0 ? 'left' : 'right'}`
     case 'declareFire':
-      if (a.shots.length === 0) return `${name(s, a.unitId)} holds fire`
+      if (a.shots.length === 0) {
+        const extra = [a.charge?.length ? 'charges a capacitor' : '', a.coolantPod ? 'vents a coolant pod' : ''].filter(Boolean)
+        return extra.length ? `${name(s, a.unitId)} holds fire and ${extra.join(' and ')}` : `${name(s, a.unitId)} holds fire`
+      }
       return `${name(s, a.unitId)} fires ${a.shots.length} weapon${a.shots.length > 1 ? 's' : ''} at ${[...new Set(a.shots.map((x) => name(s, x.targetId)))].join(' and ')}`
     case 'chooseAmmo': {
       // the action names no unit: the open chooseAmmo decision's unit, else the player's unit holding that mount and bin
@@ -181,7 +184,23 @@ export function describeEvent(s: GameState, e: GameEvent): string {
     case 'PsrResolved': return `${name(s, e.unitId)} ${e.success ? 'keeps its footing' : 'loses its footing'}${e.roll !== null ? ` (${e.roll} vs ${e.tn})` : ''}.`
     case 'PsrDiscarded': return `A piloting roll for ${name(s, e.unitId)} is no longer needed.`
     case 'UnitFell': return `${name(s, e.unitId)} falls for ${e.damage} damage.`
-    case 'UnitDisplaced': return `${name(s, e.unitId)} is pushed to ${hex(s, e.to)}.`
+    case 'UnitDisplaced': return e.cause === 'stacking'
+      ? `${name(s, e.unitId)} shares a hex after its fall and moves aside to ${hex(s, e.to)}.`
+      : `${name(s, e.unitId)} is pushed to ${hex(s, e.to)}.`
+    case 'EquipmentUsed': {
+      const what = mountName(s, e.unitId, e.mountId)
+      switch (e.use) {
+        case 'capacitorCharged': return `${name(s, e.unitId)} charges its ${what} (+${e.amount} heat); the linked PPC holds its fire this turn.`
+        case 'capacitorDischarged': return `${name(s, e.unitId)} releases its ${what} into the shot (+${e.amount} damage on a hit).`
+        case 'coolantPod': return `${name(s, e.unitId)} vents its ${what}: +${e.amount} heat dissipation this turn.`
+        case 'masc': return `${name(s, e.unitId)} engages its ${what} (held on ${e.amount}+): Run MP doubles walk this turn.`
+        case 'mascFailed': return `${name(s, e.unitId)}'s ${what} gives out (needed ${e.amount}+) and strains a leg.`
+      }
+      return `${name(s, e.unitId)} uses its ${what}.`
+    }
+    case 'WeaponJamChanged': return e.jammed
+      ? `${name(s, e.unitId)}'s ${mountName(s, e.unitId, e.mountId)} jams.`
+      : `${name(s, e.unitId)} clears the jam in its ${mountName(s, e.unitId, e.mountId)}.`
     case 'HeatApplied': return `${name(s, e.unitId)} heat ${e.before} → ${e.after} (+${e.generated}, -${e.dissipated}).`
     case 'UnitShutdown': return `${name(s, e.unitId)} shuts down at heat ${e.heat}.`
     case 'UnitRestarted': return `${name(s, e.unitId)} powers back up.`

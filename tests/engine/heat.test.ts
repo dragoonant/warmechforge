@@ -146,12 +146,21 @@ describe('heat phase order (10 section 13.3)', () => {
     expect(auto.state.units.A1!.shutdown).toBeNull()
   })
 
-  it('HEAT-010 partial wing adds 3 dissipation, less per lost mount', () => {
-    const m = (loc: string, destroyed = false) => ({ item: 'is.eq.partial-wing', location: loc, destroyed })
-    const mounts = { w1: m('LT'), w2: m('RT') }
-    expect(dissipation(mkState({ mounts }), mkState({ mounts }).units.A1!)).toBe(13)
-    const one = { w1: m('LT', true), w2: m('RT') }
-    expect(dissipation(mkState({ mounts: one }), mkState({ mounts: one }).units.A1!)).toBe(11)
+  it('HEAT-010 EQUIP-018 partial wing adds 3 dissipation (hook partialWing), 1 less per wing crit; a lost torso takes its wing slots', async () => {
+    const { loadBundle } = await import('../../src/data/index')
+    const { registerBundle } = await import('../../src/engine/bundles')
+    const bundle = loadBundle()
+    registerBundle(bundle)
+    const m = (id: string, loc: string, critHits = 0) => ({ id, item: 'is.eq.partial-wing', location: loc, destroyed: false, critHits, jammed: false, firedTurn: null, linkedTo: null })
+    const at = (mounts: Record<string, unknown>, u: Record<string, unknown> = {}): number => {
+      const s = { ...mkState({ mounts, baseMp: { walk: 5, run: 8, jump: 5 }, ...u }), dataVersion: bundle.version } as GameState
+      return dissipation(s, s.units.A1!)
+    }
+    expect(at({ w1: m('w1', 'LT'), w2: m('w2', 'RT') })).toBe(13)
+    expect(at({ w1: m('w1', 'LT', 1), w2: m('w2', 'RT') })).toBe(12)
+    const wingSlots = { ...slots(), LT: [1, 2, 3, 4].map(() => ({ token: '#w1', hit: false, hitPhase: null })) }
+    const lostLt = { ...mkState().units.A1!.locs, LT: loc(true) }
+    expect(at({ w1: m('w1', 'LT'), w2: m('w2', 'RT') }, { slots: wingSlots, locs: lostLt })).toBe(10)
   })
 
   it('HEAT-025 life support crit: heat 20+ gives 2 pilot hits, 10-19 gives 1', () => {

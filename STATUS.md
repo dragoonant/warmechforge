@@ -84,7 +84,25 @@
   0 violations; bench normal vs random 10/10, normal vs easy 8/10, 0 rejections / stalls / fallbacks; e2e play + skirmish specs.
 - Not yet: PPC capacitor, coolant pod, MASC, Ultra AC double-tap in the UI/AI (`tools/out/m5-followups.md`).
 
+## M7 done (equipment rules, AI for the full roster, threat overlay, client polish)
+- Engine (`src/engine/equipment.ts` + hooks; 00 §14 rows of 2026-10-08 tagged M6): PPC capacitor charge and +5 shot (EQUIP-016),
+  coolant pod (EQUIP-017), Clan MASC with escalating failure and the turn-start reset (EQUIP-020/021), RAC jam and unjam
+  (EQUIP-022, fixture weapon), partial wing through the heat/movement hooks (EQUIP-018), Beagle probe no-op (EQUIP-023),
+  Ultra AC no-jam (2026 W11). New `EquipmentUsed` / `WeaponJamChanged` events, `UnitDisplaced.cause: 'stacking'`,
+  `SheetView.equipment`, `query.reachable(..., {masc})`. Tests: `tests/engine/equipment-m6.test.ts`.
+- AI: plays the 16-variant roster on all Core Box maps (ammo choice, explosion risk, ECM vs Artemis, jumpers, terrain),
+  charges capacitors, vents pods, uses MASC, double-taps Ultra ACs, prefers leaving when forced to withdraw. Bench sweeps
+  `--map a,b|all`, `--forces "A,B;C,D"`, `--withdrawal`. Tests: `tests/ai/equipment.test.ts`, `tests/ai/roster.test.ts`.
+- Client: threat overlay (T or the Threat button; engine `query.threat`), AI trace panel, Follow action camera for bot moves
+  (setting), end screen with per-'Mech mini sheets, kills, heat peaks, Play again / Rematch, same forces / Back to setup,
+  How to Play sections for the roster's equipment and the Skirmish picker, hover tips on the record sheet, softer water
+  seams, Low graphics audit, new intro briefing for Scorched Oasis. E2E `tests/e2e/polish.spec.ts` (`e2e-out/polish-*.png`).
+- Gates: typecheck; 50 test files (470 tests); validate:data 0 errors; sim 30/30 (seed 7), 0 violations; bench normal vs
+  random 19/20, normal vs easy 16/20, 0 rejections / stalls / fallbacks; Playwright 9/9.
+- Not yet: player controls for capacitor / pod / MASC / Ultra double tap (engine and AI have them); `tools/out/m7-followups.md`.
+
 ## Next
-- Owner playtest on Pages: Skirmish any-vs-any on the Core Box maps, against the normal AI.
-- Remaining equipment rules (PPC capacitor, coolant pod, MASC), Ultra AC double-tap in the fire panel and AI.
-- M3 figure gate, then figures for the other six chassis; threat overlay (T); AI trace overlay; 40-ai §4.5 Monte Carlo refinement.
+- Owner playtest on Pages: Skirmish vs the normal AI with the threat overlay (T) and the new end screen.
+- Fire-panel and move-panel controls for PPC capacitor, coolant pod, MASC and Ultra AC double tap.
+- Ferro-lamellor in previews and the AI damage model; skirmish turn-limit / withdrawal options; 40-ai §4.5 Monte Carlo.
+- M8: smoke / hidden units (Beagle probe effects), figure gate follow-ups, audio once a fresh ElevenLabs key arrives.

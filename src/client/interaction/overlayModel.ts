@@ -117,9 +117,10 @@ export interface ArcFills { fills: HexFillSpec[]; frontOutline: Hex[] }
 export function arcFills(arcs: ArcsView | null): ArcFills {
   if (!arcs) return { fills: [], frontOutline: [] }
   const fills: HexFillSpec[] = []
-  for (const h of arcs.left) fills.push({ hex: h, colour: THEME_COLOURS.arcSide, opacity: 0.15, kind: 'left' })
-  for (const h of arcs.right) fills.push({ hex: h, colour: THEME_COLOURS.arcSide, opacity: 0.15, kind: 'right' })
-  for (const h of arcs.rear) fills.push({ hex: h, colour: THEME_COLOURS.arcRear, opacity: 0.15, kind: 'rear' })
+  for (const h of arcs.left) fills.push({ hex: h, colour: THEME_COLOURS.arcSide, opacity: 0.3, kind: 'left' })
+  for (const h of arcs.right) fills.push({ hex: h, colour: THEME_COLOURS.arcSide, opacity: 0.3, kind: 'right' })
+  for (const h of arcs.rear) fills.push({ hex: h, colour: THEME_COLOURS.arcRear, opacity: 0.3, kind: 'rear' })
+  for (const h of arcs.front) fills.push({ hex: h, colour: '#c9d6e6', opacity: 0.2, kind: 'frontFill' })
   return { fills, frontOutline: arcs.front }
 }
 

@@ -23,11 +23,13 @@ export interface Settings {
   hexLabels: HexLabelMode
   grid: boolean
   odds: OddsFormat
+  /** Auto-camera: frame the acting 'Mech and its target during bot moves and attacks (never while the player is steering). */
+  followAction: boolean
 }
 
 export const SETTINGS_KEY = 'wmf.settings'
 export const DEFAULT_SETTINGS: Settings = {
-  speed: 1, graphics: 'high', narration: true, tips: true, hexLabels: 'hover', grid: true, odds: 'percent',
+  speed: 1, graphics: 'high', narration: true, tips: true, hexLabels: 'hover', grid: true, odds: 'percent', followAction: true,
 }
 
 function sanitize(raw: Partial<Settings> | null): Settings {
@@ -39,6 +41,7 @@ function sanitize(raw: Partial<Settings> | null): Settings {
   if (typeof raw.tips === 'boolean') s.tips = raw.tips
   if (raw.hexLabels === 'hover' || raw.hexLabels === 'always' || raw.hexLabels === 'off') s.hexLabels = raw.hexLabels
   if (typeof raw.grid === 'boolean') s.grid = raw.grid
+  if (typeof raw.followAction === 'boolean') s.followAction = raw.followAction
   if (raw.odds === 'percent' || raw.odds === 'tn') s.odds = raw.odds
   return s
 }
@@ -59,7 +62,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 }))
 
 export function pick(s: Settings): Settings {
-  return { speed: s.speed, graphics: s.graphics, narration: s.narration, tips: s.tips, hexLabels: s.hexLabels, grid: s.grid, odds: s.odds }
+  return { speed: s.speed, graphics: s.graphics, narration: s.narration, tips: s.tips, hexLabels: s.hexLabels, grid: s.grid, odds: s.odds, followAction: s.followAction }
 }
 
 export function getSettings(): Settings { return pick(useSettingsStore.getState()) }

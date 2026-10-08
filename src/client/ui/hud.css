@@ -156,7 +156,7 @@
 .heat-side { flex: 1; min-width: 0; }
 .heat-now { display: flex; align-items: baseline; gap: 8px; } .heat-num { font-size: 22px; } .heat-proj { color: var(--accent); font-weight: 600; }
 .heat-sum { font-size: 11px; }
-.heat-thr { list-style: none; margin: 4px 0 0; padding: 0; font-size: 11px; max-height: 120px; overflow-y: auto; scrollbar-width: thin; }
+.heat-thr { list-style: none; margin: 4px 0 0; padding: 0; font-size: 11px; max-height: 300px; overflow-y: auto; scrollbar-width: thin; }
 .heat-thr li { display: flex; gap: 6px; padding: 0 3px; color: var(--dim); } .thr-level { width: 18px; text-align: right; font-weight: 700; }
 .thr-active { color: var(--fg) !important; background: color-mix(in srgb, var(--heat) 28%, transparent); border-radius: 3px; }
 .thr-projected { color: var(--accent) !important; outline: 1px dashed var(--accent); border-radius: 3px; }
@@ -256,3 +256,26 @@
   .hud { --rail-l: 46vw; --rail-r: 46vw; }
   .hud-dock { bottom: calc(34vh + 20px); width: calc(100vw - 24px); }
 }
+
+/* End screen: wider card with a mini record sheet per 'Mech */
+.over-card { max-width: min(760px, 94vw); }
+.over-sheets { margin-top: 12px; display: grid; gap: 8px; }
+.over-side h3 { margin: 4px 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent2); }
+.over-minis { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.mini { margin: 0; width: 150px; padding: 6px 6px 4px; border: 1px solid #2a2e36; border-radius: 6px; background: #181b20; }
+.mini figcaption { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; }
+.mini-fate { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
+.mini-fate-destroyed { color: #e0604a; } .mini-fate-crippled { color: #e0a030; } .mini-fate-standing { color: #6fbf80; }
+.mini-destroyed .mini-name { text-decoration: line-through; text-decoration-color: #7a3a32; }
+.mini-doll { width: 100%; height: auto; display: block; }
+.mini-loc { font-size: 7px; fill: #aeb6c2; } .mini-dmg { font-size: 9px; font-weight: 700; fill: #fff; }
+.mini-stats { margin: 2px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; font-size: 10px; }
+.mini-stats div { display: flex; justify-content: space-between; } .mini-stats dt { color: var(--dim); } .mini-stats dd { margin: 0; font-weight: 600; }
+.over-legend { font-size: 10px; margin: 0; }
+.over-card .pbtns { flex-wrap: wrap; }
+
+/* Hover tooltips on record-sheet entries */
+.tip-layer { position: fixed; z-index: 60; max-width: 280px; padding: 7px 9px; border: 1px solid var(--accent, #c9a227); border-radius: 6px; background: rgba(20, 22, 26, 0.97); color: #e8e6e1; font-size: 12px; line-height: 1.35; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); }
+.tip-title { display: block; margin-bottom: 2px; color: var(--accent, #c9a227); }
+.tip-line + .tip-line { margin-top: 1px; }
+.sheet-table tbody tr, .crit-slot, .heat-thr li { cursor: help; }

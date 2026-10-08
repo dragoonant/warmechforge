@@ -14,6 +14,9 @@ import { WATER_DROP, type BoardLayout, type TileInfo } from './layout'
 import { R_OUT } from './tileGeometry'
 import { EDGE_FACING } from './water'
 
+/** Lines between two water hexes keep this share of the grid opacity (softer water seams). */
+export const WET_GRID_FADE = 0.22
+
 /** True hex outline radius (corner distance of a 1-unit flat-to-flat hex). */
 const R_GRID = 1 / Math.sqrt(3)
 
@@ -21,7 +24,11 @@ const R_GRID = 1 / Math.sqrt(3)
 export const visibleY = (t: TileInfo): number => (t.surfaceLevel !== null ? t.surfaceLevel * LEVEL_HEIGHT - WATER_DROP : t.topLevel * LEVEL_HEIGHT + t.dy)
 
 /** Segment endpoints (x1,y1,z1,x2,y2,z2 ...) of every distinct hex edge on the board. */
-export function gridSegments(layout: BoardLayout, board: BoardState): number[] {
+/**
+ * `kind` picks which edges: 'all' (default), 'dry' (every edge except those between two water hexes) or 'wet' (only water-to-water
+ * edges, drawn much fainter so a lake reads as one sheet of water, not a mosaic of hexes).
+ */
+export function gridSegments(layout: BoardLayout, board: BoardState, kind: 'all' | 'dry' | 'wet' = 'all'): number[] {
   const out: number[] = []
   for (const t of layout.tiles) {
     const nb = neighbors(t.hex)
@@ -29,6 +36,8 @@ export function gridSegments(layout: BoardLayout, board: BoardState): number[] {
       const l = hexToLabel(board, nb[EDGE_FACING[k]!]!)
       const n = l ? layout.byLabel.get(l) : undefined
       if (n && n.label < t.label) continue   // the lower label draws the shared edge
+      const wet = t.depth > 0 && !!n && n.depth > 0
+      if ((kind === 'wet' && !wet) || (kind === 'dry' && wet)) continue
       const y = Math.max(visibleY(t), n ? visibleY(n) : -Infinity) + 0.004
       const a0 = (k * Math.PI) / 3, a1 = ((k + 1) * Math.PI) / 3
       out.push(t.x + R_GRID * Math.cos(a0), y, t.z + R_GRID * Math.sin(a0), t.x + R_GRID * Math.cos(a1), y, t.z + R_GRID * Math.sin(a1))
@@ -51,10 +60,14 @@ export function HexGrid({ board, layout, theme, visible, opacity, hover }: {
 }): ReactElement {
   const invalidate = useThree((s) => s.invalidate)
   const mat = useLineMaterial(theme.grid, 1.1, opacity)
+  const wetMat = useLineMaterial(theme.grid, 0.8, opacity * WET_GRID_FADE)
   const hoverMat = useLineMaterial(theme.gridHover, 2.4, 1)
-  const geo = useMemo(() => { const g = new LineSegmentsGeometry(); g.setPositions(gridSegments(layout, board)); return g }, [layout, board])
+  const geo = useMemo(() => { const g = new LineSegmentsGeometry(); g.setPositions(gridSegments(layout, board, 'dry')); return g }, [layout, board])
   useEffect(() => () => geo.dispose(), [geo])
   const line = useMemo(() => { const l = new LineSegments2(geo, mat); l.name = 'hex-grid'; l.renderOrder = 3; l.frustumCulled = false; return l }, [geo, mat])
+  const wetGeo = useMemo(() => { const w = gridSegments(layout, board, 'wet'); if (!w.length) return null; const g = new LineSegmentsGeometry(); g.setPositions(w); return g }, [layout, board])
+  useEffect(() => () => wetGeo?.dispose(), [wetGeo])
+  const wetLine = useMemo(() => { if (!wetGeo) return null; const l = new LineSegments2(wetGeo, wetMat); l.name = 'hex-grid-water'; l.renderOrder = 3; l.frustumCulled = false; return l }, [wetGeo, wetMat])
   const tile = hover ? layout.byLabel.get(hover) ?? null : null
   const hoverLine = useMemo(() => {
     if (!tile) return null
@@ -84,6 +97,7 @@ export function HexGrid({ board, layout, theme, visible, opacity, hover }: {
   return (
     <group name="hex-overlay">
       {visible && <primitive object={line} />}
+      {visible && wetLine && <primitive object={wetLine} />}
       {hoverLine && <primitive object={hoverLine} />}
       {tile && fill && (
         <mesh geometry={fill} renderOrder={1}>

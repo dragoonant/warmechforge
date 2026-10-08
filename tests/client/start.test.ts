@@ -72,7 +72,7 @@ describe('start screen model', () => {
 })
 
 describe('How to Play', () => {
-  const required = ['Goal', 'Your \'Mech', 'Turn sequence', 'Moving', 'Shooting', 'Damage', 'Heat', 'Piloting rolls & falls', 'Physical attacks', 'Controls', 'Your first turn']
+  const required = ['Goal', 'Your \'Mech', 'Turn sequence', 'Moving', 'Shooting', 'Damage', 'Heat', 'Piloting rolls & falls', 'Physical attacks', 'Equipment', 'Controls', 'Your first turn', 'Skirmish']
   it('has every required tab with real content', () => {
     expect(HELP_TABS.map((t) => t.title)).toEqual(required)
     expect(new Set(HELP_TABS.map((t) => t.id)).size).toBe(HELP_TABS.length)
@@ -84,7 +84,7 @@ describe('How to Play', () => {
 
   it('covers the named topics', () => {
     const all = HELP_TABS.map(tabText).join('\n').toLowerCase()
-    for (const w of ['initiative', 'torso twist', 'line of sight', 'target movement modifier', 'prone', 'crit', 'ammo', 'shutdown', 'seatbelt', 'charge', 'skip', 'crippled', 'gunnery', 'piloting', 'heat sink', 'cluster']) {
+    for (const w of ['initiative', 'torso twist', 'line of sight', 'target movement modifier', 'prone', 'crit', 'ammo', 'shutdown', 'seatbelt', 'charge', 'skip', 'crippled', 'gunnery', 'piloting', 'heat sink', 'cluster', 'lb-x', 'ultra', 'gauss', 'capacitor', 'masc', 'ecm', 'artemis', 'targeting computer', 'ferro-lamellor', 'picker', 'even bv']) {
       expect(all, w).toContain(w)
     }
   })

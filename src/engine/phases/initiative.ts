@@ -15,7 +15,9 @@ export function startInitiativePhase(state: GameState): Stepped {
   const units = { ...state.units }
   for (const id of state.unitOrder) {
     const u = units[id]!
-    units[id] = { ...u, move: freshMove(u), attacks: freshAttacks() }
+    // escalating-failure items (EQUIP-020): a new turn starts unused; the End Phase already stepped unused ones down
+    const escalating = Object.fromEntries(Object.entries(u.escalating ?? {}).map(([k, v]) => [k, { ...v, usedThisTurn: false }]))
+    units[id] = { ...u, move: freshMove(u), attacks: freshAttacks(), escalating }
   }
   let s: GameState = { ...state, turn, units, heatLedger: {}, choices: { los: {}, direction: {} }, initiative: null }
   const b = beginPhase(s, 'initiative', 'initiative.roll')

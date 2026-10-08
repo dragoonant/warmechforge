@@ -773,6 +773,11 @@ order the table lists them.
 | 2026-10-08 | index.ts | `query.threat(state, hex)` returns `ThreatView {hex, bySide, sources}` (was `never`, an M4 placeholder); `ThreatView` exported | release-1 threat view for the client overlay; the AI's model stays 40-ai §5 |
 | 2026-10-08 | index.ts | `registerBundle` / `bundleFor` live in `bundles.ts` and are re-exported from index under the same names; API bodies delegate to `machine.ts`, `queries.ts`, `describe.ts` | rules modules read the bundle without an import cycle through index |
 | 2026-10-08 | events.ts | `DamageApplied.reduced?: number` (points ferro-lamellor stopped at that location; a fully stopped hit emits `damage: 0`) | M5 ferro-lamellor (10 EQUIP-014) |
+| 2026-10-08 | actions.ts | `MoveAction.masc?: boolean`; `DeclareFireAction.charge?: LocalId[]` (PPCs whose capacitor charges) and `coolantPod?: LocalId` | M6 equipment: MASC (10 EQUIP-021), PPC capacitor (EQUIP-016), coolant pod (EQUIP-017) need a player choice |
+| 2026-10-08 | events.ts | `EquipmentUsed {unitId, mountId, use: capacitorCharged / capacitorDischarged / coolantPod / masc / mascFailed, amount}`, `WeaponJamChanged {unitId, mountId, jammed}`; `UnitDisplaced.cause` gains `'stacking'` (involuntary stacking, MOVE-012; was reported as `'domino'`) | M6: every equipment effect emits an event |
+| 2026-10-08 | hooks.ts | `EQUIPMENT_HOOKS` gains `coolantPod`, `masc`, `partialWing`, `beagleProbe`, `guardianEcm`; `collectHooks` also binds a weapon's `rapidFire.jamHook` (20 §3.1); `HOOK_WIRING` text now names the real call sites (movement, attackDeclare, attackRolled incl. linked mounts, cluster, damage, heat, endPhase) | M6 hook wiring (60 §7) |
+| 2026-10-08 | index.ts | `query.reachable(state, unitId, opts?: ReachOptions)`, `ReachOptions {masc?}`; `HeatPlan.charge?` / `coolantPod?`; `FirePlan.charge?` / `coolantPod?`; `SheetView.equipment?` (capacitor / pod / MASC / jammed weapon state, MASC avoid TN and run MP) | the UI and AI read MASC moves, capacitor and pod numbers from the engine |
+| 2026-10-08 | state use (no type change) | `MountState.firedTurn` of a capacitor = turn it charged, of a coolant pod = turn it was vented; `UnitState.escalating[mountId]` holds the MASC step (reset of `usedThisTurn` at the start of each turn) | no new state fields needed |
 
 ### Rulings made in this spec
 

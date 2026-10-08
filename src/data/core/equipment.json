@@ -67,6 +67,7 @@
     "kind": "other",
     "slots": 2,
     "tons": 1.5,
+    "code": ["beagleProbe"],
     "notes": "Release 1 has no probe rules; it occupies its slots and weight only.",
     "source": { "ref": "megamek", "note": "UZL-2S MTF lists it in the left torso; 1.5 t and 2 slots per the TechManual Beagle Active Probe entry (MegaMek ISBeagleActiveProbe)" }
   },
@@ -77,6 +78,7 @@
     "kind": "other",
     "slots": 4,
     "tons": "perMech",
+    "code": ["partialWing"],
     "notes": "One mount per torso. Release 1 has no wing rules; it occupies slots and weight only.",
     "source": { "ref": "megamek", "note": "ERS-2N MTF lists four slots in each side torso; IS partial wing weighs 7% of chassis tonnage rounded up to the half ton, 3.5 t at 50 t (BattleMech Manual p.116; TacOps)" },
     "verify": [
@@ -126,6 +128,7 @@
     "kind": "capacitor",
     "slots": 1,
     "tons": 1,
+    "code": ["ppcCapacitor"],
     "notes": "Release 1 has no capacitor rules yet; it occupies its slot and weight. Intended hook name: ppcCapacitor (not registered).",
     "source": { "ref": "megamek", "note": "MiscType createISPPCCapacitor (2026-10-08): 1 t, 1 slot; the same item serves Clan PPCs", "retrieved": "2026-10-08" },
     "verify": [
@@ -153,6 +156,7 @@
     "kind": "other",
     "slots": 1,
     "tons": 1,
+    "code": ["coolantPod"],
     "notes": "Release 1 has no coolant-pod rules; it occupies its slot and weight only. It adds heat dissipation and can explode in the full rules.",
     "source": { "ref": "megamek", "note": "AmmoType createISCoolantPod (2026-10-08): Coolant Pod is an ammo-type item (1 shot); 1 slot and 1 ton from the MTF slot table and the Regent A tonnage audit", "retrieved": "2026-10-08" },
     "verify": [
@@ -170,6 +174,7 @@
     "kind": "masc",
     "slots": "perMech",
     "tons": "perMech",
+    "code": ["masc"],
     "notes": "Mount tons and slots both equal tonnage / 25, rounded to the nearest ton (minimum 1): 1 for a 25 t Solitaire. Release 1 has no MASC rules yet. Intended hook name: masc (not registered).",
     "source": { "ref": "megamek", "note": "MiscType createCLMASC (2026-10-08): weight = max(1, round(tonnage * 0.04)) for Clan", "retrieved": "2026-10-08" },
     "verify": [
@@ -187,6 +192,7 @@
     "kind": "ecm",
     "slots": 2,
     "tons": 1.5,
+    "code": ["guardianEcm"],
     "notes": "Guardian ECM: a 6-hex bubble. Release 1 models one effect: hostile Artemis IV loses its cluster bonus when the attacker or the target is within 6 hexes of an operating Guardian (2026 [CL W38]: radius only, no LOS tracing). Probe, TAG, C3 and stealth effects are not modelled.",
     "source": { "ref": "megamek", "note": "MiscType createGECM (2026-10-08): 1.5 t, 2 slots", "retrieved": "2026-10-08" },
     "verify": [

@@ -10,6 +10,7 @@ import { skipAll } from '../presentation/director'
 import { dispatch, isBotDecision, legalFor, useGameStore, type BotTier } from '../store/gameStore'
 import { scaled, useSettingsStore } from '../store/settingsStore'
 import { createAiWorkerClient, type AiWorkerClient } from './aiWorkerClient'
+import { publishTrace } from './traceStore'
 
 export const WATCHDOG_MS = 5000
 /** Pause before the bot answers at speed 1, so a human can follow along (scaled by speed; 0 when instant). */
@@ -51,7 +52,9 @@ export function chooseBotAction(state: GameState, pending: PendingDecision, lega
   if (!brain) return legal[0]!
   if (isAiTier(tier)) {
     try {
-      return brain.ai(view(state, pending.player), pending, legal, { tier }).action
+      const d = brain.ai(view(state, pending.player), pending, legal, { tier, trace: true })
+      publishTrace(d.trace, { seed: state.seed, turn: state.turn, phase: state.phase, player: pending.player })
+      return d.action
     } catch {
       return randomAnswer(state, pending, legal, seed)
     }

@@ -109,7 +109,22 @@ export interface PsrQueued extends Ev<'PsrQueued'> { psrId: PsrId; unitId: UnitI
 export interface PsrResolved extends Ev<'PsrResolved'> { psrId: PsrId; unitId: UnitId; reason: PsrReason; tn: number; mods: Mod[]; roll: number | null; success: boolean; auto: boolean }
 export interface PsrDiscarded extends Ev<'PsrDiscarded'> { psrId: PsrId; unitId: UnitId; reason: PsrReason; why: 'alreadyFell' | 'prone' | 'destroyed' }
 export interface UnitFell extends Ev<'UnitFell'> { unitId: UnitId; hex: Hex; levels: number; facing: Facing; damage: number; column: 'front' | 'rear'; inWater: boolean }
-export interface UnitDisplaced extends Ev<'UnitDisplaced'> { unitId: UnitId; from: Hex; to: Hex; cause: 'charge' | 'dfa' | 'dfaMiss' | 'push' | 'domino' | 'fallFromAbove' | 'dodge' }
+export interface UnitDisplaced extends Ev<'UnitDisplaced'> { unitId: UnitId; from: Hex; to: Hex; cause: 'charge' | 'dfa' | 'dfaMiss' | 'push' | 'domino' | 'fallFromAbove' | 'dodge' | 'stacking' }
+
+// ---------- equipment (10 §18) ----------
+/**
+ * An equipment item was used or changed state. `use`: capacitorCharged (amount = heat), capacitorDischarged (amount = extra
+ * damage), coolantPod (amount = extra dissipation this turn), masc (amount = the avoid number rolled against; run MP boosted),
+ * mascFailed (amount = the avoid number; the MASC is destroyed and a random leg takes a crit check).
+ */
+export interface EquipmentUsed extends Ev<'EquipmentUsed'> {
+  unitId: UnitId
+  mountId: LocalId
+  use: 'capacitorCharged' | 'capacitorDischarged' | 'coolantPod' | 'masc' | 'mascFailed'
+  amount: number
+}
+/** A rapid-fire weapon jammed on its attack roll, or was cleared by a Movement Phase unjam roll (10 EQUIP-011). */
+export interface WeaponJamChanged extends Ev<'WeaponJamChanged'> { unitId: UnitId; mountId: LocalId; jammed: boolean }
 
 // ---------- heat ----------
 export interface HeatApplied extends Ev<'HeatApplied'> { unitId: UnitId; before: number; generated: number; dissipated: number; after: number; entries: HeatEntry[] }
@@ -137,6 +152,7 @@ export type GameEvent =
   | LocationDestroyed | CritCheckRolled | CritLost | CritSlotHit | ComponentDestroyed | AmmoExploded | ComponentExploded | PilotHit
   | UnitDestroyed | AttackEnded
   | PsrQueued | PsrResolved | PsrDiscarded | UnitFell | UnitDisplaced
+  | EquipmentUsed | WeaponJamChanged
   | HeatApplied | UnitShutdown | UnitRestarted
   | ConsciousnessChecked | PilotRecovered | PilotKilled
   | TwistReset | StatusChanged | UnitRemoved | GameEnded

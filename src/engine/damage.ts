@@ -17,6 +17,7 @@ import { queuePsr, fallDeps } from './psr'
 import type { PsrRequest } from './psr'
 import { heatDeps } from './heat'
 import { bundleFor } from './bundles'
+import { equipDeps } from './equipment'
 
 export interface Stepped { state: GameState; events: GameEvent[] }
 
@@ -298,19 +299,34 @@ export function explodeBinW(w: Work, unitId: UnitId, binId: LocalId, cause: 'cri
 }
 
 /** AMMO-020: a crit on an explosive component (Gauss) explodes it for 2 x slots, same caps; no ammo needed. */
-export function explodeComponentW(w: Work, unitId: UnitId, mountId: LocalId): void {
+/** AMMO-020 component explosion: 2 x slots unless `rawOverride` is given (coolant pod: 10, EQUIP-017). */
+export function explodeComponentW(w: Work, unitId: UnitId, mountId: LocalId, rawOverride?: number): void {
   const u = unitOf(w, unitId)
   const m = u.mounts[mountId]
   if (!m) return
   let slots = 0
   for (const sl of Object.values(u.slots)) for (const s of sl) if (s.token === `#${mountId}`) slots++
-  const raw = 2 * Math.max(1, slots)
+  const raw = rawOverride ?? 2 * Math.max(1, slots)
   const cs = caseAt(w.data, u, m.location)
   const dmg = Math.min(raw, cs === 'case' ? CASE_CAP : EXPLOSION_CAP)
   const ev: ComponentExploded = { type: 'ComponentExploded', unitId, mountId, location: m.location, damage: dmg, capped: raw > dmg }
   w.ev.push(ev)
   explosionDamageW(w, unitId, m.location, dmg, 'componentExplosion', cs)
   pilotHitW(w, unitId, 'explosion')
+}
+
+/** A hook-driven component explosion (coolant pod crit): mount destroyed (critHits + 1, ComponentDestroyed), then `raw` points. */
+export function explodeComponent(state: GameState, unitId: UnitId, mountId: LocalId, raw: number, data?: DataBundle): Stepped {
+  const w = beginWork(state, data ?? bundleFor(state))
+  const m = unitOf(w, unitId).mounts[mountId]
+  if (m && !m.destroyed) {
+    m.critHits++
+    m.destroyed = true
+    const ev: ComponentDestroyed = { type: 'ComponentDestroyed', unitId, mountId, token: `#${mountId}`, location: m.location }
+    w.ev.push(ev)
+    explodeComponentW(w, unitId, mountId, raw)
+  }
+  return endWork(w)
 }
 
 export function explodeBin(state: GameState, unitId: UnitId, binId: LocalId, cause: 'crit' | 'heat' = 'heat', data?: DataBundle): Stepped {
@@ -390,6 +406,21 @@ export function damagePer(prof: { damage: number | { short?: number; medium?: nu
 }
 
 /**
+ * Hook point 'damage' (00 §11.4): extra damage per hit that items linked to (or on) the firing mount add to a ranged shot
+ * (PPC capacitor +5 when charged last turn, EQUIP-016). Previews call this too, so the UI shows the same number.
+ */
+export function weaponDamageBonus(state: GameState, data: DataBundle, attackerId: UnitId, mountId: LocalId): number {
+  const u = state.units[attackerId]
+  if (!u) return 0
+  let bonus = 0
+  for (const b of collectHooksWith(data, state, attackerId, 'damage')) {
+    if (!b.hook.damage || !b.mountId || (b.mountId !== mountId && u.mounts[b.mountId]?.linkedTo !== mountId)) continue
+    bonus = b.hook.damage({ state, point: 'damage', unitId: attackerId, sourceId: b.sourceId, mountId: b.mountId, params: { weaponMountId: mountId, data } }, bonus)
+  }
+  return bonus
+}
+
+/**
  * Resolves one declared ranged shot (00 §6 steps 1-6): to-hit roll, aimed shot, cluster roll, a location roll per group and the
  * damage for each. Ammo and heat for non-Streak weapons are spent at declaration by the caller; a Streak hit spends its ammo here
  * (CLUS-005) and reports `streakHit` so the caller can book its heat.
@@ -429,11 +460,14 @@ export function resolveAttack(state: GameState, decl: RangedDeclaration, opts: R
   }
   w.ev.push({ type: 'AttackRolled', attackId, attackerId, targetId, kind: 'ranged', mountId: decl.mountId, tn: decl.tn, roll: rolled, hit, auto })
   // hook point 'attackRolled' (00 §11.4): items on the firing mount react to the to-hit roll (RAC jam, capacitor)
-  const rolledHooks = collectHooksWith(w.data, snapshot(w), attackerId, 'attackRolled').filter((b) => b.mountId === decl.mountId && b.hook.attackRolled)
+  const snap0 = snapshot(w)
+  const onMount = (mid: LocalId | undefined): boolean => mid === decl.mountId || (!!mid && snap0.units[attackerId]!.mounts[mid]?.linkedTo === decl.mountId)
+  const rolledHooks = collectHooksWith(w.data, snap0, attackerId, 'attackRolled').filter((b) => onMount(b.mountId) && b.hook.attackRolled)
   for (const b of rolledHooks) {
     viaState(w, (s) => b.hook.attackRolled!({
-      state: s, point: 'attackRolled', unitId: attackerId, sourceId: b.sourceId, mountId: decl.mountId, attackId, targetId,
+      state: s, point: 'attackRolled', unitId: attackerId, sourceId: b.sourceId, mountId: b.mountId ?? decl.mountId, attackId, targetId,
       roll: { purpose: 'toHit', total: rolled ?? 0, dice: [] },
+      params: { weaponMountId: decl.mountId, rapidShots: decl.rapidShots ?? 1, rolled: rolled !== null },
     }))
   }
   if (!hit) return finish(false, 0)
@@ -451,7 +485,7 @@ export function resolveAttack(state: GameState, decl: RangedDeclaration, opts: R
   }
 
   // 4. groups
-  const dmg = damagePer(prof, decl.band)
+  const dmg = damagePer(prof, decl.band) + weaponDamageBonus(snapshot(w), w.data, attackerId, decl.mountId)
   let groups: number[]
   const rapid = decl.rapidShots ?? 0
   const cluster = prof.cluster ?? (rapid > 1 ? { rackSize: rapid, groupSize: 1 } : null)
@@ -480,6 +514,7 @@ export function resolveAttack(state: GameState, decl: RangedDeclaration, opts: R
 
 // ---------- wire the late-bound collaborators ----------
 try {
+  equipDeps.explodeComponent = (state, unitId, mountId, raw, data) => explodeComponent(state, unitId, mountId, raw, data)
   fallDeps.applyDamage = (state, i) => applyDamage(state, i)
   heatDeps.explodeAmmo = (state, unitId, binId) => explodeBin(state, unitId, binId, 'heat')
   heatDeps.pickBin = (state, unitId) => pickHeatExplosionBin(bundleFor(state), state.units[unitId]!)

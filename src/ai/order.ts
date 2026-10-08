@@ -27,8 +27,10 @@ export function decideSelect(ctx: AiCtx, legal: Action[]): Action {
     return flex + 0.15 * fp - 0.08 * threat
   }
   let best = opts[0]!, bk = key(best.unitId)
+  ctx.note(best, -bk)
   for (const o of opts.slice(1)) {
     const k = key(o.unitId)
+    ctx.note(o, -k)
     if (k < bk - 1e-9 || (Math.abs(k - bk) <= 1e-9 && o.unitId < best.unitId)) { best = o; bk = k }
   }
   return best

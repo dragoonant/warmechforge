@@ -6,26 +6,54 @@ import { OrbitControls } from '@react-three/drei'
 import { MOUSE, TOUCH, Vector3, type InstancedMesh } from 'three'
 import type { OrbitControls as OrbitImpl } from 'three-stdlib'
 import { create } from 'zustand'
-import { MAX_DISTANCE, MAX_POLAR, MIN_DISTANCE, MIN_POLAR, cameraPose, panClamp, type CameraPreset, type HomeEdge, type PoseBounds, type PoseOptions } from './cameraPose'
+import { MAX_DISTANCE, MAX_POLAR, MIN_DISTANCE, MIN_POLAR, cameraPose, framePoints, panClamp, type CameraPreset, type HomeEdge, type PoseBounds, type PoseOptions } from './cameraPose'
 
 export const TRANSITION_MS = 500   // spec: transitions at most 600 ms
 export const easeInOut = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 const PAN_KEYS: Record<string, [number, number]> = { w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }
 
-interface CamRequest { preset: CameraPreset; opts: PoseOptions; nonce: number; instant: boolean }
+interface CamRequest { preset: CameraPreset; opts: PoseOptions; nonce: number; instant: boolean; auto: boolean; restore: boolean }
 export const useCameraStore = create<{ req: CamRequest | null }>(() => ({ req: null }))
 let nonce = 0
 
+// ---- player steering: the auto-camera yields to anything the player does with the camera ----
+let steerUntil = 0, dragging = 0
+/** The view the player had before the auto-camera first moved it (restored when a human decision opens); null when none. */
+let savedView: { p: Vector3; t: Vector3 } | null = null
+/** True while the auto-camera holds the camera away from the player's own view. */
+export const autoCameraActive = (): boolean => savedView !== null
+/** True while the player drags / pans / zooms the camera (and for a short grace period after). */
+export function playerSteering(graceMs = 2500): boolean { return dragging > 0 || (steerUntil > 0 && performance.now() < steerUntil + graceMs) }
+function noteSteer(): void { steerUntil = performance.now(); savedView = null /* the player owns the view now */ }
+export function resetSteering(): void { steerUntil = 0; dragging = 0; savedView = null }
+
 /** Ask the camera for a preset (any component, keyboard handlers, the start of a decision). */
 export const cameraActions = {
-  preset(preset: CameraPreset, opts: PoseOptions & { instant?: boolean } = {}): void {
-    const { instant, ...rest } = opts
-    useCameraStore.setState({ req: { preset, opts: rest, nonce: ++nonce, instant: !!instant } })
+  preset(preset: CameraPreset, opts: PoseOptions & { instant?: boolean; auto?: boolean; restore?: boolean } = {}): void {
+    const { instant, auto, restore, ...rest } = opts
+    useCameraStore.setState({ req: { preset, opts: rest, nonce: ++nonce, instant: !!instant, auto: !!auto, restore: !!restore } })
   },
   overview: (): void => cameraActions.preset('overview'),
   topDown: (): void => cameraActions.preset('top'),
   home: (edge: HomeEdge): void => cameraActions.preset('home', { edge }),
   follow: (x: number, z: number, y = 0): void => cameraActions.preset('follow', { focus: { x, y, z } }),
+  /**
+   * Auto-camera: ease to frame these world points, keeping the player's orbit angles. Skipped (returns false) while the
+   * player is steering the camera, so it never fights their input.
+   */
+  /** Return to the view the player had before the auto-camera moved it. False when it never did (nothing to restore). */
+  restoreView(): boolean {
+    if (!savedView) return false
+    cameraActions.preset('overview', { restore: true })
+    return true
+  },
+  frame(points: readonly { x: number; y?: number; z: number }[], opts: { force?: boolean } = {}): boolean {
+    if (!opts.force && playerSteering()) return false
+    if (!points.length) return false
+    const { focus, distance } = framePoints(points, 1.6)
+    cameraActions.preset('frame', { focus, distance, keepAngles: true, auto: true })
+    return true
+  },
 }
 
 /** Dev / e2e hooks: window.__boardCam.set(position, target), .screen(x, y, z) -> page pixels. Installed only with ?test=1 or in dev. */
@@ -61,7 +89,17 @@ export function CameraRig({ bounds, aspectHint }: { bounds: PoseBounds; aspectHi
   useEffect(() => {
     const c = controls.current
     if (!req || !c) return
-    const pose = cameraPose(req.preset, boundsRef.current, { aspect: aspectRef.current, ...req.opts })
+    if (req.auto && playerSteering()) return // the player took the camera between the request and now
+    if (req.restore) {
+      const v = savedView; savedView = null
+      if (!v) return
+      tween.current = { t0: performance.now(), fromP: camera.position.clone(), toP: v.p, fromT: c.target.clone(), toT: v.t }
+      invalidate()
+      return
+    }
+    if (req.auto && !savedView) savedView = { p: camera.position.clone(), t: c.target.clone() }
+    const keep = req.opts.keepAngles ? { azimuth: c.getAzimuthalAngle(), polar: c.getPolarAngle() } : {}
+    const pose = cameraPose(req.preset, boundsRef.current, { aspect: aspectRef.current, ...req.opts, ...keep })
     if (req.instant) { tween.current = null; camera.position.set(...pose.position); c.target.set(...pose.target); c.update(); invalidate(); return }
     tween.current = { t0: performance.now(), fromP: camera.position.clone(), toP: new Vector3(...pose.position), fromT: c.target.clone(), toT: new Vector3(...pose.target) }
     invalidate()
@@ -88,10 +126,20 @@ export function CameraRig({ bounds, aspectHint }: { bounds: PoseBounds; aspectHi
     return () => { delete w.__boardCam }
   }, [camera, invalidate, gl, scene, ctl])
 
+  // note the player's own camera input (right / middle drag, wheel, touch) so the auto-camera stays out of the way
+  useEffect(() => {
+    const el = gl.domElement
+    const down = (e: PointerEvent): void => { if (e.button === 1 || e.button === 2 || e.pointerType === 'touch') { dragging++; noteSteer(); tween.current = null } }
+    const up = (): void => { if (dragging > 0) dragging--; noteSteer() }
+    const wheel = (): void => { noteSteer(); tween.current = null }
+    el.addEventListener('pointerdown', down); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); el.addEventListener('wheel', wheel, { passive: true })
+    return () => { el.removeEventListener('pointerdown', down); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); el.removeEventListener('wheel', wheel); dragging = 0 }
+  }, [gl])
+
   // WASD pan (ignored while typing)
   useEffect(() => {
     const typing = (e: KeyboardEvent): boolean => { const t = e.target as HTMLElement | null; return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) }
-    const down = (e: KeyboardEvent): void => { if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return; const k = e.key.toLowerCase(); if (k in PAN_KEYS) { keys.current.add(k); invalidate() } }
+    const down = (e: KeyboardEvent): void => { if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return; const k = e.key.toLowerCase(); if (k in PAN_KEYS) { keys.current.add(k); noteSteer(); tween.current = null; invalidate() } }
     const up = (e: KeyboardEvent): void => { keys.current.delete(e.key.toLowerCase()) }
     window.addEventListener('keydown', down); window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }

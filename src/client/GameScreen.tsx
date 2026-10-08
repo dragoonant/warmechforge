@@ -1,11 +1,12 @@
 // The in-game screen: the 3D board (tiles, terrain, figures, overlays, VFX, the optional game shop around it) with the HUD
 // over it. Lazy-loaded by App, so three.js and the board live in this chunk. Pattern from Whirr Machine's GameScreen.
-import { useEffect, useMemo, type ReactElement } from 'react'
+import { useEffect, useMemo, useRef, type ReactElement } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import { BoardCanvas, HexBoard, cameraActions, hexTopPoint, layoutBoard } from './board'
 import { FpsMeter, FpsProbe, fpsEnabled } from './board/FpsMeter'
-import { registerHexToScreen, useControllers, usePresentedState, usePrompt, type HexToScreen } from './contract'
+import { registerHexToScreen, useControllers, useCurrentBeat, usePresentedState, usePrompt, useSettings, type HexToScreen } from './contract'
+import { AiTraceLayer, ThreatLayer } from './optionalOverlays'
 import { usePresentedStore } from './presentation/presentedStore'
 import { useUiStore } from './store/uiStore'
 import { EstablishingHint, EstablishingShot, GameShop, useEffectiveSurroundings, useEstablishingActive } from './environment'
@@ -71,13 +72,60 @@ function FollowOffscreen(): null {
   const camera = useThree((s) => s.camera)
   useEffect(() => {
     if (!prompt?.unitId) return
-    const p = unitPoint(prompt.unitId)
-    if (!p) return
-    camera.updateMatrixWorld()
-    const v = new Vector3(p.x, p.y + 0.5, p.z).project(camera)
-    const off = v.z > 1 || Math.abs(v.x) > 0.85 || v.y > 0.8 || v.y < -0.55 // the bottom of the view sits under the decision panel
-    if (off) cameraActions.follow(p.x, p.z, p.y)
+    const check = (): void => {
+      const p = unitPoint(prompt.unitId)
+      if (!p) return
+      camera.updateMatrixWorld()
+      const v = new Vector3(p.x, p.y + 0.5, p.z).project(camera)
+      const off = v.z > 1 || Math.abs(v.x) > 0.85 || v.y > 0.8 || v.y < -0.55 // the bottom of the view sits under the decision panel
+      if (off) cameraActions.follow(p.x, p.z, p.y)
+    }
+    // a human decision opens: if Follow action moved the camera during the bots' turn, hand the player's own view back first
+    if (cameraActions.restoreView()) {
+      const t = setTimeout(check, 650)
+      return () => clearTimeout(t)
+    }
+    check()
+    return undefined
   }, [prompt?.id, prompt?.unitId, camera])
+  return null
+}
+
+/**
+ * Follow action (setting): while a bot 'Mech moves or shoots, ease the camera to frame it and its target. It keeps the
+ * player's own orbit angle, never interrupts a camera drag / pan / zoom (cameraActions.frame refuses while the player steers),
+ * and frames each actor/target pair once so a volley of hit beats does not make the view bob.
+ */
+function FollowAction(): null {
+  const beat = useCurrentBeat()
+  const { followAction } = useSettings()
+  const controllers = useControllers()
+  const shot = useEstablishingActive() // the opening sweep owns the camera until it ends or is skipped
+  const lastKey = useRef('')
+  useEffect(() => {
+    if (!followAction || !beat || shot) return
+    const st = usePresentedStore.getState().state
+    if (!st) return
+    const FRAMED = beat.kind === 'move' || beat.kind === 'fire' || beat.kind === 'twist' || beat.kind === 'deploy'
+    if (!FRAMED) return
+    const actor = st.units[beat.unitIds[0] ?? '']
+    if (!actor || controllers[actor.owner] !== 'bot') return
+    const pts: { x: number; y: number; z: number }[] = []
+    for (const id of beat.unitIds.slice(0, beat.kind === 'fire' ? 2 : 1)) {
+      const tw = usePresentedStore.getState().tweens[id]
+      if (tw && tw.keys.length) {
+        const a = tw.keys[0]!, b = tw.keys[tw.keys.length - 1]!
+        pts.push({ x: a.x, y: 0, z: a.z }, { x: b.x, y: 0, z: b.z })
+      } else {
+        const p = unitPoint(id)
+        if (p) pts.push(p)
+      }
+    }
+    if (!pts.length) return
+    const key = beat.kind === 'fire' ? `fire:${beat.unitIds.join('>')}` : `${beat.kind}:${beat.unitIds[0]}:${Math.round(pts[0]!.x)},${Math.round(pts[0]!.z)}`
+    if (key === lastKey.current) return
+    if (cameraActions.frame(pts)) lastKey.current = key
+  }, [beat?.id, followAction, controllers, shot]) // eslint-disable-line react-hooks/exhaustive-deps
   return null
 }
 
@@ -110,6 +158,8 @@ function Board(): ReactElement | null {
         {shop && <EstablishingShot />}
         <HexProjector />
         <FollowOffscreen />
+        <FollowAction />
+        <ThreatLayer />
         {fpsEnabled() && <FpsProbe />}
       </BoardCanvas>
       <InteractionProxies />
@@ -125,6 +175,7 @@ function HudLayer({ onExit }: { onExit?: () => void }): ReactElement {
   return (
     <div data-testid="hud-layer" style={{ opacity: shot ? 0 : 1, transition: 'opacity 500ms ease', pointerEvents: shot ? 'none' : undefined }}>
       <Hud onExit={onExit} />
+      <AiTraceLayer />
     </div>
   )
 }

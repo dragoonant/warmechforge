@@ -10,6 +10,11 @@ export const BASE_THICKNESS = 0.12
 export const HEIGHT_BY_CLASS: Readonly<Record<WeightClass, number>> = { light: 0.75, medium: 0.8333, heavy: 0.9167, assault: 1.0 }
 /** Base disc radius per weight class (the GLB discs are 0.394 and 0.433). Fits inside the hex's inscribed circle (0.5). */
 export const BASE_RADIUS_BY_CLASS: Readonly<Record<WeightClass, number>> = { light: 0.394, medium: 0.41, heavy: 0.42, assault: 0.433 }
+/**
+ * The body above the base disc is drawn this much larger than the data height, so a 'Mech reads at the default camera (the base
+ * disc keeps its size: it must stay inside its hex). Applies to every rig, procedural and GLB; rig.height and halfWidth include it.
+ */
+export const FIGURE_SCALE = 1.2
 /** Woods stay below the shoulders: 0.55 x the smallest figure height on the board (the board agent reads this). */
 export const TREE_MAX_HEIGHT = 0.55 * HEIGHT_BY_CLASS.light
 /** Prone tip angle (about 80 degrees) about the forward axis. */

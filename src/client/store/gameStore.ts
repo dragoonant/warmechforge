@@ -4,7 +4,7 @@
 import { create } from 'zustand'
 import {
   EngineInvariantError, createGame, legalActions, load as engineLoad, save as engineSave, step,
-  type Action, type GameEvent, type GameState, type PendingDecision, type PlayerId, type RejectionCode, type SaveFile, type UnitId,
+  type Action, type GameEvent, type GameState, type Loc, type PendingDecision, type PlayerId, type RejectionCode, type SaveFile, type UnitId,
 } from '../../engine/index'
 import { enqueueBatch, resetPresentation } from '../presentation/director'
 import type { SeqEvent } from '../presentation/beats'
@@ -34,6 +34,11 @@ export const EVENT_LOG_LIMIT = 2000
 /** Running per-side tallies for the end screen (sums of event numbers; no rules). */
 export interface SideStats { damageDealt: number; damageTaken: number; heatPeak: number }
 
+/** Running per-'Mech tallies for the end screen's mini sheets: damage taken per location, damage dealt, kills, heat peak. */
+export interface UnitTally { dealt: number; taken: number; byLoc: Partial<Record<Loc, number>>; kills: number; heatPeak: number; lastHitBy: UnitId | null }
+export type UnitTallies = Record<UnitId, UnitTally>
+const blankTally = (): UnitTally => ({ dealt: 0, taken: 0, byLoc: {}, kills: 0, heatPeak: 0, lastHitBy: null })
+
 export interface GameStoreState {
   /** True engine state (NOT what the screen shows: render from the presented store). */
   state: GameState | null
@@ -52,16 +57,18 @@ export interface GameStoreState {
   /** The options the game was started with (Play again reuses them with a new seed); null after a bare load. */
   options: NewGameOptions | null
   stats: Record<PlayerId, SideStats>
+  /** Per-'Mech tallies (additive, polish pass). */
+  unitStats: UnitTallies
 }
 
 const ZERO_STATS = (): Record<PlayerId, SideStats> => ({ A: { damageDealt: 0, damageTaken: 0, heatPeak: 0 }, B: { damageDealt: 0, damageTaken: 0, heatPeak: 0 } })
 
 const INITIAL: GameStoreState = {
   state: null, pending: null, controllers: { A: 'human', B: 'bot' }, bot: { tier: 'random', seed: 'bot' },
-  events: [], eventSeq: 0, lastRejection: null, fatal: null, version: 0, options: null, stats: ZERO_STATS(),
+  events: [], eventSeq: 0, lastRejection: null, fatal: null, version: 0, options: null, stats: ZERO_STATS(), unitStats: {},
 }
 
-export const useGameStore = create<GameStoreState>(() => ({ ...INITIAL, stats: ZERO_STATS() }))
+export const useGameStore = create<GameStoreState>(() => ({ ...INITIAL, stats: ZERO_STATS(), unitStats: {} }))
 
 // ---------- legal actions, cached per state object ----------
 const legalCache = new WeakMap<GameState, Action[]>()
@@ -162,6 +169,35 @@ function tally(stats: Record<PlayerId, SideStats>, state: GameState, events: rea
   return out ?? stats
 }
 
+/** Per-'Mech tallies: damage per location (armor + internal removed), damage dealt, kills (credited to the last 'Mech to hurt the victim), heat peak. */
+function tallyUnits(prev: UnitTallies, events: readonly GameEvent[]): UnitTallies {
+  let out: UnitTallies | null = null
+  const cur = (id: UnitId): UnitTally | undefined => (out ?? prev)[id]
+  const edit = (id: UnitId): UnitTally => {
+    out ??= { ...prev }
+    const c = out[id] ?? blankTally()
+    const n = { ...c, byLoc: { ...c.byLoc } }
+    out[id] = n
+    return n
+  }
+  for (const e of events) {
+    if (e.type === 'DamageApplied') {
+      const taken = e.armorBefore - e.armorAfter + (e.structureBefore - e.structureAfter)
+      if (taken <= 0) continue
+      const v = edit(e.unitId)
+      v.taken += taken
+      v.byLoc[e.location] = (v.byLoc[e.location] ?? 0) + taken
+      if (e.sourceUnitId && e.sourceUnitId !== e.unitId) { v.lastHitBy = e.sourceUnitId; edit(e.sourceUnitId).dealt += taken }
+    } else if (e.type === 'HeatApplied') {
+      if (e.after > (cur(e.unitId)?.heatPeak ?? 0)) edit(e.unitId).heatPeak = e.after
+    } else if (e.type === 'UnitDestroyed' && e.effective) {
+      const by = cur(e.unitId)?.lastHitBy
+      if (by) edit(by).kills += 1
+    }
+  }
+  return out ?? prev
+}
+
 function pushEvents(events: readonly GameEvent[]): { seqEvents: SeqEvent[]; first: number; last: number } {
   const s = useGameStore.getState()
   let seq = s.eventSeq
@@ -180,20 +216,25 @@ function commitStep(before: GameState, after: GameState, events: readonly GameEv
     eventSeq: last,
     version: s.version + 1,
     stats: tally(s.stats, after, events),
+    unitStats: tallyUnits(s.unitStats, events),
   })
   enqueueBatch({ firstSeq: first, lastSeq: seqEvents.length ? last : s.eventSeq, before, after, events: seqEvents })
 }
 
 function startFrom(state: GameState, events: readonly GameEvent[], controllers: Record<PlayerId, Controller>, bot: BotConfig, options: NewGameOptions | null, animate: boolean): void {
-  useGameStore.setState({ ...INITIAL, stats: ZERO_STATS(), controllers, bot, options, version: useGameStore.getState().version + 1 })
+  useGameStore.setState({ ...INITIAL, stats: ZERO_STATS(), unitStats: {}, controllers, bot, options, version: useGameStore.getState().version + 1 })
   ui.reset()
   if (animate) {
     resetPresentation(state, 0)
     commitStep(state, state, events)
   } else {
     const { seqEvents, last } = pushEvents(events)
-    useGameStore.setState({ state, pending: state.pending, events: seqEvents.slice(-EVENT_LOG_LIMIT), eventSeq: last })
-    resetPresentation(state, last)
+    // A loaded game keeps its history: feed, dice log and end-screen tallies come from the replayed events.
+    useGameStore.setState({
+      state, pending: state.pending, events: seqEvents.slice(-EVENT_LOG_LIMIT), eventSeq: last,
+      stats: tally(ZERO_STATS(), state, events), unitStats: tallyUnits({}, events),
+    })
+    resetPresentation(state, last, seqEvents)
   }
 }
 
@@ -212,6 +253,13 @@ export function newGame(opts: NewGameOptions): ClientRejection | null {
   const bot: BotConfig = { tier: opts.bot?.tier ?? 'random', seed }
   startFrom(r.state, r.events, controllers, bot, { ...opts, seed }, true)
   return null
+}
+
+/** Same setup AND the same seed (end screen "Rematch with same forces": the dice stream starts over, so a different plan shows). */
+export function rematch(): ClientRejection | null {
+  const s = useGameStore.getState()
+  if (!s.options) return reject('E_CLIENT', 'no previous setup', null, 'Start a new battle from the start screen.')
+  return newGame({ ...s.options, controllers: s.controllers, bot: { tier: s.bot.tier } })
 }
 
 /** Same setup, new seed (end screen "Play again"). */
@@ -310,7 +358,7 @@ export function importSave(data: unknown): ClientRejection | null {
   const cur = useGameStore.getState()
   const controllers = isClientSave(data) ? data.controllers : cur.controllers
   const bot = isClientSave(data) ? data.bot : { ...cur.bot, seed: file.seed }
-  startFrom(r.state, [], controllers, bot, isClientSave(data) ? data.options : null, false)
+  startFrom(r.state, r.events, controllers, bot, isClientSave(data) ? data.options : null, false)
   return null
 }
 
@@ -375,7 +423,7 @@ export function installAutosave(): () => void {
 
 /** Tests: forget the current game entirely. */
 export function resetGameStore(): void {
-  useGameStore.setState({ ...INITIAL, stats: ZERO_STATS() })
+  useGameStore.setState({ ...INITIAL, stats: ZERO_STATS(), unitStats: {} })
   resetPresentation(null, 0)
   ui.reset()
 }

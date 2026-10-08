@@ -3,11 +3,11 @@ import type { Loc, UnitState } from '../../engine/index'
 
 export interface HeatGlow { colour: 'none' | 'orange' | 'red'; intensity: number; pulse: boolean }
 
-/** Emissive heat glow: orange 10-19 (0.15 rising to 0.45), red 20+ (0.5 rising to 0.8, slow pulse). None while shut down. */
+/** Emissive heat glow: orange 10-19 (0.06 rising to 0.2), red 20+ (0.22 rising to 0.4, slow pulse); low enough that the side colour still reads. None while shut down. */
 export function heatGlow(heat: number, shutdown: boolean): HeatGlow {
   if (shutdown || heat < 10) return { colour: 'none', intensity: 0, pulse: false }
-  if (heat < 20) return { colour: 'orange', intensity: 0.15 + 0.3 * ((heat - 10) / 9), pulse: false }
-  return { colour: 'red', intensity: Math.min(0.8, 0.5 + 0.3 * ((heat - 20) / 10)), pulse: true }
+  if (heat < 20) return { colour: 'orange', intensity: 0.06 + 0.14 * ((heat - 10) / 9), pulse: false }
+  return { colour: 'red', intensity: Math.min(0.4, 0.22 + 0.18 * ((heat - 20) / 10)), pulse: true }
 }
 
 export interface UnitVisual {

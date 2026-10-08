@@ -4,18 +4,17 @@ import type {
   Action, AiTier, ChooseAmmoAction, DeclareFireAction, DeclarePhysicalAction, Decider, DeployAction, PendingDecision,
   PlayerView, PowerChoiceAction, StandUpAction, TorsoTwistAction, Twist, UnitId,
 } from '../engine/index'
-import { query, validate } from '../engine/index'
+import { describe, query, validate } from '../engine/index'
 import { decideRandom } from './random'
 import { AiCtx, aiRng, facingToward, turnGap } from './ctx'
-import { targetModel } from './damage'
-import { planFire, toFireShots, type FirePlanResult } from './fire'
-import { heatCapFor } from './heat'
+import { attackFromPreview, targetModel, volleyValue } from './damage'
+import { heatBase, planFire, toFireShots, type FirePlanResult } from './fire'
+import { heatCapFor, heatCost } from './heat'
 import { decideMove, type MoveScore } from './moves'
 import { decideSelect } from './order'
 import { bestMeleeFrom, choiceValue } from './physical'
 import { threatAt } from './threat'
 import { DECISION_BUDGET_MS, TIERS, type UtilityTier } from './tiers'
-import { TUNE } from './tune'
 
 export interface AiDecideOptions {
   tier: UtilityTier
@@ -26,7 +25,11 @@ export interface AiDecideOptions {
   onEvent?: (kind: 'fallback' | 'unhandledKind', detail: string) => void
   trace?: boolean
 }
-export interface AiDecision { action: Action; trace?: { kind: string; top?: unknown[]; ms: number } }
+/** One scored option of a decision for the AI trace panel: the engine's own words for the action, its score in DP. */
+export interface AiTraceOption { label: string; score: number; chosen: boolean; parts?: Record<string, number> }
+/** Decision trace: kind, unit, the raw top entries (tests), the best three options (trace panel) and the time taken. */
+export interface AiTrace { kind: string; unitId?: UnitId; top?: unknown[]; options?: AiTraceOption[]; ms: number }
+export interface AiDecision { action: Action; trace?: AiTrace }
 
 const firstValid = (state: PlayerView['state'], legal: Action[]): Action => legal.find((a) => validate(state, a) === null) ?? legal[0]!
 
@@ -37,6 +40,7 @@ export function decideAi(view: PlayerView, pending: PendingDecision, legal: Acti
   const tier = TIERS[opts.tier]
   const rng = aiRng(opts.seed ?? state.seed, pending.player, state.decisionSeq, tier.id)
   const ctx = new AiCtx(state, pending.player, tier, rng, opts.budgetMs ?? DECISION_BUDGET_MS)
+  if (opts.trace) ctx.cands = []
   let action: Action
   let top: unknown[] | undefined
   try {
@@ -47,7 +51,10 @@ export function decideAi(view: PlayerView, pending: PendingDecision, legal: Acti
       case 'move': {
         const r = decideMove(ctx, pending.unitId!, legal)
         action = r.action
-        if (opts.trace) top = r.top.map(traceMove)
+        if (opts.trace) {
+          top = r.top.map(traceMove)
+          for (const s of r.top) ctx.note(s.action, s.total, { dealt: s.dealt, taken: -s.taken, heat: -s.heat, psr: -s.psr, approach: s.approach, physical: s.physical, position: s.position })
+        }
         break
       }
       case 'standUp': action = decideStand(ctx, pending, legal); break
@@ -75,8 +82,26 @@ export function decideAi(view: PlayerView, pending: PendingDecision, legal: Acti
     action = firstValid(state, legal)
   }
   const out: AiDecision = { action }
-  if (opts.trace) out.trace = { kind: pending.kind, ...(top ? { top } : {}), ms: Math.round(performance.now() - ctx.t0) }
+  if (opts.trace) out.trace = { kind: pending.kind, ...(pending.unitId ? { unitId: pending.unitId } : {}), ...(top ? { top } : {}), options: traceOptions(ctx, action), ms: Math.round(performance.now() - ctx.t0) }
   return out
+}
+
+// equipment extras (capacitor charge, coolant pod) ride on the chosen fire set: compare candidates without them
+const keyOf = (a: Action): string => JSON.stringify({ ...a, decisionId: '', charge: undefined, coolantPod: undefined })
+/** Best three distinct candidates (the chosen action always included), labelled by describe.action. */
+function traceOptions(ctx: AiCtx, chosen: Action): AiTraceOption[] {
+  const r = (x: number): number => Math.round(x * 10) / 10
+  const ck = keyOf(chosen)
+  const seen = new Set<string>()
+  const list = [...(ctx.cands ?? [])].sort((a, b) => b.score - a.score).filter((c) => { const k = keyOf(c.action); if (seen.has(k)) return false; seen.add(k); return true })
+  if (!list.some((c) => keyOf(c.action) === ck)) list.unshift({ action: chosen, score: 0 })
+  let top = list.slice(0, 3)
+  if (!top.some((c) => keyOf(c.action) === ck)) top = [...top.slice(0, 2), list.find((c) => keyOf(c.action) === ck)!]
+  const label = (a: Action): string => { try { return describe.action(ctx.state, a) } catch { return a.type } }
+  return top.map((c) => ({
+    label: label(c.action), score: r(c.score), chosen: keyOf(c.action) === ck,
+    ...(c.parts ? { parts: Object.fromEntries(Object.entries(c.parts).map(([k, v]) => [k, r(v)])) } : {}),
+  }))
 }
 
 function traceMove(s: MoveScore): unknown {
@@ -101,6 +126,7 @@ function decideDeploy(ctx: AiCtx, legal: Action[]): Action {
       s -= 0.3 * turnGap(a.facing, facingToward(a.hex, cx))
     }
     s += ctx.rng() * 1e-3
+    ctx.note(a, s)
     if (s > bs) { bs = s; best = a }
   }
   return best
@@ -117,7 +143,9 @@ function decideStand(ctx: AiCtx, pending: PendingDecision, legal: Action[]): Act
   const adj = ctx.enemiesOf().some((e) => { const q = ctx.unit(e).pos; return !!q && !!u.pos && query.distance(q, u.pos) === 1 })
   // standing restores movement, TMM and full fire; a failed attempt only costs the fall itself (the unit is already down)
   const vStand = Math.max(30, 0.5 * ctx.kill(unitId)) + 10 * (adj ? 1 : 0)
-  const go = ctx.tier.id === 'easy' ? p >= 0.5 : p * vStand > (1 - p) * (ctx.fallCost(unitId) - TUNE.fallTempo)
+  const go = ctx.tier.id === 'easy' ? p >= 0.5 : p * vStand > (1 - p) * (ctx.fallCost(unitId) - ctx.tune.fallTempo)
+  ctx.note(stay, 0)
+  ctx.note(attempts[0]!, p * vStand - (1 - p) * (ctx.fallCost(unitId) - ctx.tune.fallTempo), { pStand: p, value: vStand })
   if (!go) return stay
   // face the nearest enemy
   let want = u.facing
@@ -148,6 +176,7 @@ function decideTwist(ctx: AiCtx, pending: PendingDecision, legal: Action[]): Act
       for (const a of twists) {
         let v = 0
         for (const e of ctx.enemiesOf()) { const p = ctx.unit(e).pos; if (p && u.pos && query.distance(p, u.pos) === 1) v = Math.max(v, bestMeleeFrom(ctx, unitId, { twist: a.twist }, e)) }
+        ctx.note(a, v)
         if (v > bv + 0.5) { bv = v; best = a }
       }
       return best
@@ -162,9 +191,11 @@ function decideTwist(ctx: AiCtx, pending: PendingDecision, legal: Action[]): Act
   const pDying = pDyingNow(ctx, unitId)
   let best: Action = keep
   let bs = planFire(ctx, unitId, { twist: 0, pDying }).score
+  ctx.note(keep, bs)
   for (const a of twists) {
     if (a.twist === 0) continue
     const p = planFire(ctx, unitId, { twist: a.twist as Twist, pDying })
+    ctx.note(a, p.score, { dv: p.dv, heatEnd: p.heatEnd })
     if (p.score > bs + 0.25) { bs = p.score; best = a }
   }
   return best
@@ -178,12 +209,17 @@ function decideFire(ctx: AiCtx, pending: PendingDecision, legal: Action[], opts:
   const unitId = pending.unitId!
   const hold = legal.find((a) => a.type === 'declareFire' && a.shots.length === 0) ?? legal[0]!
   const pDying = ctx.tier.wT > 0 ? pDyingNow(ctx, unitId) : 0
-  const plan: FirePlanResult = planFire(ctx, unitId, { pDying })
+  const collect: FirePlanResult[] | undefined = ctx.cands ? [] : undefined
+  const plan: FirePlanResult = planFire(ctx, unitId, { pDying, ...(collect ? { collect } : {}) })
+  if (collect) {
+    ctx.note(hold, plan.shots.length ? -heatCostHold(ctx, unitId) : plan.score)
+    for (const c of collect) ctx.note({ type: 'declareFire', decisionId: pending.id, player: pending.player, unitId, shots: toFireShots(c) }, c.score, { damage: c.dv, heatEnd: c.heatEnd, pKill: c.pKill })
+  }
   info.heatEnd = plan.heatEnd; info.pKill = plan.pKill; info.pDying = pDying; info.dv = plan.dv
   info.cap = heatCapFor(ctx, unitId, { pKill: plan.pKill, pDying })
-  if (!plan.shots.length) return hold
+  if (!plan.shots.length) return hold.type === 'declareFire' ? withEquipment(ctx, unitId, plan, hold) : hold
   const action: DeclareFireAction = { type: 'declareFire', decisionId: pending.id, player: pending.player, unitId, shots: toFireShots(plan) }
-  if (validate(ctx.state, action) === null) return action
+  if (validate(ctx.state, action) === null) return withEquipment(ctx, unitId, plan, action)
   // a shot the previews accepted was refused: keep the primary target's shots only
   const primary = plan.shots[0]!.targetId
   const alt: DeclareFireAction = { ...action, shots: toFireShots(plan).filter((s) => s.targetId === primary) }
@@ -192,6 +228,46 @@ function decideFire(ctx: AiCtx, pending: PendingDecision, legal: Action[], opts:
   return hold
 }
 
+/**
+ * Equipment with a fire-phase choice (normal tier, M6): charge the PPC capacitor of a PPC the plan holds this turn when an
+ * enemy is within its long range + 3 and the end heat stays under the cap (+5 damage on next turn's shot, 10 EQUIP-016); vent
+ * the one-use coolant pod when it takes enough heat cost off this turn's end heat (EQUIP-017). Heat from query.heatProjection.
+ * Returns the action unchanged when the engine lists no such equipment or the extended declaration fails validate.
+ */
+function withEquipment(ctx: AiCtx, unitId: UnitId, plan: FirePlanResult, action: DeclareFireAction): DeclareFireAction {
+  if (ctx.tier.id !== 'normal') return action
+  const eq = query.sheet(ctx.state, unitId).equipment ?? []
+  if (!eq.length) return action
+  const u = ctx.unit(unitId)
+  const mounts = action.shots.map((s) => s.mountId)
+  const rapidShots = Object.fromEntries(action.shots.filter((s) => s.rapidShots).map((s) => [s.mountId, s.rapidShots!]))
+  const endHeat = (extra: { charge?: string[]; coolantPod?: string }): number => query.heatProjection(ctx.state, unitId, { mounts, rapidShots, ...extra }).end
+  const cap = heatCapFor(ctx, unitId, { pKill: plan.pKill, pDying: 0 })
+  const charge: string[] = []
+  for (const e of eq) {
+    if (e.kind !== 'capacitor' || e.state !== 'ready') continue
+    const ppc = u.mounts[e.mountId]?.linkedTo
+    if (!ppc || mounts.includes(ppc)) continue
+    const w = ctx.factsOf(unitId).weapons.find((x) => x.mountId === ppc)
+    if (!w || !u.pos) continue
+    const near = ctx.enemiesOf().some((id) => { const p = ctx.unit(id).pos; return !!p && query.distance(p, u.pos!) <= w.ranges.long + 3 })
+    if (!near || endHeat({ charge: [...charge, ppc] }) > cap) continue
+    charge.push(ppc)
+  }
+  let out: DeclareFireAction = charge.length ? { ...action, charge } : action
+  const pod = eq.find((e) => e.kind === 'coolantPod' && e.state === 'ready')
+  if (pod) {
+    const base = charge.length ? { charge } : {}
+    const H = Math.max(0, Math.round(endHeat(base))), H2 = Math.max(0, Math.round(endHeat({ ...base, coolantPod: pod.mountId })))
+    if (heatCost(ctx, unitId, H) - heatCost(ctx, unitId, H2) >= 6) out = { ...out, coolantPod: pod.mountId }
+  }
+  if (out !== action && validate(ctx.state, out) !== null) return action
+  return out
+}
+
+/** Score of holding fire: the end-of-turn heat cost with no weapons fired. */
+function heatCostHold(ctx: AiCtx, unitId: UnitId): number { return heatCost(ctx, unitId, Math.max(0, Math.round(heatBase(ctx, unitId)))) }
+
 // ---------- ammo (§8.5) ----------
 function decideAmmo(ctx: AiCtx, legal: Action[]): Action {
   const opts = legal.filter((a): a is ChooseAmmoAction => a.type === 'chooseAmmo')
@@ -199,6 +275,23 @@ function decideAmmo(ctx: AiCtx, legal: Action[]): Action {
   const u = ctx.unit(ctx.state.pending.unitId ?? '') ?? null
   const unit = u ?? Object.values(ctx.state.units).find((x) => opts.some((o) => x.bins[o.binId])) ?? null
   if (!unit) return opts[0]!
+  // different ammo types (LB-X slug / cluster, MML LRM / SRM): price each against the parked shot's target
+  const parked = (ctx.state.resume?.code === 'declareFire' ? (ctx.state.resume.data as { action?: DeclareFireAction }).action : undefined)
+  const shot = parked?.shots.find((s) => s.mountId === opts[0]!.mountId)
+  const types = new Set(opts.map((o) => unit.bins[o.binId]?.ammo))
+  const tid = shot?.targetId ?? null
+  if (shot && tid && types.size > 1 && ctx.alive(tid)) {
+    const model = targetModel(ctx, tid)
+    const perGroup = ctx.factsOf(unit.id).weapons.find((w) => w.mountId === shot.mountId)?.cluster?.groupSize ?? 1
+    let best: ChooseAmmoAction | null = null, bv = -Infinity
+    for (const o of opts) {
+      const pv = query.attackPreview(ctx.state, { attackerId: unit.id, mountId: shot.mountId, targetId: tid, binId: o.binId, primaryTargetId: parked!.shots[0]?.targetId ?? null })
+      if (!pv.legal) continue
+      const v = volleyValue(model, pv.direction, [attackFromPreview(pv, perGroup)]).dv
+      if (v > bv + 1e-9) { bv = v; best = o }
+    }
+    if (best) return best
+  }
   return [...opts].sort((a, b) => {
     const ba = unit.bins[a.binId], bb = unit.bins[b.binId]
     if (!ba || !bb) return 0
@@ -216,6 +309,7 @@ function decidePhysical(ctx: AiCtx, pending: PendingDecision, legal: Action[]): 
   for (const a of legal) {
     if (a.type !== 'declarePhysical' || a.attack.kind === 'none') continue
     const v = choiceValue(ctx, unitId, (a as DeclarePhysicalAction).attack)
+    ctx.note(a, v)
     if (v > bv + 1e-9) { bv = v; best = a }
   }
   return best

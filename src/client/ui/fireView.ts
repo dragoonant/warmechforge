@@ -1,6 +1,7 @@
 // Ranged attack view model (50 §7, §8). Weapon rows, the live heat line and the self-explaining confirm sentence. Every number is
 // from query.attackPreview / query.firePreview; the sentence lists the engine's modifiers in the engine's order.
-import type { AttackPreview, FirePreview, FireShot, GameState, Loc, LosVerdict, RejectionCode, SheetView, UnitId } from '../../engine/index'
+import type { ArcsView, AttackPreview, FirePreview, FireShot, GameState, Loc, LosVerdict, RejectionCode, SheetView, Twist, UnitId } from '../../engine/index'
+import { distance as hexDistance } from '../../engine/hex'
 import { LOS_REASON_LABELS, RANGE_LABELS, formatOdds, unitName } from '../contract'
 import type { Settings } from '../contract'
 import { heatEffectChips, heatParts, heatTotalText, heatWarning, modPhrases, oddsWord, targetHexes, type HeatParts, type HeatRisk, heatRisk } from './format'
@@ -44,7 +45,7 @@ export function weaponLine(state: GameState | null, name: string, loc: Loc, rear
   const where = `${loc}${rear ? ', rear' : ''}`
   // A weapon that cannot fire has no meaningful TN or odds (the engine reports TN 0): show what it is and how far, and let the
   // reason column say why.
-  if (!p.legal) return `${name} (${where}) · ${p.distance} hex${p.distance === 1 ? '' : 'es'} · +${p.heat} heat · ${damageText(p)}`
+  if (!p.legal) return `${name} (${where}) · ${p.distance} hex${p.distance === 1 ? '' : 'es'} · +${p.heat} heat`
   return `${name} (${where}) · ${p.distance} hex${p.distance === 1 ? '' : 'es'} ${RANGE_LABELS[p.band]} · ${oddsMode === 'tn' ? `TN ${p.tn}` : `TN ${p.tn} · ${formatOdds(p.pHit, p.tn)}`} · +${p.heat} heat · ${damageText(p)}`
 }
 
@@ -143,3 +144,38 @@ export function losChips(los: LosVerdict | null): string[] {
 }
 
 export const oddsOf = oddsWord
+
+// ---------- torso twist outcomes ----------
+export interface TwistOutcome {
+  twist: Twist
+  /** Enemies standing in one of the firing arcs this twist gives, with how many working weapons cover each. */
+  targets: { id: UnitId; name: string; weapons: number }[]
+  /** "Rakshasa MDG-1A in arc (3 weapons)", or "no enemy in any arc". */
+  text: string
+}
+const ARC_KEYS = ['front', 'left', 'right', 'rear'] as const
+/**
+ * What each offered twist brings into arc, from the engine's arc query. Range and line of sight are not part of it: the fire
+ * panel shows those. `physical` limits it to adjacent enemies (punch arcs follow the same torso).
+ */
+export function twistOutcomes(state: GameState | null, unitId: UnitId, twists: readonly Twist[], arcsFor: (t: Twist) => ArcsView | null, sheet: SheetView | null, physical = false): TwistOutcome[] {
+  const me = state?.units[unitId]
+  return twists.map((twist): TwistOutcome => {
+    const arcs = arcsFor(twist)
+    const targets: TwistOutcome['targets'] = []
+    if (state && me && arcs) {
+      for (const u of Object.values(state.units)) {
+        if (u.owner === me.owner || u.status !== 'active' || !u.pos) continue
+        const pos = u.pos
+        if (physical && state.units[unitId]?.pos && hexDistance(state.units[unitId]!.pos!, pos) > 1) continue
+        const arc = ARC_KEYS.find((k) => arcs[k].some((h) => h.q === pos.q && h.r === pos.r))
+        if (!arc) continue
+        const weapons = (sheet?.weapons ?? []).filter((w) => !w.destroyed && (arcs.mountArcs[w.mountId] ?? []).includes(arc)).length
+        if (weapons > 0 || physical) targets.push({ id: u.id, name: u.name, weapons })
+      }
+    }
+    const text = targets.length === 0 ? 'no enemy in any arc'
+      : targets.map((t) => (physical ? `${t.name} in front arc` : `${t.name} in arc (${t.weapons} weapon${t.weapons === 1 ? '' : 's'})`)).join(', ')
+    return { twist, targets, text }
+  })
+}

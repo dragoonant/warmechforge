@@ -3,14 +3,14 @@
 // rear-arc gain, LOS, map edge) + noise. Stage 1 scores every entry with the fast additive model against current enemy
 // positions; stage 2 (normal) re-scores the best entries with sampled enemy positions, exact DV and torso-twist options.
 import type { Action, MoveAction, ReachEntry, Twist, UnitAt, UnitId } from '../engine/index'
-import { query } from '../engine/index'
+import { query, validate } from '../engine/index'
 import { facingToward, hexKey, type AiCtx } from './ctx'
 import { targetModel, type TargetModel } from './damage'
 import { enemyModels, fastDealt, heatBase } from './fire'
 import { heatCapFor, heatCost } from './heat'
 import { bestMeleeFrom, directionOf, previewValue } from './physical'
+import { pFail } from './prob'
 import { threatAt } from './threat'
-import { TUNE } from './tune'
 
 export interface MoveScore {
   entry: ReachEntry
@@ -33,12 +33,29 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
   let entries: ReachEntry[] = []
   try { entries = query.reachable(ctx.state, unitId) } catch { entries = [] }
   entries = entries.filter((e) => legalByKey.has(stableKey(e.action)))
+  // MASC (10 EQUIP-021, normal tier): run entries at walk x 2, priced with the activation roll's failure risk below. They are
+  // not in the legal list (legalActions lists plain moves), so the pick is validated before it is returned.
+  const mascRisk = new Map<string, number>()
+  if (ctx.tier.id === 'normal' && entries.length) {
+    const masc = (query.sheet(ctx.state, unitId).equipment ?? []).find((x) => x.kind === 'masc' && x.state === 'ready')
+    if (masc) {
+      let extra: ReachEntry[] = []
+      // only the hexes plain moves cannot reach (the extra MASC ring): the rest adds risk for nothing and doubles the work
+      const plain = new Set(entries.map((e) => hexKey(e.hex)))
+      try { extra = query.reachable(ctx.state, unitId, { masc: true }).filter((e) => e.action.masc && !plain.has(hexKey(e.hex)) && !legalByKey.has(stableKey(e.action))) } catch { extra = [] }
+      // a failed roll destroys the MASC and makes a critical check on a leg; each use raises the next avoid number
+      const risk = pFail(masc.avoidTn ?? null) * (12 + 0.5 * ctx.fallCost(unitId)) + 2
+      for (const e of extra) { const k = stableKey(e.action); legalByKey.set(k, e.action); mascRisk.set(k, risk) }
+      entries = entries.concat(extra)
+    }
+  }
   if (!entries.length) return { action: legal[0]!, top: [] }
   // never risk a piloting roll while passing through another unit's hex: a fall there strands the unit in a shared hex
   const occupied = new Set(ctx.state.unitOrder.filter((id) => id !== unitId && ctx.unit(id).pos && ctx.unit(id).status !== 'destroyed').map((id) => hexKey(ctx.unit(id).pos!)))
   const safe = entries.filter((e) => !e.path.some((p) => p.psr !== null && occupied.has(hexKey(p.hex))))
   if (safe.length) entries = safe
   const t = ctx.tier
+  const T = ctx.tune
   const u = ctx.unit(unitId)
   const facts = ctx.factsOf(unitId)
   const own: TargetModel = targetModel(ctx, unitId)
@@ -67,6 +84,13 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
     return d
   }
   const enemyCentre = enemies.length ? enemies.map((id) => ctx.unit(id).pos!).filter(Boolean) : []
+  const nearestEnemy = (h: ReachEntry['hex']): ReachEntry['hex'] | null => {
+    let best: ReachEntry['hex'] | null = null, d = Infinity
+    for (const p of enemyCentre) { const x = query.distance(h, p); if (x < d) { d = x; best = p } }
+    return best
+  }
+  const friends = ctx.friendsOf().filter((id) => id !== unitId).map((id) => ctx.unit(id).pos!).filter(Boolean)
+  const withdrawing = u.status === 'withdrawing'
 
   const scores: MoveScore[] = []
   for (const e of entries) {
@@ -92,26 +116,34 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
       const d = fastDealt(ctx, unitId, at, targets, cap - base)
       dealt = d.value
       dealtHeat = d.heat
+      if (dealt <= 0 && u.attacks.twist === 0 && !u.prone) {
+        // a torso twist may bring a target into the front arc: a hex with only a twisted shot is not a hex with no shot
+        for (const tw of [-1, 1] as Twist[]) {
+          const x = fastDealt(ctx, unitId, { ...at, twist: tw }, targets, cap - base)
+          if (x.value > dealt) { dealt = x.value; dealtHeat = x.heat }
+        }
+      }
     }
     const H = Math.max(0, Math.round(base + dealtHeat))
     const heat = heatCost(ctx, unitId, H) + (H > cap ? 5 * (H - cap) : 0)
     let psr = 0
-    for (const r of e.psrs) psr += TUNE.psrW * (1 - r.p) * fallU
+    for (const r of e.psrs) psr += T.psrW * (1 - r.p) * fallU
+    psr += mascRisk.get(stableKey(e.action)) ?? 0
     if (e.endsProne) psr += fallU + 20
     let taken = 0, pDying = 0, rear = 0
     if (t.wT > 0) {
-      const th = threatAt(ctx, unitId, usAt, own, { fast: true, sample: false, lambda: TUNE.lambda ?? t.lambda })
+      const th = threatAt(ctx, unitId, usAt, own, { fast: true, sample: false, lambda: T.lambda ?? t.lambda })
       taken = th.taken; pDying = th.pDying; rear = th.rearExposed
     }
     // position terms
     let position = 0
     const info = ctx.hexInfo(e.hex)
-    if (info?.woods === 'light') position += TUNE.woodsL
-    if (info?.woods === 'heavy') position += TUNE.woodsH
-    position += TUNE.tmmW * e.tmm
+    if (info?.woods === 'light') position += T.woodsL
+    if (info?.woods === 'heavy') position += T.woodsH
+    position += T.tmmW * e.tmm
     const nb = ctx.boardNeighbours(e.hex)
     if (nb < 6) position -= 2 + (6 - nb)
-    if (t.wT > 0 && rear > 0) position -= TUNE.rearW * rear // never leave our rear to an enemy that can shoot it
+    if (t.wT > 0 && rear > 0) position -= T.rearW * rear // never leave our rear to an enemy that can shoot it
     if (dealt > 0) position += 0.5 // keep LOS
     // melee from an adjacent end hex (resolved later in the Physical Attack Phase, §6.2)
     if (!e.physical && !e.endsProne) {
@@ -121,14 +153,31 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
       }
     }
     const dist = nearestEnemyDist(e.hex)
-    const approach = enemyCentre.length ? -TUNE.approach * Math.abs(dist - pref) : 0
+    let approach = enemyCentre.length ? -T.approach * Math.abs(dist - pref) : 0
+    if (T.heightW && info && nearestEnemy(e.hex)) {
+      // high ground: better lines of fire over hills and woods, partial cover for us (the previews price this turn only)
+      const el = ctx.hexInfo(nearestEnemy(e.hex)!)?.level ?? info.level
+      position += T.heightW * Math.max(-2, Math.min(2, info.level - el))
+    }
+    if (T.supportW && friends.length) {
+      let near = 0
+      for (const f of friends) if (query.distance(f, e.hex) <= 3) near++
+      position += T.supportW * Math.min(2, near)
+    }
+    if (withdrawing) {
+      // forced withdrawal (11 §3.3): head for the home edge and leave; damage dealt on the way is a bonus
+      const exits = e.action.steps.some((st) => st.op === 'exit')
+      approach = exits ? 40 : -T.withdrawW * ctx.edgeDistance(u.owner, e.hex)
+    }
     scores.push({ entry: e, action: legalByKey.get(stableKey(e.action))!, dealt, taken, heat, psr, approach, physical, position, total: 0, pDying })
   }
   if (!scores.length) return { action: legal[0]!, top: [] }
   const maxDealt = Math.max(...scores.map((s) => s.dealt + s.physical))
-  const approachW = maxDealt <= 0.01 ? TUNE.approachFar : 1
-  const wT = t.wT > 0 ? TUNE.wT ?? t.wT : 0
-  const total = (s: MoveScore): number => t.wD * s.dealt - wT * s.taken - s.heat - s.psr + t.wA * approachW * s.approach + s.physical + s.position
+  const approachW = maxDealt <= 0.01 ? T.approachFar : 1
+  const wT = t.wT > 0 ? T.wT ?? t.wT : 0
+  // an end hex with no shot at all, while another reachable hex has one, wastes the turn (not for withdrawals or falls)
+  const noShotPen = withdrawing ? 0 : Math.max(5, 0.6 * t.wD * maxDealt)
+  const total = (s: MoveScore): number => (maxDealt > 0.01 && s.dealt <= 0.01 && s.physical <= 0 && !s.entry.endsProne ? -noShotPen : 0) + t.wD * s.dealt - wT * s.taken - s.heat - s.psr + t.wA * approachW * s.approach + s.physical + s.position
   for (const s of scores) s.total = total(s)
   scores.sort((a, b) => b.total - a.total)
 
@@ -139,7 +188,7 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
       if (ctx.timeLeft() < 0) break // hard stop only (deterministic in practice: the work per decision is bounded)
       const e = s.entry
       const usAt: UnitAt & { hex: ReachEntry['hex'] } = { hex: e.hex, facing: e.facing, hexesMoved: e.hexesMoved, jumped: e.mode === 'jump', prone: e.endsProne }
-      const th = threatAt(ctx, unitId, usAt, own, { fast: false, sample: t.sampleEnemies, lambda: TUNE.lambda ?? t.lambda })
+      const th = threatAt(ctx, unitId, usAt, own, { fast: false, sample: t.sampleEnemies, lambda: T.lambda ?? t.lambda })
       s.taken = th.taken
       s.pDying = th.pDying
       if (!e.physical && !e.endsProne && u.attacks.twist === 0) {
@@ -162,5 +211,9 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
   // noise (easy plays loose; normal only breaks ties) and a stable tie-break
   if (t.noise > 0) for (const s of scores.slice(0, 40)) s.total += t.noise * Math.max(1, Math.abs(s.total)) * (ctx.rng() * 2 - 1)
   scores.sort((a, b) => b.total - a.total || (stableKey(a.action) < stableKey(b.action) ? -1 : 1))
+  // a MASC move must pass validate (it is not a member of the legal list); otherwise take the best plain move
+  const pick = scores.findIndex((s) => !mascRisk.has(stableKey(s.action)) || validate(ctx.state, s.action) === null)
+  if (pick < 0) return { action: legal[0]!, top: [] }
+  if (pick > 0) scores.splice(0, pick)
   return { action: scores[0]!.action as MoveAction, top: scores.slice(0, 3) }
 }

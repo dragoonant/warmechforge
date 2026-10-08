@@ -4,6 +4,7 @@ import type { AmmoSpent } from './events'
 import type { DataBundle, DataRecord, Id, LocalId, Loc, UnitId, UnitState } from './types'
 import type { Work } from './dice'
 import { unitOf } from './dice'
+import { codesOf, podUsed } from './equipment'
 
 export interface WeaponRec extends DataRecord {
   name?: string
@@ -118,9 +119,12 @@ export function isExplosiveSlot(data: DataBundle, u: UnitState, token: string): 
   const bin = u.bins[id]
   if (bin) return binExplosionRaw(data, u, id) > 0
   const m = u.mounts[id]
-  if (m && !m.destroyed) return !!(weaponRec(data, m.item)?.flags?.includes('explodes') || equipRec(data, m.item)?.explodes)
+  if (m && !m.destroyed) return !!(weaponRec(data, m.item)?.flags?.includes('explodes') || equipRec(data, m.item)?.explodes) || unusedPod(data, m)
   return false
 }
+/** EQUIP-017: an unused coolant pod bursts on a crit. */
+export const unusedPod = (data: DataBundle, m: { item: Id; firedTurn: number | null; destroyed: boolean }): boolean =>
+  !m.destroyed && codesOf(data, m.item).includes('coolantPod') && !podUsed(m as never)
 
 /**
  * AMMO-030 bin choice for a heat explosion: highest damage per shot, then most shots, then (RULING) the first in record

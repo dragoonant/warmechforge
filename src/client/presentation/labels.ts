@@ -120,7 +120,7 @@ export const HEAT_EFFECT_LABELS = {
   shutdown: (v: number) => `shutdown ${v}+`,
   autoShutdown: () => 'shuts down',
   ammo: (v: number) => `ammo ${v}+`,
-  lifeSupport: (v: number) => `pilot hit ${v}+`,
+  lifeSupport: () => 'pilot takes 1 hit (life support damaged)',
 } as const
 
 // ---------- formatting (never computing) ----------
@@ -163,7 +163,9 @@ export function rollVerdict(ev: DiceRolled): string | null {
 }
 
 // ---------- narration (one line per notable event; numbers from the event) ----------
-export function narrate(state: GameState | null, ev: GameEvent): string | null {
+/** Where a unit was when the event happened, tracked by the caller from earlier events (never read from live unit state). */
+export interface NarrateAt { hex?: Hex; facing?: Facing; stayedDown?: boolean }
+export function narrate(state: GameState | null, ev: GameEvent, at: NarrateAt = {}): string | null {
   const n = (id: UnitId | null | undefined) => unitName(state, id)
   switch (ev.type) {
     case 'TurnStarted': return `Turn ${ev.turn} begins.`
@@ -174,15 +176,19 @@ export function narrate(state: GameState | null, ev: GameEvent): string | null {
     case 'MoveEnded': {
       const u = state?.units[ev.unitId]
       if (ev.mode === 'standStill') return `${n(ev.unitId)} holds position.`
+      // hex and facing come from the move's own steps (at), so a past row never changes when the unit moves later
+      const hex = at.hex ?? u?.pos
+      const facing = at.facing ?? u?.facing
+      if (at.stayedDown) return `${n(ev.unitId)} stays down in ${hexName(state, hex)} (${ev.mpSpent} MP spent trying to stand).`
       const verb = ev.mode === 'jump' ? 'jumps' : ev.mode === 'run' ? 'runs' : 'walks'
-      return `${n(ev.unitId)} ${verb} to ${hexName(state, u?.pos)} (${ev.mpSpent} MP), facing ${u ? FACING_LABELS[u.facing] : '?'}.`
+      return `${n(ev.unitId)} ${verb} to ${hexName(state, hex)} (${ev.mpSpent} MP), facing ${facing !== undefined ? FACING_LABELS[facing] : '?'}.`
     }
     case 'PhysicalDeclaredInMove': return `${n(ev.unitId)} commits to a ${ev.kind === 'dfa' ? 'death from above' : 'charge'} on ${n(ev.targetId)}.`
     case 'StandAttempted': return ev.success ? `${n(ev.unitId)} gets back up.` : `${n(ev.unitId)} fails to stand.`
     case 'TorsoTwisted': return ev.flipped ? `${n(ev.unitId)} flips its arms.` : ev.twist === 0 ? null : `${n(ev.unitId)} twists ${ev.twist < 0 ? 'left' : 'right'}.`
     case 'FireDeclared': return ev.shots.length ? `${n(ev.unitId)} fires ${ev.shots.length} weapon${ev.shots.length > 1 ? 's' : ''}.` : `${n(ev.unitId)} holds fire.`
     case 'PhysicalDeclared': return `${n(ev.unitId)} readies a ${ev.kind} on ${n(ev.targetId)} (TN ${ev.tn}).`
-    case 'AttackRolled': return `${n(ev.attackerId)} → ${n(ev.targetId)}: ${ev.auto ? `automatic ${ev.auto}` : `TN ${ev.tn}, rolled ${ev.roll}`} ${ev.hit ? 'HIT' : 'MISS'}.`
+    case 'AttackRolled': return `${n(ev.attackerId)} → ${n(ev.targetId)}: ${ev.auto ? `automatic ${ev.auto}` : `${ev.tn > 0 ? `TN ${ev.tn}, ` : ''}rolled ${ev.roll}`} ${ev.hit ? 'HIT' : 'MISS'}.`
     case 'ClusterResolved': return `${ev.hits} of ${ev.rackSize} hit.`
     case 'DamageApplied': {
       const armor = ev.armorBefore !== ev.armorAfter ? ` armor ${ev.armorBefore}→${ev.armorAfter}` : ''

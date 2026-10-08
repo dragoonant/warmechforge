@@ -16,6 +16,7 @@ import { heatDeps } from './heat'
 import { applyDamage, explodeBin } from './damage'
 import { pickHeatExplosionBin } from './ammo'
 import { bundleFor } from './bundles'
+import { ammoLabel } from './describe'
 import { heatApply } from './phases/heat'
 import { finishInitiativePhase, startInitiativePhase } from './phases/initiative'
 import {
@@ -532,10 +533,16 @@ function fireOutcome(r: Run, out: FireOutcome, action: DeclareFireAction, choice
     // offer only the bins under which the whole declaration stays legal (an ammo type can change the weapon's ranges)
     const fits = ac.bins.filter((b) => !declareFire(r.s, r.data, action, { ammoChoices: { ...choices, [ac.mountId]: b.binId } }).rejection)
     const bins = fits.length > 0 ? fits : ac.bins
+    if (bins.length === 1) { // one legal bin: nothing to ask (00 §9.2)
+      const only = bins[0]!
+      autoResolve(r, 'chooseAmmo', only.binId)
+      const next = { ...choices, [ac.mountId]: only.binId }
+      return fireOutcome(r, declareFire(r.s, r.data, action, { ammoChoices: next }), action, next)
+    }
     r.s = parkDeclaration(r.s, action, choices)
     const u = r.s.units[action.unitId]!
     raise(r, { ...base(r.s, 'chooseAmmo', u.owner, u.id, { phase: 'rangedAttack', mountId: ac.mountId, bins }),
-      options: bins.map((b) => opt(b.binId, `${b.ammo} (${b.shots})`, { type: 'chooseAmmo', decisionId: '', player: u.owner, mountId: ac.mountId, binId: b.binId })) })
+      options: bins.map((b) => opt(b.binId, ammoLabel(r.s, b.ammo, b.shots), { type: 'chooseAmmo', decisionId: '', player: u.owner, mountId: ac.mountId, binId: b.binId })) })
     return
   }
   push(r, out)

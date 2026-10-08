@@ -1,10 +1,13 @@
 // Main-thread side of the AI worker (40-ai §14): one module worker, the data bundle posted once per version, one request per
 // decision and a 3 s timeout. Resolves null (the caller falls back to the random bot) when the worker is unavailable,
-// fails or times out; logs `AiFallback {kind, ms}` to the console when that happens.
+// fails or times out; logs `AiFallback {kind, ms}` to the console when that happens. Every request asks for the decision trace,
+// which goes to the trace store (ui/AiTrace.tsx) and never back into play.
 import type { Action, GameState } from '../../engine/index'
 import { bundleFor, view } from '../../engine/index'
 import type { UtilityTier } from '../../ai/tiers'
 import type { WorkerRequest, WorkerResponse } from '../../ai/worker'
+import type { AiTrace } from '../../ai/decider'
+import { publishTrace } from './traceStore'
 
 export const AI_TIMEOUT_MS = 3000
 
@@ -38,7 +41,7 @@ export function createAiWorkerClient(opts: { timeoutMs?: number; worker?: Worker
   let seq = 0
   let broken = false
   const versions = new Set<string>()
-  const waiting = new Map<number, (a: Action | null) => void>()
+  const waiting = new Map<number, (a: Action | null, trace?: AiTrace) => void>()
   const fail = (why: string, kind: string, ms: number): void => { console.warn('[ai worker] AiFallback', { kind, ms: Math.round(ms), why }) }
   worker.onmessage = (ev) => {
     const m = ev.data
@@ -48,7 +51,7 @@ export function createAiWorkerClient(opts: { timeoutMs?: number; worker?: Worker
     const done = waiting.get(m.id)
     if (!done) return
     waiting.delete(m.id)
-    if (m.type === 'action') done(m.action)
+    if (m.type === 'action') done(m.action, m.trace as AiTrace | undefined)
     else { console.warn('[ai worker]', m.message); done(null) }
   }
   worker.onerror = (e) => {
@@ -67,7 +70,13 @@ export function createAiWorkerClient(opts: { timeoutMs?: number; worker?: Worker
         const timer = setTimeout(() => {
           if (waiting.delete(id)) { fail('timeout', state.pending.kind, Date.now() - t0); resolve(null) }
         }, timeoutMs)
-        waiting.set(id, (a) => { clearTimeout(timer); if (!a) fail('error', state.pending.kind, Date.now() - t0); resolve(a) })
+        const meta = { seed: state.seed, turn: state.turn, phase: state.phase, player: state.pending.player }
+        waiting.set(id, (a, trace) => {
+          clearTimeout(timer)
+          if (!a) fail('error', state.pending.kind, Date.now() - t0)
+          else publishTrace(trace, meta)
+          resolve(a)
+        })
         try {
           const bundle = bundleFor(state)
           if (!versions.has(bundle.version)) {
@@ -76,7 +85,7 @@ export function createAiWorkerClient(opts: { timeoutMs?: number; worker?: Worker
           }
           worker.postMessage({
             type: 'decide', id, view: view(state, state.pending.player), pending: state.pending, legal, decisionSeq: state.decisionSeq, tier,
-            ...(seed ? { seed } : {}),
+            ...(seed ? { seed } : {}), trace: true,
           } satisfies WorkerRequest)
         } catch (e) {
           waiting.delete(id); clearTimeout(timer)

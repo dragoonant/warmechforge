@@ -22,39 +22,43 @@ Questions:
    rulebook would settle most of them.
 
 Content: all 8 chassis (stock variants), the 4 Core Box maps, Skirmish any-vs-any
+M7: the roster's special equipment works by the rules (AI uses it; player controls still to come), press T for the threat overlay, and the end screen shows per-'Mech damage with Play again / Rematch / Back to setup.
 
 ## Current state
-- Engine: `src/engine/` (rules, queries, text). M5 added ferro-lamellor (damage.ts, 10 EQUIP-014: 1 point per 5 stopped while
-  the struck armor stands; `DamageApplied.reduced`), the Clan targeting computer -1 for direct-fire weapons (ranged.ts, EQUIP-001)
-  and Guardian ECM cancelling hostile Artemis IV (cluster.ts, EQUIP-015). LB-X slug/cluster ammo choice, the Ultra AC two-shot
-  cluster and the Gauss crit explosion already worked and are now tested on the real roster (`tests/engine/equipment-m5.test.ts`).
-  Stacking after a fall (MOVE-012) resolves when the fallen unit's move ends (movement.ts `resolveStacking`).
-- Data: 16 'Mechs (two variants for each of the 8 Core Box chassis; unknown box variants are public stock stand-ins labelled
-  "(stock)"), the 4 Core Box maps (Scorched Oasis, Arid Canyons, Headwater Crossing, Sodden Hills; layouts cross-checked with
-  MegaMek boards) plus the dev map Test Canyons; the intro mission now plays on Scorched Oasis. Presets: Regent Lance, Mad Cat Lance.
-- AI (M4): `src/ai/` utility decider, tiers random / easy / normal, in a Web Worker in the browser (3 s timeout, random-bot fallback).
-- Client: start screen Skirmish has an any-vs-any picker (`ui/start/SkirmishPicker.tsx`, model in `startOptions.ts`): 1-4 'Mechs per
-  side from every data 'Mech (chassis + variant dropdowns, "(stock)" labels, base BV), G/P skills per 'Mech (default 4/5), adjusted
-  BV per pick and side totals, an Even BV button (moves the bot side's pilot skills), and the map list (4 Core Box maps, then the
-  dev map). Hand-picked sides are sent as `NewGameOptions.lineups` and skip the 7500 BV budget (RULING).
-- Tools: `npm run sim` and `npm run bench:ai` take `--map <id>` and `--forces A,B` (force ids or '+'-joined 'Mech ids) or
-  `--forces random` (seeded 1-4 'Mechs per side from the whole roster, skirmish rules).
-- Checks: `npm run typecheck`, `npm test` (46 files, 437 tests), `npm run validate:data`, `npm run sim -- --games 30 --seed 5` (also with
-  `--forces random --map map.scorched-oasis`), `npm run bench:ai -- --games 10 --seed 2`, `PW_PORT=4183 npx playwright test`
-  (play.spec + skirmish.spec; screenshots in `e2e-out/`, incl. `skirmish-setup.png` and `scorched-oasis.png`).
+- Engine: `src/engine/` (rules, queries, text). M5 added ferro-lamellor (EQUIP-014), the Clan targeting computer (EQUIP-001) and
+  Guardian ECM vs Artemis IV (EQUIP-015). M7 added `equipment.ts` and wired every hook point (00 §14 rows tagged M6; `HOOK_WIRING`
+  in hooks.ts names the call sites): PPC capacitor (`DeclareFireAction.charge`, EQUIP-016), coolant pod (`coolantPod`, EQUIP-017),
+  Clan MASC (`MoveAction.masc`, `query.reachable(..., {masc})`, escalating failure EQUIP-020/021), RAC jam / unjam (EQUIP-022),
+  partial wing via the heat and movement hooks (EQUIP-018), Beagle probe no-op (EQUIP-023). Events `EquipmentUsed`,
+  `WeaponJamChanged`; `SheetView.equipment` carries capacitor / pod / MASC / jam state. Involuntary stacking reports
+  `UnitDisplaced.cause: 'stacking'`.
+- Data: 16 'Mechs (two variants per Core Box chassis; unknown box variants are public stock stand-ins labelled "(stock)"), the 4
+  Core Box maps plus the dev map Test Canyons; the intro plays on Scorched Oasis with a new briefing. Presets: Regent Lance, Mad Cat Lance.
+  All 8 chassis have generated GLB figures (`public/assets/models/`).
+- AI: `src/ai/` utility decider, tiers random / easy / normal, in a Web Worker (3 s timeout, random-bot fallback). M7: roster-wide
+  play (LB-X / MML ammo choice, explosion risk, ECM vs Artemis, jumpers, woods and elevation), capacitor charge, coolant pod, MASC
+  run entries priced by failure risk, Ultra AC double tap, forced-withdrawal exit preference.
+- Client: Skirmish any-vs-any picker (M5). M7: threat overlay (`interaction/ThreatOverlay.tsx`, T key or the Threat button), AI trace
+  panel (`ui/AiTrace.tsx`), Settings > Follow action (camera frames bot moves and attacks, hands the view back on your turn), end
+  screen with mini sheets per 'Mech (`ui/MiniSheet.tsx`), kills and heat peaks, Play again / Rematch, same forces / Back to setup;
+  How to Play equipment + Skirmish sections; record-sheet hover tips (`ui/Tip.tsx`); softer water seams; Low graphics audit.
+- Tools: `npm run sim` and `npm run bench:ai` take `--map <id>` and `--forces`; the bench also sweeps `--map a,b|all`,
+  `--forces "A,B;C,D"` and `--withdrawal`.
+- Checks: `npm run typecheck`, `npm test` (50 files, 470 tests), `npm run validate:data`, `npm run sim -- --games 30 --seed 7`
+  (30/30, 0 violations), `npm run bench:ai -- --games 20 --seed 1` (normal vs random 19/20, vs easy 16/20, 0 rejections / stalls /
+  fallbacks), `PW_PORT=4183 npx playwright test` (play, skirmish, polish specs; `e2e-out/polish-*.png`).
 
 ## Next
-1. Owner playtest on Pages: Skirmish with any 'Mechs on the four Core Box maps; does the picker read well, is Even BV useful?
-2. Equipment still unmodelled (all optional to use): PPC capacitor charge (Regent A), coolant pod (Regent A), Clan MASC sprint
-   (Solitaire 2), other ECM effects. The fire panel and AI cannot fire an Ultra AC twice yet; previews and the AI ignore
-   ferro-lamellor. List: `tools/out/m5-followups.md`.
-3. M3 figure gate (Solitaire and Regent GLBs), then figures for the other six chassis.
-4. Threat overlay (T), AI trace overlay, 40-ai §4.5 Monte Carlo refinement.
+1. Owner playtest on Pages: Skirmish vs the normal AI; try the threat overlay (T), Follow action and the new end screen.
+2. Player controls for the new equipment: "2 shots" for Ultra ACs, Charge for capacitor PPCs, Vent coolant pod, MASC in Run mode
+   (engine and AI already support them). List: `tools/out/m7-followups.md`.
+3. Ferro-lamellor in `attackPreview` / `firePreview` and the AI damage model; skirmish turn-limit and withdrawal options.
+4. M8: smoke and hidden units (Beagle probe effects), 40-ai §4.5 Monte Carlo, figure-gate follow-ups, audio when a key arrives.
 
 ## Known gaps
-- Only the Solitaire and the Regent have generated GLB figures; the other 'Mechs use procedural stand-ins.
-- Unmodelled equipment above; skirmish turn-limit and withdrawal choices are not on the start screen yet.
-- Water pools show the sea-bed steps between hexes of different depth through the surface; reads fine, could be softer.
-- The camera follows the acting 'Mech only when it is off screen; there is no auto-camera for the bot's moves.
-- Hook points other than initiative, toHit, attackRolled, crit and setup are not called yet; `choice` decisions
-  (askDefender) are never raised (defaults decide).
+- The player cannot charge a capacitor, vent a coolant pod, use MASC or double-tap an Ultra AC; only the AI does.
+- Previews and the AI damage model ignore ferro-lamellor (about 20 % high against a Vulture Mk IV).
+- Skirmish turn-limit and withdrawal choices are not on the start screen; no AI force picker.
+- Water pools still show the sea-bed steps faintly at low camera angles.
+- Beagle probe has no effect yet; Guardian ECM only cancels hostile Artemis; RAC tested only with a fixture weapon.
+- `choice` decisions (askDefender) are never raised (defaults decide).

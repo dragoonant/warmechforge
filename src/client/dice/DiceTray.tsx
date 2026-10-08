@@ -24,7 +24,7 @@ export function RollCard({ view, rolling, compact }: { view: RollView; rolling?:
       </div>
       {!rolling && (
         <div className="tray-result">
-          <span className="tray-total" data-testid={`tray-total-${view.rollId}`}>{view.total}</span>
+          {!view.hideTotal && <span className="tray-total" data-testid={`tray-total-${view.rollId}`}>{view.total}</span>}
           {view.target !== null && <span className="tray-target" data-testid={`tray-target-${view.rollId}`}>vs {view.targetWord} {view.target}</span>}
           <span className="tray-verdict" data-testid={`tray-verdict-${view.rollId}`}>{view.verdict.word}</span>
         </div>

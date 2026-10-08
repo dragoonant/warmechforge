@@ -1,7 +1,7 @@
 // HUD view models (50 §17): dice renderers, prompt / fire sentences, move view, sheet view, feed, heat scale, physical panel,
 // top bar and end screen. Headless: the views are pure; games are played through the client store at speed 0.
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { ROLL_PURPOSES, query, type DiceRolled, type FirePlan, type GameState, type Loc, type PendingDecision, type SheetView } from '../../src/engine/index'
+import { ROLL_PURPOSES, query, type GameEvent, type DiceRolled, type FirePlan, type GameState, type Loc, type PendingDecision, type SheetView } from '../../src/engine/index'
 import { newGame, resetGameStore, useGameStore, legalFor } from '../../src/client/store/gameStore'
 import { memoryStorage, setStorage } from '../../src/client/store/storage'
 import { useSettingsStore } from '../../src/client/store/settingsStore'
@@ -306,7 +306,7 @@ describe('HUD event feed view', () => {
     expect(rows.every((r) => r.text.length > 0)).toBe(true)
     const seqs = rows.map((r) => r.seq)
     expect(new Set(seqs).size).toBe(seqs.length)
-    const attacks = rows.filter((r) => / TN \d+ (rolled \d+|automatic \w+) (HIT|MISS)/.test(r.text))
+    const attacks = rows.filter((r) => / (TN \d+ rolled \d+|rolled \d+|automatic \w+) (HIT|MISS)/.test(r.text))
     expect(attacks.length).toBeGreaterThan(5)
     const hit = attacks.find((r) => r.tone !== 'miss' && r.text.includes('armor'))
     expect(hit, 'a hit row carries its armor before -> after').toBeTruthy()
@@ -316,6 +316,30 @@ describe('HUD event feed view', () => {
       expect(line, r.text).toBeTruthy()
     }
     expect(rows.some((r) => r.text.startsWith('Heat:'))).toBe(true)
+    expect(rows.some((r) => /TN -?\d+ automatic|TN 0 /.test(r.text))).toBe(false)
+  })
+
+  it('FEED-002 move rows keep the hex and facing of the move, whatever the unit does later', () => {
+    const final = playToEnd('feed-2')
+    const feed = usePresentedStore.getState().feed
+    const rows = buildFeed(final, feed)
+    const moves = rows.filter((r) => / (walks|runs|jumps) to /.test(r.text))
+    expect(moves.length).toBeGreaterThan(4)
+    const moved = { ...final, units: Object.fromEntries(Object.entries(final.units).map(([k, u]) => [k, { ...u, pos: { q: 0, r: 0 }, facing: 3 }])) } as GameState
+    expect(buildFeed(moved, feed).filter((r) => / (walks|runs|jumps) to /.test(r.text)).map((r) => r.text)).toEqual(moves.map((r) => r.text))
+  })
+})
+
+describe('critSlot dice labels', () => {
+  it('DICE-010 a rejected slot roll says the slot was already hit; the accepted roll names its slot', () => {
+    const roll = (rollId: string, dice: number[]) => ({ type: 'DiceRolled', rollId, purpose: 'critSlot', dice, kept: dice, total: dice.reduce((a, b) => a + b, 0), unitId: 'u', reason: 'CT' }) as unknown as DiceRolled
+    const r1 = roll('r:1', [4, 4]), r2 = roll('r:2', [1, 4])
+    const hit = { type: 'CritSlotHit', unitId: 'u', location: 'CT', index: 3, token: 'gyro', itemName: 'Gyro', effect: 'gyro' } as unknown as GameEvent
+    const feed = [{ seq: 2, event: r2 }, { seq: 3, event: hit }]
+    const v1 = viewRoll({ seq: 1, event: r1, label: 'x' }, null, feed)
+    expect(v1.verdict.word).toBe('lower half, slot 10 already hit, roll again')
+    expect(v1.hideTotal).toBe(true)
+    expect(viewRoll({ seq: 2, event: r2, label: 'x' }, null, feed).verdict.word).toBe('upper half, slot 4: Gyro')
   })
 })
 
@@ -374,7 +398,7 @@ describe('HUD prompts and top bar', () => {
     const final = playToEnd('over-1')
     const result = final.result!
     const stats = useGameStore.getState().stats
-    const v = buildOver(final, result, stats)
+    const v = buildOver(final, result, stats, useGameStore.getState().unitStats)
     expect(v.sides).toHaveLength(2)
     expect(v.sides[0]!.dealt).toBe(stats.A.damageDealt)
     expect(v.sides[1]!.taken).toBe(stats.B.damageTaken)

@@ -1,6 +1,7 @@
 import type { SheetView } from '../../../engine/index'
 import { LOC_SHORT } from '../../contract'
-import { buildWeaponRows } from './sheetView'
+import { tipProps } from '../Tip'
+import { buildWeaponRows, weaponTip } from './sheetView'
 
 /** Name, location, heat, damage, min / short / medium / long (hexes) and ammo left. Destroyed weapons are struck through. */
 export function WeaponsTable({ sheet }: { sheet: SheetView }) {
@@ -15,7 +16,7 @@ export function WeaponsTable({ sheet }: { sheet: SheetView }) {
         {rows.map((w) => (
           <tr
             key={w.mountId} data-testid={`sheet-weapon-${w.mountId}`} data-destroyed={w.destroyed || w.orphaned ? 'true' : 'false'}
-            className={`${w.destroyed ? 'w-struck' : ''}${w.orphaned ? ' w-grey' : ''}${w.fired ? ' w-fired' : ''}`}
+            className={`${w.destroyed ? 'w-struck' : ''}${w.orphaned ? ' w-grey' : ''}${w.fired ? ' w-fired' : ''}`} tabIndex={0} {...tipProps(weaponTip(sheet, w))}
           >
             <td>{w.name}{w.rear ? ' (rear)' : ''}</td><td>{LOC_SHORT[w.location]}</td><td>{w.heat}</td><td>{w.damage}</td>
             <td>{w.min}</td><td>{w.short}</td><td>{w.medium}</td><td>{w.long}</td><td>{w.ammo}</td>

@@ -176,10 +176,10 @@ describe('procedural rig and status visuals', () => {
     expect(heatGlow(9, false).colour).toBe('none')
     expect(heatGlow(15, true).colour).toBe('none')
     const a = heatGlow(10, false), b = heatGlow(19, false)
-    expect(a.colour).toBe('orange'); expect(a.intensity).toBeCloseTo(0.15); expect(b.intensity).toBeCloseTo(0.45)
+    expect(a.colour).toBe('orange'); expect(a.intensity).toBeCloseTo(0.06); expect(b.intensity).toBeCloseTo(0.2)
     const r = heatGlow(20, false)
-    expect(r.colour).toBe('red'); expect(r.intensity).toBeCloseTo(0.5); expect(r.pulse).toBe(true)
-    expect(heatGlow(40, false).intensity).toBeLessThanOrEqual(0.8)
+    expect(r.colour).toBe('red'); expect(r.intensity).toBeCloseTo(0.22); expect(r.pulse).toBe(true)
+    expect(heatGlow(40, false).intensity).toBeLessThanOrEqual(0.4)
   })
 
   it('force colours: the trim of a dark main is light and the trim of a light main is dark', () => {
@@ -308,10 +308,10 @@ describe('overlay view models', () => {
     expect(v.hexes.map((h) => h.q)).toEqual([1, 2, 3]) // the turn does not add a hex
   })
 
-  it('arcs: sides blue-grey, rear red, front outline only', () => {
+  it('arcs: sides blue-grey, rear red, front shaded lightly and outlined', () => {
     const f = arcFills({ front: [{ q: 0, r: 0 }], left: [{ q: 1, r: 0 }], right: [{ q: 2, r: 0 }], rear: [{ q: 3, r: 0 }], mountArcs: {} })
-    expect(f.fills.map((x) => x.kind)).toEqual(['left', 'right', 'rear'])
-    expect(f.fills.every((x) => x.opacity === 0.15)).toBe(true)
+    expect(f.fills.map((x) => x.kind)).toEqual(['left', 'right', 'rear', 'frontFill'])
+    expect(f.fills.every((x) => x.opacity >= 0.2)).toBe(true)
     expect(f.frontOutline).toEqual([{ q: 0, r: 0 }])
     expect(arcFills(null)).toEqual({ fills: [], frontOutline: [] })
   })

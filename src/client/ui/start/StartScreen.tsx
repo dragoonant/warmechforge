@@ -118,7 +118,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
                 </button>
               ))}
             </div>
-            {mission && <p className="start-brief" data-testid="start-briefing">{mission.briefing}</p>}
+            {mission && <p className="start-brief" data-testid="start-briefing">{mission.kind === 'skirmish' ? "Pick any 'Mechs for each side, then fight a single battle on any ready map. The BV totals and Even BV help you balance the two sides. The last side with a fighting force wins." : mission.briefing}</p>}
             {maps.length > 0 && (
               <label>Map
                 <select data-testid="start-map" value={form.map ?? maps[0]!.id} onChange={(e) => patch({ ...form, map: e.target.value })}>

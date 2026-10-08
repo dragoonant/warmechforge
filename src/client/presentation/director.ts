@@ -218,7 +218,8 @@ export function setPaused(paused: boolean): void {
 }
 
 /** New game or load: drop everything queued and present `state` as of `seq` with no animation. */
-export function resetPresentation(state: GameState | null, seq = 0): void {
+/** `history`: events already played (a loaded game); they fill the feed and the dice log without animation. */
+export function resetPresentation(state: GameState | null, seq = 0, history: readonly SeqEvent[] = []): void {
   if (timer !== null) clock.clearTimeout(timer)
   timer = null
   timerBeat = null
@@ -227,7 +228,22 @@ export function resetPresentation(state: GameState | null, seq = 0): void {
   fastForward = false
   draft = { patch: {}, feed: [], dice: [], lines: [] }
   resetAnnouncements()
-  usePresentedStore.setState({ ...INITIAL_PRESENTED, paused: usePresentedStore.getState().paused, state, cursor: seq, rev: usePresentedStore.getState().rev + 1 })
+  const feed: FeedEntry[] = []
+  const diceLog: ShownRoll[] = []
+  if (state && history.length) {
+    let turn = 0
+    for (const se of history) {
+      if (se.event.type === 'TurnStarted') turn = se.event.turn
+      feed.push({ seq: se.seq, event: se.event, text: describeSafe(state, se), turn })
+      if (se.event.type === 'DiceRolled') {
+        diceLog.push({ seq: se.seq, event: se.event, label: rollLabel(state, se.event), verdict: rollVerdict(se.event), startedAt: 0, durationMs: 0 })
+      }
+    }
+  }
+  usePresentedStore.setState({
+    ...INITIAL_PRESENTED, paused: usePresentedStore.getState().paused, state, cursor: seq, rev: usePresentedStore.getState().rev + 1,
+    feed: feed.slice(-FEED_LIMIT), diceLog: diceLog.slice(-DICE_LOG_LIMIT),
+  })
 }
 
 /** Batches waiting plus the one playing (diagnostics). */

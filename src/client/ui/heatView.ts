@@ -16,7 +16,7 @@ export function effectChip(e: HeatScaleRow['effects'][number]): string {
     case 'shutdown': return HEAT_EFFECT_LABELS.shutdown(e.value)
     case 'autoShutdown': return HEAT_EFFECT_LABELS.autoShutdown()
     case 'ammo': return HEAT_EFFECT_LABELS.ammo(e.value)
-    case 'lifeSupport': return HEAT_EFFECT_LABELS.lifeSupport(e.value)
+    case 'lifeSupport': return HEAT_EFFECT_LABELS.lifeSupport()
   }
 }
 
@@ -32,10 +32,12 @@ export interface ThresholdView {
 const keyOf = (r: HeatScaleRow): string => r.effects.map((e) => `${e.code}${e.value}`).join('|')
 
 /** Levels at which the effect set changes, with the one in force now and at the projected level marked. */
-export function buildThresholds(scale: readonly HeatScaleRow[], current: number, projected: number | null): ThresholdView[] {
+export function buildThresholds(scale: readonly HeatScaleRow[], current: number, projected: number | null, lifeSupportDamaged = false): ThresholdView[] {
   const out: ThresholdView[] = []
   let prev = ''
-  for (const r of scale) {
+  for (const row of scale) {
+    // the life-support pilot hit only matters to a 'Mech whose life support is damaged (HEAT-025)
+    const r = lifeSupportDamaged ? row : { ...row, effects: row.effects.filter((e) => e.code !== 'lifeSupport') }
     const k = keyOf(r)
     if (k !== prev && r.effects.length > 0) out.push({ level: r.level, chips: r.effects.map(effectChip), active: false, projected: false })
     prev = k
@@ -45,6 +47,15 @@ export function buildThresholds(scale: readonly HeatScaleRow[], current: number,
   if (a >= 0) out[a]!.active = true
   if (p >= 0 && p !== a) out[p]!.projected = true
   return out
+}
+
+/** Hover lines for a heat-scale row: from this heat up, until the next row, these things happen. */
+export function thresholdTip(t: ThresholdView, next: ThresholdView | undefined): { title: string; lines: string[] } {
+  const span = next ? `heat ${t.level} to ${next.level - 1}` : `heat ${t.level} and above`
+  return {
+    title: `At ${span}`,
+    lines: [...t.chips, t.active ? 'This is where this machine is now.' : t.projected ? 'This is where it would end the turn if you do this.' : 'Heat is checked at the end of every turn, after the heat sinks work.'],
+  }
 }
 
 export interface HeatSegment { level: number; tone: HeatTone; filled: boolean; marker: 'current' | 'projected' | null }

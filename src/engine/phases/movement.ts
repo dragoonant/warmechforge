@@ -63,7 +63,8 @@ export function legalMovementActions(state: GameState): Action[] {
   const unitId = p.unitId
   if (!unitId) return []
   const u = state.units[unitId]!
-  if (p.kind === 'move') return reachable(state, unitId).map((e) => e.action)
+  // MASC run moves (EQUIP-021) are legal answers too; query.reachable lists them only when asked ({masc: true})
+  if (p.kind === 'move') return [...reachable(state, unitId), ...reachable(state, unitId, { masc: true })].map((e) => e.action)
   if (p.kind !== 'standUp') return []
   const base = { type: 'standUp' as const, decisionId: p.id, player: u.owner, unitId }
   const out: StandUpAction[] = []

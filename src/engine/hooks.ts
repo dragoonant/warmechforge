@@ -19,24 +19,26 @@ export const HOOK_WIRING: Readonly<Record<HookPoint, string>> = {
   passive: 'query.* and every point below read passive values through collectHooks(state, unitId, "passive")',
   setup: 'setup.ts createInitialState, once per unit after its record is built',
   initiative: 'phases/initiative.ts, the side modifier added to each initiative roll',
-  movement: 'movement.ts currentMp() and the Movement Phase move handler (sprint MP, escalating failure, RAC unjam)',
-  attackDeclare: 'phases/ranged.ts and phases/physical.ts validation of each shot (may reject or add constraints)',
+  movement: 'movement.ts jumpMp()/currentMp() MP bonuses (partial wing jump, MASC run) and executeMove (RAC unjam, MASC activation)',
+  attackDeclare: 'phases/ranged.ts declareFire validation of each shot, items on or linked to the firing mount (may reject)',
   toHit: 'tohit.ts modifier list (extra Mod lines)',
-  attackRolled: 'phases/ranged.ts right after the toHit DiceRolled (RAC jam, capacitor)',
+  attackRolled: 'damage.ts resolveAttack right after the toHit roll, items on or linked to the firing mount (RAC jam, capacitor)',
   hitLocation: 'hitloc.ts after the location roll (location override)',
-  cluster: 'cluster.ts cluster roll modifier',
-  damage: 'damage.ts per hit before armor (damage adjustment, e.g. ferro-lamellor)',
+  cluster: 'cluster.ts ecmBlocksArtemis: hostile items that change the cluster roll of an attack (Guardian ECM vs Artemis IV)',
+  damage: 'damage.ts weaponDamageBonus: per-hit damage of a ranged shot, items linked to the firing mount (PPC capacitor)',
   crit: 'crits.ts when a slot holding the item is hit (autocannon first crit, explosions, CASE)',
   psr: 'psr.ts TN modifier lines',
-  heat: 'heat.ts Heat Phase ledger entries and dissipation adjustments',
+  heat: 'heat.ts dissipation(): dissipation adjustments (partial wing, coolant pod)',
   consciousness: 'pilot.ts consciousness and recovery TN modifier lines',
-  endPhase: 'phases/end.ts once per unit per End Phase (escalating failure step down, jam clearing)',
+  endPhase: 'phases/end.ts runEndPhaseA once per unit on the map (escalating failure step down)',
 }
 
 /** Hook names fixed by 20 §12.2. 'ultraRapid' is a NO-OP that never rolls: 2026 W11, Ultra ACs do not jam (validate-data: Ultra weapons carry no jamHook). SPA hooks are 'spa.<name>'. */
 export const EQUIPMENT_HOOKS = [
   'racJam', 'ultraRapid', 'xPulse', 'improvedHeavyGauss', 'ppcCapacitor', 'targetingComputer', 'supercharger',
   'caseProtect', 'caseIIProtect', 'ferroLamellor',
+  // M6 (additive, 00 §14): equipment the stock roster carries
+  'coolantPod', 'masc', 'partialWing', 'beagleProbe', 'guardianEcm',
 ] as const
 export type EquipmentHookName = (typeof EQUIPMENT_HOOKS)[number]
 export type HookName = EquipmentHookName | `spa.${string}`
@@ -86,7 +88,13 @@ const REGISTRY: CodeHookRegistry = Object.fromEntries(CODE_HOOKS.map((h) => [h.n
 /** Every registered hook by name (read-only view; tests and validate-data read it). */
 export function registeredHooks(): Readonly<CodeHookRegistry> { return REGISTRY }
 
-interface CodeCarrier { code?: string[] }
+interface CodeCarrier { code?: string[]; rapidFire?: { jamHook?: string } }
+/** Hook names a record carries: its `code` list, then a rapid-fire weapon's `rapidFire.jamHook` (20 §3.1) when not already listed. */
+const namesOf = (r: CodeCarrier | undefined): string[] => {
+  const code = r?.code ?? []
+  const jam = r?.rapidFire?.jamHook
+  return jam && !code.includes(jam) ? [...code, jam] : code
+}
 interface SpaCarrier { hook?: string }
 function lookup(name: string): CodeHook {
   const h = REGISTRY[name]
@@ -95,7 +103,8 @@ function lookup(name: string): CodeHook {
 }
 
 /**
- * The hooks a unit carries at one point, in a fixed order: intact mounts (record order, each item's data `code` list), then
+ * The hooks a unit carries at one point, in a fixed order: intact mounts (record order, each item's data `code` list plus a
+ * rapid-fire weapon's `rapidFire.jamHook`), then
  * ammo bins (loaded ammo's `code`), then pilot SPAs ('spa.<hook>'). A destroyed mount or a mount in a destroyed location
  * carries no hook. Unknown names throw EngineInvariantError (validate-data refuses them first).
  */
@@ -110,7 +119,7 @@ export function collectHooksWith(data: DataBundle, state: GameState, unitId: Uni
   const out: BoundHook[] = []
   for (const m of Object.values(u.mounts)) {
     if (m.destroyed || u.locs[m.location].destroyed) continue
-    for (const name of (data.byId[m.item] as CodeCarrier | undefined)?.code ?? []) {
+    for (const name of namesOf(data.byId[m.item] as CodeCarrier | undefined)) {
       const hook = lookup(name)
       if (hook.points.includes(point)) out.push({ hook, unitId, sourceId: m.item, mountId: m.id })
     }

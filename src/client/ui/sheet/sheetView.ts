@@ -1,7 +1,8 @@
 // Record sheet view model (50 §10, our own layout). Pure: SheetView (engine) in, display rows out. Fractions are for drawing
 // only; every number printed comes from the sheet query.
 import type { Loc, Mod, SheetView, UnitState } from '../../../engine/index'
-import { LOC_SHORT, STATUS_LABELS } from '../../contract'
+import { LOC_LABELS, LOC_SHORT, STATUS_LABELS } from '../../contract'
+import type { TipContent } from '../Tip'
 import { modPhrases } from '../format'
 
 export type CellState = 'full' | 'damaged' | 'exposed' | 'destroyed'
@@ -176,3 +177,30 @@ export function statusChips(sheet: SheetView, unit: Pick<UnitState, 'status' | '
 }
 
 export const modsText = (mods: readonly Mod[]): string => modPhrases(mods).join(', ')
+
+// ---------- hover tooltips ----------
+/** Hover lines for a weapon row: what it is, what it does, how far it reaches. Numbers are the sheet's own. */
+export function weaponTip(sheet: SheetView, w: WeaponRowView): TipContent {
+  const reach = w.short === '-' ? 'no range data' : `short up to ${w.short} hexes, medium up to ${w.medium}, long up to ${w.long}`
+  const lines = [
+    `Damage ${w.damage} · heat ${w.heat} when fired`,
+    `Reach: ${reach}${w.min !== '-' ? `; closer than ${w.min} hexes is harder` : ''}`,
+    w.ammo !== '-' ? `Ammo left: ${w.ammo}` : 'No ammunition needed',
+  ]
+  if (w.orphaned) lines.push(`Cannot fire: the ${LOC_LABELS[w.location]} is gone`)
+  else if (w.destroyed) lines.push('Destroyed: it cannot fire')
+  else if (w.fired) lines.push('Already fired this turn')
+  void sheet
+  return { title: `${w.name} · ${LOC_LABELS[w.location]}${w.rear ? ' (rear-facing)' : ''}`, lines }
+}
+
+/** Hover lines for one critical slot. */
+export function critTip(loc: Loc, s: CritSlotView): TipContent {
+  const where = `${LOC_LABELS[loc]}, slot ${s.index + 1}`
+  if (s.empty) return { title: 'Empty slot', lines: [where, 'Nothing is mounted here, so a critical hit on it does no harm.'] }
+  const lines = [where]
+  if (s.hit) lines.push('Hit: this item was damaged and is out of action.')
+  else lines.push('Working. A critical hit on this slot would knock the item out.')
+  if (s.ammo && s.shots !== null) lines.push(`${s.shots} shots left. Ammunition can explode if this slot is hit.`)
+  return { title: s.label, lines }
+}

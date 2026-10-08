@@ -1,6 +1,6 @@
 // Camera presets as pure maths (no three.js): where the eye and target go for each preset on a board of given bounds.
 // 50-client §5: `1` top-down, `2` own home edge at 55 degrees, `3` follow the active unit, `0` overview.
-export type CameraPreset = 'overview' | 'top' | 'home' | 'follow' | 'low'
+export type CameraPreset = 'overview' | 'top' | 'home' | 'follow' | 'low' | 'frame'
 export type HomeEdge = 'north' | 'south' | 'east' | 'west'
 
 export interface PoseBounds { minX: number; maxX: number; minZ: number; maxZ: number; w: number; d: number }
@@ -13,6 +13,11 @@ export interface PoseOptions {
   aspect?: number
   /** Azimuth (radians) to keep for 'follow'. */
   azimuth?: number
+  /** For 'frame': polar angle (radians) and eye distance. */
+  polar?: number
+  distance?: number
+  /** For 'frame': keep the camera's current azimuth and polar (the rig fills them in). */
+  keepAngles?: boolean
 }
 export interface Pose { position: [number, number, number]; target: [number, number, number]; polar: number; azimuth: number; distance: number }
 
@@ -50,10 +55,27 @@ export function cameraPose(preset: CameraPreset, b: PoseBounds, o: PoseOptions =
       const f = o.focus ?? { x: cx, z: cz }
       return make([f.x, f.y ?? 0, f.z], deg(55), o.azimuth ?? 0, 11)
     }
+    case 'frame': {
+      const f = o.focus ?? { x: cx, z: cz }
+      return make([f.x, f.y ?? 0, f.z], o.polar ?? deg(55), o.azimuth ?? 0, o.distance ?? 11)
+    }
     case 'low': return make([cx, 0, cz + b.d * 0.05], deg(77), 0, Math.min(MAX_DISTANCE, 15 + b.d * 0.35))
     case 'overview':
     default: return make([cx, 0, cz], deg(50), 0, fitDistance(b, aspect, deg(50)))
   }
+}
+
+/**
+ * Auto-camera framing: the centre of the points and an eye distance that keeps all of them in view with a margin.
+ * A single point gets the close follow distance; a pair this far apart pulls back (never beyond what still shows the figures).
+ */
+export function framePoints(points: readonly { x: number; y?: number; z: number }[], aspect = 1.6): { focus: { x: number; y: number; z: number }; distance: number } {
+  if (!points.length) return { focus: { x: 0, y: 0, z: 0 }, distance: 11 }
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, y = 0
+  for (const p of points) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z); y = Math.max(y, p.y ?? 0) }
+  const spanX = maxX - minX, spanZ = maxZ - minZ
+  const span = Math.max(spanX / Math.max(1, aspect) * 1.6, spanZ * 1.1)
+  return { focus: { x: (minX + maxX) / 2, y, z: (minZ + maxZ) / 2 }, distance: Math.min(MAX_DISTANCE, Math.max(10, 8 + span * 1.2)) }
 }
 
 /** Clamp a pan target to the board bounds plus a margin (spec: 2 hexes). Returns the shift to apply to eye and target. */

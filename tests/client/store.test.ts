@@ -277,6 +277,11 @@ describe('autosave, continue and URL setup', () => {
     expect(hasAutosave()).toBe(true)
     expect(continueGame()).toBeNull()
     expect(JSON.stringify(useGameStore.getState().state)).toBe(before)
+    // the battle history comes back with the game: feed and dice log
+    expect(usePresentedStore.getState().feed.length).toBeGreaterThan(20)
+    expect(usePresentedStore.getState().diceLog.length).toBeGreaterThan(0)
+    expect(usePresentedStore.getState().feed.some((f) => f.turn === 1)).toBe(true)
+    expect(useGameStore.getState().events.length).toBeGreaterThan(20)
     expect(usePresentedStore.getState().state).toBe(useGameStore.getState().state)
     expect(useGameStore.getState().controllers).toEqual({ A: 'human', B: 'bot' })
     // another build's data: no Continue

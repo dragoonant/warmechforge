@@ -77,7 +77,7 @@ describe('stacking after a fall in a friendly hex (MOVE-012)', () => {
     expect(end.next).toBe('done')
     expect(end.state.units.A1!.move.done).toBe(true)
     const shove = end.events.find((e) => e.type === 'UnitDisplaced')
-    expect(shove).toMatchObject({ unitId: 'A1', from: FRIEND, to: START }) // back toward where it started
+    expect(shove).toMatchObject({ unitId: 'A1', from: FRIEND, to: START, cause: 'stacking' }) // back toward where it started
     expect(unitAt(end.state, FRIEND, 'A2')).toBeNull()
     expect(end.state.units.A2!.pos).toEqual(FRIEND)
   })

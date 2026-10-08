@@ -19,6 +19,8 @@ export interface ShotOption {
   attack: AttackIn
   value: number // additive single-shot value
   shots: number // ammo shots left in the bin (Infinity for energy)
+  /** Rapid-fire mode (Ultra AC double tap); absent = one shot. */
+  rapidShots?: number
 }
 
 export interface FirePlanResult {
@@ -40,7 +42,7 @@ export function plannedDamage(ctx: AiCtx): Record<UnitId, Partial<Record<Loc, { 
     if (d.kind !== 'ranged' || !d.targetId) continue
     const a = s.units[d.attackerId]
     if (!a || a.owner !== ctx.me) continue
-    const pv = query.attackPreview(s, { attackerId: d.attackerId, mountId: d.mountId, targetId: d.targetId, ...(d.binId ? { binId: d.binId } : {}) })
+    const pv = query.attackPreview(s, { attackerId: d.attackerId, mountId: d.mountId, targetId: d.targetId, ...(d.binId ? { binId: d.binId } : {}), ...(d.rapidShots ? { rapidShots: d.rapidShots } : {}) })
     const perHit = pv.damage * (pv.cluster ? pv.cluster.expectedHits : 1)
     const pHit = p2d6(d.tn)
     const ht = hitTable(d.direction, d.table, d.partialCover, s.units[d.targetId]?.prone ?? false)
@@ -54,13 +56,44 @@ export function plannedDamage(ctx: AiCtx): Record<UnitId, Partial<Record<Loc, { 
   return out
 }
 
-/** Target models for every live enemy, with the plan memo applied (cached per decision). */
+/** P(kill) our earlier declarations this phase already put on each target (so later shooters stop piling on). */
+export function plannedKill(ctx: AiCtx): Record<UnitId, number> {
+  const out: Record<UnitId, number> = {}
+  const s = ctx.state
+  const byT = new Map<UnitId, { dir: AttackDirection; attacks: AttackIn[] }>()
+  for (const d of s.declarations) {
+    if (d.kind !== 'ranged' || !d.targetId) continue
+    const a = s.units[d.attackerId]
+    if (!a || a.owner !== ctx.me) continue
+    const pv = query.attackPreview(s, { attackerId: d.attackerId, mountId: d.mountId, targetId: d.targetId, ...(d.binId ? { binId: d.binId } : {}), ...(d.rapidShots ? { rapidShots: d.rapidShots } : {}) })
+    if (!pv.legal) continue
+    const w = ctx.factsOf(d.attackerId).weapons.find((x) => x.mountId === d.mountId)
+    let g = byT.get(d.targetId)
+    if (!g) { g = { dir: pv.direction, attacks: [] }; byT.set(d.targetId, g) }
+    g.attacks.push(attackFromPreview(pv, w ? perGroupOf(w) : 1))
+  }
+  for (const [t, g] of byT) out[t] = volleyValue(targetModel(ctx, t), g.dir, g.attacks).pKill
+  return out
+}
+
+/** Target models for every live enemy, with the plan memo applied (cached per decision). A target already likely dead from
+ *  earlier declarations, or helpless (unconscious pilot, immobile and down), is worth less than an active one. */
 export function enemyModels(ctx: AiCtx): Map<UnitId, TargetModel> {
   const k = 'enemyModels'
   let v = ctx.memo.get(k) as Map<UnitId, TargetModel> | undefined
   if (v) return v
-  const planned = ctx.state.phase === 'rangedAttack' ? plannedDamage(ctx) : {}
-  v = new Map(ctx.enemiesOf().map((id) => [id, targetModel(ctx, id, planned[id])]))
+  const ranged = ctx.state.phase === 'rangedAttack'
+  const planned = ranged ? plannedDamage(ctx) : {}
+  const pk = ranged ? plannedKill(ctx) : {}
+  v = new Map(ctx.enemiesOf().map((id) => {
+    const m = targetModel(ctx, id, planned[id])
+    const u = ctx.unit(id)
+    let f = 1 - 0.9 * Math.min(1, pk[id] ?? 0)
+    if (!u.pilot.conscious) f *= 0.7
+    else if (u.prone && (u.locs.LL.destroyed || u.locs.RL.destroyed)) f *= 0.85
+    m.m *= f
+    return [id, m] as const
+  }))
   ctx.memo.set(k, v)
   return v
 }
@@ -69,27 +102,34 @@ function perGroupOf(w: WeaponInfo): number { return w.cluster?.groupSize ?? 1 }
 
 /** Every legal (weapon, target, ammo) shot from the attacker's (hypothetical) position with this primary target and twist. */
 export function shotOptions(ctx: AiCtx, attackerId: UnitId, opts: {
-  attackerAt?: UnitAt; targets: { id: UnitId; at?: UnitAt; model: TargetModel }[]; primaryId: UnitId | null; fast?: boolean
+  attackerAt?: UnitAt; targets: { id: UnitId; at?: UnitAt; model: TargetModel }[]; primaryId: UnitId | null; fast?: boolean; skip?: Set<LocalId>
 }): ShotOption[] {
   const out: ShotOption[] = []
   const weapons = ctx.factsOf(attackerId).weapons
   const u = ctx.unit(attackerId)
   for (const w of weapons) {
     if (u.attacks.firedMounts.includes(w.mountId) && ctx.state.phase === 'rangedAttack') continue
+    if (opts.skip?.has(w.mountId)) continue
     for (const t of opts.targets) {
       const ammoChoices: (undefined | { binId: LocalId; shots: number })[] = w.usesAmmo ? w.ammo.map((a) => ({ binId: a.binId, shots: a.shots })) : [undefined]
       for (const a of ammoChoices) {
-        const pv = query.attackPreview(ctx.state, {
-          attackerId, mountId: w.mountId, targetId: t.id,
-          ...(opts.attackerAt ? { attackerAt: opts.attackerAt } : {}), ...(t.at ? { targetAt: t.at } : {}),
-          primaryTargetId: opts.primaryId, ...(a ? { binId: a.binId } : {}),
-        })
-        if (!pv.legal || pv.pHit <= 0) continue
-        const attack = attackFromPreview(pv, perGroupOf(w))
-        const value = opts.fast
-          ? pv.expectedDamage * valuePerPoint(t.model, pv.direction)
-          : volleyValue(t.model, pv.direction, [attack]).dv
-        out.push({ mountId: w.mountId, targetId: t.id, ...(a ? { binId: a.binId } : {}), heat: pv.heat, pv, attack, value, shots: a ? a.shots : Infinity })
+        // one shot, plus each rapid-fire mode the bin can feed (the preview prices the cluster roll and the heat)
+        for (const rapid of [1, ...w.rapidModes]) {
+          if (a && rapid > a.shots) continue
+          const pv = query.attackPreview(ctx.state, {
+            attackerId, mountId: w.mountId, targetId: t.id,
+            ...(opts.attackerAt ? { attackerAt: opts.attackerAt } : {}), ...(t.at ? { targetAt: t.at } : {}),
+            primaryTargetId: opts.primaryId, ...(a ? { binId: a.binId } : {}), ...(rapid > 1 ? { rapidShots: rapid } : {}),
+          })
+          if (!pv.legal || pv.pHit <= 0) break
+          const attack = attackFromPreview(pv, perGroupOf(w))
+          let value = opts.fast
+            ? pv.expectedDamage * valuePerPoint(t.model, pv.direction)
+            : volleyValue(t.model, pv.direction, [attack]).dv
+          // a rapid-fire weapon jams on an attack roll of 2 (1/36): about two turns of its single-shot output lost
+          if (rapid > 1) value -= (1 / 36) * 2 * w.damage
+          out.push({ mountId: w.mountId, targetId: t.id, ...(a ? { binId: a.binId } : {}), heat: pv.heat, pv, attack, value, shots: a ? a.shots : Infinity, ...(rapid > 1 ? { rapidShots: rapid } : {}) })
+        }
       }
     }
   }
@@ -168,20 +208,20 @@ export function heatBase(ctx: AiCtx, unitId: UnitId, plan: { mode?: 'standStill'
  * Full fire plan for a unit at its current position (normal: knapsack + primary search; easy: greedy by damage per heat).
  * `pDying` is P(the unit is destroyed this turn) from the threat model (raises the heat cap for a last stand).
  */
-export function planFire(ctx: AiCtx, unitId: UnitId, opts: { twist?: Twist; pDying?: number; attackerAt?: UnitAt } = {}): FirePlanResult {
-  const models = enemyModels(ctx)
+export function planFire(ctx: AiCtx, unitId: UnitId, opts: { twist?: Twist; pDying?: number; attackerAt?: UnitAt; collect?: FirePlanResult[]; skip?: Set<LocalId>; extraHeat?: number; models?: Map<UnitId, TargetModel>; noSat?: boolean } = {}): FirePlanResult {
+  const models = opts.models ?? enemyModels(ctx)
   const enemies = [...models.keys()]
   const twist: Twist = opts.twist ?? (ctx.unit(unitId).attacks.twist ?? 0)
   const attackerAt: UnitAt = { ...(opts.attackerAt ?? {}), ...(opts.twist !== undefined ? { twist: opts.twist } : {}) }
   const hasAt = Object.keys(attackerAt).length > 0
-  const base = heatBase(ctx, unitId)
+  const base = heatBase(ctx, unitId) + (opts.extraHeat ?? 0)
   const empty: FirePlanResult = { shots: [], twist, score: -heatCost(ctx, unitId, Math.max(0, base)), dv: 0, heatEnd: Math.max(0, base), pKill: 0, expectedByTarget: {} }
   if (!enemies.length) return empty
   const targets = enemies.map((id) => ({ id, model: models.get(id)! }))
   const pDying = opts.pDying ?? 0
 
   // primary candidates: the enemies with the best single-target value (at most 3)
-  const singleOpts = shotOptions(ctx, unitId, { ...(hasAt ? { attackerAt } : {}), targets, primaryId: null })
+  const singleOpts = shotOptions(ctx, unitId, { ...(hasAt ? { attackerAt } : {}), targets, primaryId: null, ...(opts.skip ? { skip: opts.skip } : {}) })
   if (!singleOpts.length) return empty
   const perTarget = new Map<UnitId, number>()
   for (const o of singleOpts) perTarget.set(o.targetId, (perTarget.get(o.targetId) ?? 0) + o.value)
@@ -190,7 +230,7 @@ export function planFire(ctx: AiCtx, unitId: UnitId, opts: { twist?: Twist; pDyi
   let best: FirePlanResult = empty
   for (const p of primaries) {
     const all = ctx.tier.knapsack
-      ? shotOptions(ctx, unitId, { ...(hasAt ? { attackerAt } : {}), targets, primaryId: p })
+      ? shotOptions(ctx, unitId, { ...(hasAt ? { attackerAt } : {}), targets, primaryId: p, ...(opts.skip ? { skip: opts.skip } : {}) })
       : singleOpts.filter((o) => o.targetId === p)
     // ammo discipline (§8.3 step 5): weak ammo shots only when there is plenty of ammo
     const opts2 = all.filter((o) => !(o.shots < 10 && o.pv.pHit < 6 / 36))
@@ -223,6 +263,7 @@ export function planFire(ctx: AiCtx, unitId: UnitId, opts: { twist?: Twist; pDyi
       const cap = heatCapFor(ctx, unitId, { pKill: ev.pKill, pDying })
       if (H > cap && H > Math.max(0, Math.round(base))) continue
       const score = ev.dv - heatCost(ctx, unitId, H)
+      if (opts.collect) opts.collect.push({ shots: [...s.picks.filter((x) => x.targetId === p), ...s.picks.filter((x) => x.targetId !== p)], twist, score, dv: ev.dv, heatEnd: H, pKill: ev.pKill, expectedByTarget: {} })
       const better = score > best.score + 1e-9 || (Math.abs(score - best.score) <= 1e-9 && H < best.heatEnd)
       if (better) {
         // primary first, the rest in mount order (stable)
@@ -231,11 +272,41 @@ export function planFire(ctx: AiCtx, unitId: UnitId, opts: { twist?: Twist; pDyi
       }
     }
   }
-  return best
+  return !opts.noSat && ctx.tier.knapsack && best.shots.length > 1 ? desaturate(ctx, unitId, best, models, opts, base) : best
+}
+
+const SATURATED = 0.9
+
+/** Overkill guard: once a target's kill is near certain, the surplus weapons go to the next best target. */
+function desaturate(ctx: AiCtx, unitId: UnitId, plan: FirePlanResult, models: Map<UnitId, TargetModel>, opts: Parameters<typeof planFire>[2], base: number): FirePlanResult {
+  const keep: ShotOption[] = []
+  let released = false
+  const byT = new Map<UnitId, ShotOption[]>()
+  for (const s of plan.shots) { const l = byT.get(s.targetId); if (l) l.push(s); else byT.set(s.targetId, [s]) }
+  const keptModels = new Map(models)
+  for (const [t, list] of byT) {
+    const m = models.get(t)
+    if (!m || list.length < 2 || exactValue(models, list).pKill < SATURATED) { keep.push(...list); continue }
+    const kept: ShotOption[] = []
+    for (const o of [...list].sort((a, b) => b.value - a.value)) {
+      kept.push(o)
+      if (exactValue(models, kept).pKill >= SATURATED) break
+    }
+    if (kept.length < list.length) released = true
+    keep.push(...kept)
+    keptModels.set(t, { ...m, m: m.m * Math.max(0.05, 1 - exactValue(models, kept).pKill) })
+  }
+  if (!released) return plan
+  const extraHeat = keep.reduce((a, x) => a + x.heat, 0)
+  const more = planFire(ctx, unitId, { ...(opts ?? {}), twist: plan.twist, skip: new Set([...(opts?.skip ?? []), ...keep.map((x) => x.mountId)]), extraHeat: (opts?.extraHeat ?? 0) + extraHeat, models: keptModels, noSat: true })
+  const shots = [...keep, ...more.shots]
+  const ev = exactValue(models, shots)
+  const H = Math.max(0, Math.round(base + shots.reduce((a, x) => a + x.heat, 0) - (opts?.extraHeat ?? 0)))
+  return { shots, twist: plan.twist, score: ev.dv - heatCost(ctx, unitId, H), dv: ev.dv, heatEnd: H, pKill: ev.pKill, expectedByTarget: ev.expected }
 }
 
 export function toFireShots(plan: FirePlanResult): FireShot[] {
-  return plan.shots.map((s) => ({ mountId: s.mountId, targetId: s.targetId, ...(s.binId ? { binId: s.binId } : {}) }))
+  return plan.shots.map((s) => ({ mountId: s.mountId, targetId: s.targetId, ...(s.binId ? { binId: s.binId } : {}), ...(s.rapidShots ? { rapidShots: s.rapidShots } : {}) }))
 }
 
 /**

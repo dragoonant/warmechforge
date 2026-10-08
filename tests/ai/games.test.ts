@@ -1,12 +1,16 @@
 // AI-013 / AI-007 over real games: the utility AI never answers illegally across 5 seeded intro games, and its fire
-// declarations respect the normal tier's heat caps (H_end ≤ 9 unless a kill shot is likely or the unit is about to die;
+// declarations respect the normal tier's heat caps (H_end ≤ its cap, 13 since M6, unless a kill shot is likely or the unit is about to die;
 // shutdown avoid TN 8+ only for a kill shot; never automatic shutdown).
 import { describe, expect, it } from 'vitest'
 import type { GameState } from '../../src/engine/index'
 import { createGame, deriveSeedString, legalActions, query, step, validate, view } from '../../src/engine/index'
 import { decideAi, type FireTrace } from '../../src/ai/decider'
 import { decideRandom } from '../../src/ai/random'
+import { TIERS } from '../../src/ai/tiers'
+import { TUNE_NORMAL } from '../../src/ai/tune'
 import { BUNDLE, SETUP } from './helpers'
+
+const CAP = TUNE_NORMAL.heatCap ?? TIERS.normal.heatCap
 
 describe('utility AI in full games', () => {
   it('AI-013 never answers illegally across 5 seeded games (normal vs random, sides alternated) and respects the heat caps (AI-007)', () => {
@@ -29,11 +33,12 @@ describe('utility AI in full games', () => {
           if (p.kind === 'declareFire' && action.type === 'declareFire' && action.shots.length) {
             fires++
             const info = (d.trace?.top?.[0] ?? null) as FireTrace | null
-            const H = query.heatProjection(s, p.unitId!, { mounts: action.shots.map((x) => x.mountId) }).end
+            const rapidShots = Object.fromEntries(action.shots.filter((x) => x.rapidShots).map((x) => [x.mountId, x.rapidShots!]))
+            const H = query.heatProjection(s, p.unitId!, { mounts: action.shots.map((x) => x.mountId), rapidShots }).end
             const e = query.heatEffects(H)
             if (e.autoShutdown) problems.push(`game ${g}: automatic shutdown planned (H ${H})`)
             const H0 = query.heatProjection(s, p.unitId!, { mounts: [] }).end // heat-free weapons may fire at any heat
-            if (H > 9 && H > H0 && !(info && (info.pKill >= 0.5 || info.pDying >= 0.6))) problems.push(`game ${g}: H_end ${H} > 9 without a kill shot or last stand`)
+            if (H > CAP && H > H0 && !(info && (info.pKill >= 0.5 || info.pDying >= 0.6))) problems.push(`game ${g}: H_end ${H} > ${CAP} without a kill shot or last stand`)
             if ((e.shutdownTn ?? 0) >= 8 && !(info && info.pKill >= 0.5)) problems.push(`game ${g}: shutdown avoid ${e.shutdownTn} without a kill shot`)
           }
         } else {

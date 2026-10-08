@@ -296,7 +296,7 @@ export function LosLayer(): ReactElement | null {
       })}
       {view.chips.map((c, i) => {
         const at = c.hex ?? view.hexes[Math.floor(view.hexes.length / 2)]!
-        const pos = worldOf(state, at, lift + 0.12 + i * 0.001)
+        const pos = worldOf(state, at, lift + 0.12 + i * 0.28)
         return <Label key={i} pos={pos} tone={colour}>{c.text}</Label>
       })}
       {view.chips.length === 0 && view.colour === 'clear' && <Label pos={worldOf(state, view.hexes[Math.floor(view.hexes.length / 2)]!, lift + 0.12)} tone={colour}>clear</Label>}

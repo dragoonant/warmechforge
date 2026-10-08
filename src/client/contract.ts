@@ -35,8 +35,8 @@ import {
 import { startBotDriver } from './bot/botDriver'
 import {
   actionFor, clearAutosave, clearRejection, continueGame, dispatch, exportSave, hasAutosave, importSave, installAutosave,
-  isHumanDecision, legalFor, loadGame, newGame, playAgain, readAutosave, saveGame, setController, useGameStore,
-  type ActionPayload, type AutosaveSlot, type ClientRejection, type GameStoreState, type SideStats,
+  isHumanDecision, legalFor, loadGame, newGame, playAgain, rematch, readAutosave, saveGame, setController, useGameStore,
+  type ActionPayload, type AutosaveSlot, type ClientRejection, type GameStoreState, type SideStats, type UnitTally, type UnitTallies,
 } from './store/gameStore'
 import { panelActions, useRailCollapsed, type Rail } from './store/panelStore'
 import { SPEED_PRESETS, useSettingsStore, type Settings } from './store/settingsStore'
@@ -47,7 +47,7 @@ import { ui, useUiStore, type FireDraft, type MoveDraft, type PhysicalDraft, typ
 // ---------- types callers need ----------
 export type {
   ActiveBeat, ActionPayload, AutosaveSlot, Banner, BeatFx, BeatKind, ClientRejection, Controller, DamagePop, FeedEntry, FireDraft,
-  MoveDraft, NarrationLine, PhysicalDraft, Rail, Settings, ShownRoll, SideStats, TweenPose, UiMode, UnitTween,
+  MoveDraft, NarrationLine, PhysicalDraft, Rail, Settings, ShownRoll, SideStats, UnitTally, UnitTallies, TweenPose, UiMode, UnitTween,
 }
 export type { BotTier, ForceInfo, Lineup, LineupUnit, MapInfo, MechInfo, MissionInfo, NewGameOptions } from './store/setup'
 export type { ClientSave, SaveSummary } from './store/gameStore'
@@ -130,6 +130,8 @@ export const useNarration = (): NarrationLine[] => useAnnounceStore((s) => s.lin
 export const useGameResult = (): GameState['result'] => usePresentedStore((s) => (s.state?.phase === 'ended' ? s.state.result : null))
 /** Per-side tallies for the end screen (damage dealt/taken = armor + internal removed, heat peak). */
 export const useGameStats = (): Record<PlayerId, SideStats> => useGameStore((g) => g.stats)
+/** Per-'Mech tallies for the end screen's mini sheets: damage taken per location, damage dealt, kills, heat peak. */
+export const useUnitTallies = (): UnitTallies => useGameStore((g) => g.unitStats)
 
 // =====================================================================================================
 // Decisions (gated on presentation idle: a prompt never refers to an un-shown event)
@@ -198,7 +200,7 @@ export const usePhysicalDraft = (): PhysicalDraft => useUiStore((s) => s.physica
 /** Open popover id. */
 export const usePanel = (): string | null => useUiStore((s) => s.panel)
 /** Player settings. */
-export const useSettings = (): Settings => useSettingsStore(useShallow((s) => ({ speed: s.speed, graphics: s.graphics, narration: s.narration, tips: s.tips, hexLabels: s.hexLabels, grid: s.grid, odds: s.odds })))
+export const useSettings = (): Settings => useSettingsStore(useShallow((s) => ({ speed: s.speed, graphics: s.graphics, narration: s.narration, tips: s.tips, hexLabels: s.hexLabels, grid: s.grid, odds: s.odds, followAction: s.followAction })))
 /** Rail collapsed ([ and ]). */
 export { useRailCollapsed }
 
@@ -403,6 +405,8 @@ export const game = {
   newGame,
   /** Same setup with a new seed (end screen). */
   playAgain,
+  /** Same setup and same seed (end screen Rematch). */
+  rematch,
   /** Dispatch a full Action as the human (refused when the decision is the bot's). */
   dispatch: (a: Action): ClientRejection | null => dispatch(a, 'human'),
   /** Dispatch a payload for the open decision; decisionId and player are filled in. */
@@ -573,5 +577,6 @@ function installFollowDecision(): () => void {
   return () => { a(); b() }
 }
 
-// Additive changes after the M3 freeze: (none yet)
+// Additive changes after the M3 freeze:
+//  - polish pass: useUnitTallies / UnitTally (per-'Mech damage by location, kills, heat peak), game.rematch, Settings.followAction.
 

@@ -4,7 +4,6 @@ import { query } from '../engine/index'
 import type { UnitId } from '../engine/index'
 import { pFail } from './prob'
 import type { AiCtx } from './ctx'
-import { TUNE } from './tune'
 
 /** HeatCost(H) in DP: MP and to-hit thresholds reached, P(shutdown) and P(heat ammo explosion) priced (§8.4). */
 export function heatCost(ctx: AiCtx, unitId: UnitId, H: number): number {
@@ -15,7 +14,7 @@ export function heatCost(ctx: AiCtx, unitId: UnitId, H: number): number {
   const e = query.heatEffects(H)
   const facts = ctx.factsOf(unitId)
   const u = ctx.unit(unitId)
-  let c = (TUNE.heatW ?? 1) * (3 * e.mpLoss + 0.25 * facts.firepower * e.toHitMod)
+  let c = (ctx.tune.heatW ?? 1) * (3 * e.mpLoss + 0.25 * facts.firepower * e.toHitMod)
   const pShut = e.autoShutdown ? 1 : !u.pilot.conscious && e.shutdownTn !== null ? 1 : pFail(e.shutdownTn)
   c += pShut * (0.5 * facts.kill + facts.firepower)
   if (facts.liveAmmo && e.ammoTn !== null) c += pFail(e.ammoTn) * (0.5 * facts.kill)
@@ -32,7 +31,7 @@ export interface HeatCapInfo { pKill: number; pDying: number }
  */
 export function heatCapFor(ctx: AiCtx, unitId: UnitId, info: HeatCapInfo): number {
   const t = ctx.tier
-  let cap = t.heatCap
+  let cap = ctx.tune.heatCap ?? t.heatCap
   const liveAmmo = ctx.factsOf(unitId).liveAmmo
   const highest = (ok: (h: number) => boolean): number => { let h = cap; for (let x = cap + 1; x < 30; x++) if (ok(x)) h = x; else break; return h }
   if (t.killShotAvoidTn !== null && info.pKill >= t.killShotP) {

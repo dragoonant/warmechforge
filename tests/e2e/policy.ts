@@ -61,20 +61,36 @@ export async function playMove(page: Page, mode: 'walk' | 'run' | 'jump', me: st
   const reach = (await ids(page, 'hex-')).filter((x) => /^hex-\d{4}$/.test(x)).map((x) => x.slice(4))
   const enemies = await enemyHexes(page, me)
   const ep = enemies.length ? await hexPx(page, enemies[0]!) : null
+  // a click on a hex that holds a 'Mech picks the 'Mech, not the hex: leave occupied hexes alone
+  const occupied = new Set(await page.$$eval('[data-testid^="mech-"][data-hex]', (els) => els.map((e) => e.getAttribute('data-hex')!)))
   const box = page.viewportSize()!
-  let best: { h: string; x: number; y: number; d: number } | null = null
+  const cands: { h: string; x: number; y: number; d: number }[] = []
   const pts = await page.evaluate((ls) => ls.map((l) => window.__game!.hexToScreen(l)), reach)
   for (let i = 0; i < reach.length; i++) {
     const h = reach[i]!, p = pts[i]
+    if (occupied.has(h)) continue
     if (!p || p.x < 300 || p.x > box.width - 320 || p.y < 90 || p.y > box.height - 200) continue
     const d = ep ? Math.hypot(p.x - ep.x, p.y - ep.y) : p.y
     if (ep && d < 30) continue
-    if (!best || d < best.d) best = { h, ...p, d }
+    cands.push({ h, ...p, d })
   }
-  if (best) await page.mouse.click(best.x, best.y)
-  else if (reach[0]) await page.getByTestId(`hex-${reach[0]}`).dispatchEvent('click')
-  await page.waitForTimeout(250)
-  const facings = await ids(page, 'move-facing-', ':not([disabled])')
+  cands.sort((x, y) => x.d - y.d)
+  // a tall figure can stand over the hex behind it, so the click picks the figure: try the next hex when no facing picker opens
+  let best = cands[0] ?? null
+  let facings: string[] = []
+  for (const c of cands.slice(0, 6)) {
+    await page.mouse.click(c.x, c.y)
+    await page.waitForTimeout(250)
+    facings = await ids(page, 'move-facing-', ':not([disabled])')
+    if (facings.length) { best = c; break }
+  }
+  if (!facings.length) {
+    // the board's own DOM proxy for the hex always answers
+    const h = best?.h ?? reach.find((x) => !occupied.has(x)) ?? reach[0]
+    if (h) await page.getByTestId(`hex-${h}`).dispatchEvent('click')
+    await page.waitForTimeout(250)
+    facings = await ids(page, 'move-facing-', ':not([disabled])')
+  }
   if (facings.length) await page.getByTestId(facings[Math.floor(facings.length / 2)]!).click()
   if (await enabled(page.getByTestId('move-confirm'))) return `${m} ${best?.h ?? reach[0]}`
   // nothing reachable on screen: stand still (always offered when the unit is on the board)

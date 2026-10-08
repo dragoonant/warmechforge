@@ -16,6 +16,8 @@ import { aimedShotLegal, computeRangedTn, rangeBand, armCritsFor, sensorCrits } 
 import { ammoRec, binsFor, defaultBin, effectiveProfile, equipRec, hasFlag, spendAmmo, weaponRec } from '../ammo'
 import type { WeaponRec } from '../ammo'
 import { collectHooks } from '../hooks'
+import { CAPACITOR_DAMAGE, CAPACITOR_HEAT, capacitorFor, capacitorReady, codesOf, coolantBonus, podUsed } from '../equipment'
+import { patchUnit } from '../pilot'
 import { hexAt, woodsPointsOf } from '../terrain'
 import type {
   ArmLoc, AttackDirection, DataBundle, GameState, Hex, Id, Loc, LocalId, Mod, MountState, RangedDeclaration, Rejection, RejectionCode,
@@ -290,6 +292,63 @@ export function evaluateShot(state: GameState, data: DataBundle, unitId: UnitId,
   return out
 }
 
+// ---------- equipment declared with the fire (EQUIP-016 capacitor charge, EQUIP-017 coolant pod) ----------
+interface EquipPlan { charges: { weaponId: LocalId; capId: LocalId }[]; pod: LocalId | null }
+function equipmentPlan(data: DataBundle, a: UnitState, action: DeclareFireAction): EquipPlan | Rejection {
+  const out: EquipPlan = { charges: [], pod: null }
+  if (action.charge !== undefined && !Array.isArray(action.charge)) return { code: 'E_BAD_PAYLOAD', message: 'charge must be a list' }
+  const seen = new Set<LocalId>()
+  for (const id of action.charge ?? []) {
+    if (seen.has(id)) return { code: 'E_DUPLICATE', message: 'a PPC appears twice in charge' }
+    seen.add(id)
+    const m = a.mounts[id]
+    const w = m ? weaponRec(data, m.item) : null
+    if (!m || !w || !hasFlag(w, 'ppc')) return { code: 'E_UNKNOWN_WEAPON', message: 'only a PPC can charge a capacitor' }
+    if (!mountOperable(a, m)) return { code: 'E_WEAPON_DESTROYED', message: 'that PPC cannot be used' }
+    const cap = capacitorFor(data, a, id)
+    if (!cap) return { code: 'E_BAD_PAYLOAD', message: 'that PPC has no working capacitor' }
+    out.charges.push({ weaponId: id, capId: cap.id })
+  }
+  if (action.coolantPod !== undefined) {
+    const m = a.mounts[action.coolantPod]
+    if (!m || !codesOf(data, m.item).includes('coolantPod')) return { code: 'E_BAD_PAYLOAD', message: 'not a coolant pod' }
+    if (m.destroyed || a.locs[m.location].destroyed) return { code: 'E_WEAPON_DESTROYED', message: 'that coolant pod is gone' }
+    if (podUsed(m)) return { code: 'E_WEAPON_USED', message: 'that coolant pod was already used' }
+    out.pod = m.id
+  }
+  return out
+}
+/** Books charges (5 heat each, capacitor firedTurn = this turn) and a vented pod (firedTurn = this turn). */
+function bookEquipment(state: GameState, unitId: UnitId, plan: EquipPlan): { state: GameState; events: GameEvent[] } {
+  let s = state
+  const events: GameEvent[] = []
+  for (const c of plan.charges) {
+    const u = s.units[unitId]!
+    s = patchUnit(s, unitId, { mounts: { ...u.mounts, [c.capId]: { ...u.mounts[c.capId]!, firedTurn: s.turn } } })
+    events.push({ type: 'EquipmentUsed', unitId, mountId: c.capId, use: 'capacitorCharged', amount: CAPACITOR_HEAT })
+    const h = addHeat(s, unitId, { source: 'equipment', amount: CAPACITOR_HEAT, ref: c.weaponId })
+    s = h.state
+    events.push(...h.events)
+  }
+  if (plan.pod) {
+    const u = s.units[unitId]!
+    s = patchUnit(s, unitId, { mounts: { ...u.mounts, [plan.pod]: { ...u.mounts[plan.pod]!, firedTurn: s.turn } } })
+    events.push({ type: 'EquipmentUsed', unitId, mountId: plan.pod, use: 'coolantPod', amount: coolantBonus(s.units[unitId]!) })
+  }
+  return { state: s, events }
+}
+/** Hook point 'attackDeclare' (00 §11.4): items on or linked to the firing mount may refuse the shot (a charging capacitor). */
+function declareHookReject(state: GameState, a: UnitState, mountId: LocalId, charging: LocalId[]): string | null {
+  let bound
+  try { bound = collectHooks(state, a.id, 'attackDeclare') } catch { return null }
+  for (const b of bound) {
+    if (!b.hook.attackDeclare || !b.mountId || (b.mountId !== mountId && a.mounts[b.mountId]?.linkedTo !== mountId)) continue
+    const r = b.hook.attackDeclare({ state, point: 'attackDeclare', unitId: a.id, sourceId: b.sourceId, mountId: b.mountId, params: { weaponMountId: mountId, charging } })
+    if (r?.reject) return r.reject
+  }
+  return null
+}
+
 // ---------- declaration ----------
 export interface FireOptions {
   /** Answers to earlier chooseAmmo decisions, mount id -> bin id. */
@@ -309,10 +368,13 @@ export function declareFire(state: GameState, data: DataBundle, action: DeclareF
   if (a.shutdown) return rej(state, 'E_SHUTDOWN', 'a shut-down unit makes no ranged attack')
   if (!a.pilot.conscious || a.pilot.dead) return rej(state, 'E_UNCONSCIOUS', 'an unconscious pilot makes no ranged attack')
   if (a.attacks.rangedDeclared) return rej(state, 'E_DUPLICATE', 'already declared this phase')
+  const eqPlan = equipmentPlan(data, a, action)
+  if ('code' in eqPlan) return { state, events: [], rejection: eqPlan }
   const shots = action.shots
   if (shots.length === 0) {
     const u2: UnitState = { ...a, attacks: { ...a.attacks, rangedDeclared: true } }
-    return { state: { ...state, units: { ...state.units, [a.id]: u2 } }, events: [{ type: 'FireDeclared', unitId: a.id, primaryTargetId: null, shots: [] }] }
+    const held = bookEquipment({ ...state, units: { ...state.units, [a.id]: u2 } }, a.id, eqPlan)
+    return { state: held.state, events: [{ type: 'FireDeclared', unitId: a.id, primaryTargetId: null, shots: [] }, ...held.events] }
   }
   if (a.attacks.charge || a.attacks.dfa) return rej(state, 'E_NO_RANGED', 'a unit that declared a charge or DFA makes no ranged attack')
   if (sensorCrits(a) >= 2) return rej(state, 'E_NO_RANGED', 'sensors are gone: no ranged attack')
@@ -338,6 +400,8 @@ export function declareFire(state: GameState, data: DataBundle, action: DeclareF
     const bin0 = ammoBinFor(a, data, sh, opts.ammoChoices)
     const g = shotGeometry(state, data, a, bin0 ? { ...sh, binId: bin0 } : sh, propArm)
     if ('code' in g) return { state, events: [], rejection: g }
+    const hr = declareHookReject(state, a, sh.mountId, action.charge ?? [])
+    if (hr) return rej(state, 'E_WEAPON_USED', hr)
     geos.push(g)
   }
   // TOHIT-005: primary target
@@ -425,6 +489,11 @@ export function declareFire(state: GameState, data: DataBundle, action: DeclareF
   }
   const primaryTarget = shots[0]!.targetId ?? null
   events.push({ type: 'FireDeclared', unitId: a.id, primaryTargetId: primaryTarget, shots: evShots })
+  // a PPC charged last turn spends its capacitor on this shot (EQUIP-016; the +5 itself comes from the damage hook)
+  for (const p of plans) {
+    const cap = capacitorFor(data, a, p.g.mount.id)
+    if (cap && capacitorReady(state, cap)) events.push({ type: 'EquipmentUsed', unitId: a.id, mountId: cap.id, use: 'capacitorDischarged', amount: CAPACITOR_DAMAGE })
+  }
   s = { ...table, attackSeq: seq }
   // ammo and heat per shot
   const w2 = beginWork(s, data)
@@ -456,7 +525,8 @@ export function declareFire(state: GameState, data: DataBundle, action: DeclareF
     },
     declarations: [...s.declarations, ...declsOut],
   }
-  return { state: s, events }
+  const eqDone = bookEquipment(s, a.id, eqPlan)
+  return { state: eqDone.state, events: [...events, ...eqDone.events] }
 }
 
 /** Continuation of a declaration that stopped for chooseAmmo (00 §9.3): `state.resume` carries the action and the answers so far. */

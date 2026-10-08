@@ -9,6 +9,7 @@ import {
 import './hud.css'
 import { EventFeed } from './EventFeed'
 import { GameOver } from './GameOver'
+import { TipLayer } from './Tip'
 import { HeatScale } from './HeatScale'
 import { PromptDock } from './Prompt'
 import { HoverCard } from './sheet/HoverCard'
@@ -112,6 +113,7 @@ export function Hud({ onExit, topExtra }: { onExit?: () => void; topExtra?: Reac
       </SideRail>
       <PromptDock />
       <Toast />
+      <TipLayer />
       <GameOver onExit={onExit} />
       <Fatal />
     </div>

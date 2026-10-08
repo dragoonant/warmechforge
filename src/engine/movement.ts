@@ -2,10 +2,12 @@
 // Pure: state in, { state, events } out. Rolls only through psr.ts (resolvePsrs / fall); heat only through addHeat.
 import type { MoveAction, StandUpAction } from './actions'
 import type { GameEvent } from './events'
-import { partialWingBonuses } from './crits'
+import { collectHooks } from './hooks'
+import { bundleFor } from './bundles'
+import { mascActive, workingMasc } from './equipment'
 import { addHeat, heatMpLoss, hitCount, movementHeat } from './heat'
 import { directionTo, distance, edgeHexes, hexEq, hexKey, neighbor, neighbors, onBoard, opposite, turnLeft, turnRight } from './hex'
-import type { PathStep, ReachEntry } from './index'
+import type { PathStep, ReachEntry, ReachOptions } from './index'
 import { patchUnit } from './pilot'
 import type { Stepped } from './pilot'
 import { pAtLeast2d6 } from './prob'
@@ -13,9 +15,13 @@ import { persistentMods, queuePsr, resolvePsrs } from './psr'
 import { floorLevel, hexAt as boardHexAt } from './terrain'
 import { attackerMoveMod, tmmForHexes } from './tohit'
 import type {
-  BoardHex, BoardState, Edge, Facing, GameState, Hex, MoveMode, Rejection, RejectionCode, StepOp, UnitId, UnitState,
+  BoardHex, BoardState, DataBundle, Edge, Facing, GameState, Hex, MoveMode, Rejection, RejectionCode, StepOp, UnitId, UnitState,
 } from './types'
 import { FACINGS } from './types'
+
+/** The state's bundle, or null for bare test states with none registered (no equipment rules apply then). */
+const dataOf = (state: GameState): DataBundle | null => { try { return bundleFor(state) } catch { return null } }
+const mascOn = (state: GameState, u: UnitState): boolean => { const d = dataOf(state); return !!d && mascActive(d, u) }
 
 // ---------- per-board lookup caches (boards are immutable; the reach search and validate hit these thousands of times) ----------
 const HEX_CACHE = new WeakMap<BoardState, Map<number, BoardHex | null>>()
@@ -58,6 +64,26 @@ export function damagedWalk(u: UnitState): number {
 const depthOf = (state: GameState, u: UnitState): number => (u.pos ? hexAt(state.board, u.pos)?.depth ?? 0 : 0)
 const isJumpJet = (item: string): boolean => item.includes('jump-jet')
 
+/**
+ * Hook point 'movement' (00 §11.4), MP queries: the sum of `mpBonus` the unit's items give. 'jump' (params.jets: jet MP):
+ * partial wing (EQUIP-018). 'run' (params.walk, params.requested): MASC walk x 2 while active or requested (EQUIP-021).
+ */
+function hookMp(state: GameState, u: UnitState, query: 'jump' | 'run', params: Record<string, unknown>): number {
+  let bound
+  try { bound = collectHooks(state, u.id, 'movement') } catch { return 0 }
+  let n = 0
+  for (const b of bound) {
+    const r = b.hook.movement?.({ state, point: 'movement', unitId: u.id, sourceId: b.sourceId, ...(b.mountId ? { mountId: b.mountId } : {}), params: { query, ...params } })
+    n += r?.mpBonus ?? 0
+  }
+  return n
+}
+/** Run MP from walk MP: ceil(1.5 x walk) (MOVE-006), or walk x 2 with MASC active this turn or requested now (EQUIP-021). */
+export function runMp(state: GameState, u: UnitState, walk: number, mascRequested = false): number {
+  const base = Math.ceil(1.5 * walk)
+  return walk > 0 ? base + hookMp(state, u, 'run', { walk, requested: mascRequested }) : base
+}
+
 /** Jump MP: operable jets plus the partial-wing bonus; leg jets fail in depth 1, all jets when submerged (MOVE-007, MOVE-062). */
 export function jumpMp(state: GameState, u: UnitState): number {
   if (u.baseMp.jump <= 0) return 0
@@ -69,13 +95,14 @@ export function jumpMp(state: GameState, u: UnitState): number {
     if (m.destroyed || u.locs[m.location].destroyed) lost++
     else if (depth >= 1 && (m.location === 'LL' || m.location === 'RL')) lost++
   }
-  return Math.max(0, u.baseMp.jump - lost) + partialWingBonuses(u).jump
+  const jets = Math.max(0, u.baseMp.jump - lost)
+  return jets > 0 ? jets + hookMp(state, u, 'jump', { jets }) : 0 // errata v7.01: the wing needs some jump MP of its own
 }
 /** Current MP after damage and heat (MOVE-006). Walk floors at 0, run = ceil(1.5 walk), jump ignores heat. */
 export function currentMp(state: GameState, unitId: UnitId): MpSet {
   const u = state.units[unitId]!
   const walk = Math.max(0, damagedWalk(u) - heatMpLoss(u.heat))
-  return { walk, run: Math.ceil(1.5 * walk), jump: jumpMp(state, u) }
+  return { walk, run: runMp(state, u, walk), jump: jumpMp(state, u) }
 }
 /** MOVE-008: shut down, unconscious pilot, or damage alone leaves 0 MP in every mode. */
 export function isImmobile(state: GameState, u: UnitState): boolean {
@@ -242,7 +269,7 @@ const turnsTo = (from: Facing, to: Facing): StepOp[] => {
 }
 
 // ---------- context ----------
-function buildCtx(state: GameState, u: UnitState, mode: MoveMode): Ctx | Fail {
+function buildCtx(state: GameState, u: UnitState, mode: MoveMode, masc = false): Ctx | Fail {
   if (u.shutdown) return rej('E_SHUTDOWN', 'the unit is shut down')
   if (!u.pilot.conscious || u.pilot.dead) return rej('E_UNCONSCIOUS', 'the pilot is unconscious')
   // isImmobile and currentMp share their parts: work them out once (validate runs this per reach entry)
@@ -253,7 +280,7 @@ function buildCtx(state: GameState, u: UnitState, mode: MoveMode): Ctx | Fail {
     return rej('E_BAD_MODE', `mode is locked to ${u.move.mode}`)
   }
   const walk = Math.max(0, dw - heatMpLoss(u.heat))
-  const mp: MpSet = { walk, run: Math.ceil(1.5 * walk), jump: jm } // = currentMp(state, u.id)
+  const mp: MpSet = { walk, run: runMp(state, u, walk, masc && mode === 'run'), jump: jm } // = currentMp(state, u.id), plus a MASC request
   const total = mode === 'walk' ? mp.walk : mode === 'run' ? mp.run : mode === 'jump' ? mp.jump : 0
   if ((mode === 'walk' || mode === 'run') && total < 1) return rej('E_BAD_MODE', `no ${mode} MP`)
   return {
@@ -369,7 +396,11 @@ export function planMove(state: GameState, action: MoveAction): MovePlan | Fail 
   if (u.owner !== action.player) return rej('E_NOT_YOUR_UNIT', 'not your unit')
   if (!(FACINGS as readonly number[]).includes(action.facing)) return rej('E_BAD_FACING', 'facing must be 0 to 5')
   if (u.status !== 'active' && u.status !== 'withdrawing' && u.status !== 'offBoard') return rej('E_NOT_ELIGIBLE', 'the unit cannot move')
-  const c = buildCtx(state, u, action.mode)
+  if (action.masc) {
+    const why = mascRefusal(state, u, action.mode)
+    if (why) return rej('E_BAD_MODE', why)
+  }
+  const c = buildCtx(state, u, action.mode, !!action.masc)
   if (isFail(c)) return c
   if (action.attack) return planAttackMove(state, u, c, action)
   if (u.status === 'offBoard' && !action.entry) return rej('E_BAD_ENTRY', 'an off-board unit must give its entry')
@@ -413,6 +444,16 @@ export function planMove(state: GameState, action: MoveAction): MovePlan | Fail 
     if (occ && changesHex(s)) return rej('E_OCCUPIED', 'cannot end a move in an occupied hex', { hex: s.hex })
   }
   return summarize(c, s)
+}
+
+/** Why a MASC request is refused (EQUIP-021), or null: run only, a working MASC, activated before the unit spends MP. */
+function mascRefusal(state: GameState, u: UnitState, mode: MoveMode): string | null {
+  if (mode !== 'run') return 'MASC works only with Run'
+  const data = dataOf(state)
+  if (!data || !workingMasc(data, u)) return 'no working MASC'
+  if (mascActive(data, u)) return null
+  if (u.move.mpSpent > 0 || u.move.standAttempts > 0) return 'MASC is activated before the unit moves'
+  return null
 }
 
 // ---------- charge and DFA declared with the move (PHYS-005, PHYS-040, PHYS-060; 00 §9.6) ----------
@@ -527,7 +568,7 @@ const toPathSteps = (steps: PlanStep[]): PathStep[] =>
   }))
 const opsOf = (steps: PlanStep[]): { op: StepOp }[] => steps.map((st) => ({ op: st.op as StepOp }))
 
-function entryFrom(state: GameState, u: UnitState, mode: MoveMode, p: MovePlan, extra: { entry?: { hex: Hex; facing: Facing }; jumpTo?: Hex }): ReachEntry {
+function entryFrom(state: GameState, u: UnitState, mode: MoveMode, p: MovePlan, extra: { entry?: { hex: Hex; facing: Facing }; jumpTo?: Hex; masc?: boolean }): ReachEntry {
   const sim = p.sim
   const action: MoveAction = {
     // the action keeps the search mode: a locked walk/run with nothing spent summarizes as stand still but must name its mode
@@ -536,6 +577,7 @@ function entryFrom(state: GameState, u: UnitState, mode: MoveMode, p: MovePlan, 
   }
   if (extra.jumpTo) action.jumpTo = extra.jumpTo
   if (extra.entry) action.entry = extra.entry
+  if (extra.masc) action.masc = true
   return {
     hex: sim.hex, label: null, facing: sim.facing, mode: p.mode, path: toPathSteps(p.steps), mpUsed: p.mpUsed, hexesMoved: p.hexesMoved,
     tmm: p.tmm, attackerMod: p.attackerMod, heat: p.heat,
@@ -578,10 +620,11 @@ function groundSearch(c: Ctx, starts: Sim[]): Sim[] {
 }
 
 /** Every (hex, facing, mode) the unit can end its move in, cheapest path each (00 §11). */
-export function reachable(state: GameState, unitId: UnitId): ReachEntry[] {
+export function reachable(state: GameState, unitId: UnitId, opts: ReachOptions = {}): ReachEntry[] {
   const u = state.units[unitId]
   if (!u || (u.status !== 'active' && u.status !== 'withdrawing' && u.status !== 'offBoard')) return []
   if (u.move.done || isImmobile(state, u)) return []
+  if (opts.masc) return mascReach(state, u)
   const out: ReachEntry[] = []
   const mp = currentMp(state, unitId)
   const locked = u.move.mode
@@ -640,6 +683,31 @@ export function reachable(state: GameState, unitId: UnitId): ReachEntry[] {
   }
   return out
 }
+/**
+ * MASC run entries (query.reachable with {masc: true}): Run moves with run MP = walk x 2, each action carrying `masc: true`,
+ * plus their charges. Empty when MASC cannot be requested now (no working MASC, already active, or MP already spent).
+ */
+function mascReach(state: GameState, u: UnitState): ReachEntry[] {
+  if (u.status === 'offBoard' || u.prone || mascRefusal(state, u, 'run') || mascOn(state, u)) return []
+  if (u.move.mode !== null) return []
+  const c = buildCtx(state, u, 'run', true)
+  if (isFail(c)) return []
+  const out: ReachEntry[] = []
+  for (const s of groundSearch(c, [startSim(u, 'run', c)])) {
+    if (nSteps(s) === 0 || s.exited) continue
+    if (changesHex(s) && unitAt(state, s.hex, u.id)) continue
+    out.push(entryFrom(state, u, 'run', summarize(c, s), { masc: true }))
+  }
+  const withdrawing = u.status === 'withdrawing'
+  if (!withdrawing) out.push(...attackEntries(state, u, out, { ...c.mp, jump: 0 }))
+  for (const e of out) e.label = labelOf(state, e.hex)
+  if (withdrawing) {
+    const edge = homeEdgeOf(state, u), d0 = edgeDistance(state, edge, u.pos!)
+    return out.filter((e) => edgeDistance(state, edge, e.hex) < d0)
+  }
+  return out
+}
+
 /** Charge entries for plain ground entries that end adjacent to and facing an enemy; DFA entries per enemy in jump range (00 §9.6). */
 function attackEntries(state: GameState, u: UnitState, plain: ReachEntry[], mp: MpSet): ReachEntry[] {
   const out: ReachEntry[] = []
@@ -715,7 +783,34 @@ const gyroDestroyed = (u: UnitState): boolean => hitSlots(u, 'gyro') >= 2
 function firstAction(state: GameState, u: UnitState, mode: MoveMode, startMp: number): { state: GameState; events: GameEvent[] } {
   if (u.move.mode !== null) return { state, events: [] }
   const s = setRecord(state, u.id, { mode, startHex: u.pos, startFacing: u.facing, entered: u.status === 'offBoard' })
-  return { state: s, events: [{ type: 'MoveStarted', unitId: u.id, mode, hex: u.pos, facing: u.facing, mp: startMp }] }
+  const uj = unjamWeapons(s, u.id)
+  return { state: uj.state, events: [{ type: 'MoveStarted', unitId: u.id, mode, hex: u.pos, facing: u.facing, mp: startMp }, ...uj.events] }
+}
+
+/** Hook point 'movement', query 'unjam' (EQUIP-022, 2026 [CL W10]): each jammed rapid-fire weapon rolls to clear as the unit's move starts. */
+function unjamWeapons(state: GameState, unitId: UnitId): Stepped {
+  let s = state
+  const events: GameEvent[] = []
+  if (!Object.values(s.units[unitId]!.mounts).some((m) => m.jammed && !m.destroyed)) return { state: s, events }
+  let bound
+  try { bound = collectHooks(s, unitId, 'movement') } catch { return { state: s, events } }
+  for (const b of bound) {
+    if (!b.mountId || !s.units[unitId]!.mounts[b.mountId]?.jammed) continue
+    const r = b.hook.movement?.({ state: s, point: 'movement', unitId, sourceId: b.sourceId, mountId: b.mountId, params: { query: 'unjam' } })
+    if (r?.result) { s = r.result.state; events.push(...r.result.events) }
+  }
+  return { state: s, events }
+}
+
+/** Hook point 'movement', query 'activate': the MASC escalating-failure roll (EQUIP-020/021). ok = the boost applies. */
+function activateMascHooks(state: GameState, unitId: UnitId): Stepped & { ok: boolean } {
+  const data = bundleFor(state)
+  const m = workingMasc(data, state.units[unitId]!)
+  if (!m) return { state, events: [], ok: false }
+  const b = collectHooks(state, unitId, 'movement').find((x) => x.mountId === m.id && x.hook.name === 'masc')
+  const r = b?.hook.movement?.({ state, point: 'movement', unitId, sourceId: b.sourceId, mountId: m.id, params: { query: 'activate', data } })
+  if (!r?.result) return { state, events: [], ok: false }
+  return { ...r.result, ok: mascActive(data, r.result.state.units[unitId]!) }
 }
 
 /** Finishes a unit's move: end-of-move PSRs, MoveEnded, movement heat (00 §9.3). */
@@ -763,7 +858,7 @@ export function resolveStacking(state: GameState, unitId: UnitId): Stepped {
   const pick = cands[0]
   if (!pick) return { state, events: [] }
   const s = patchUnit(state, unitId, { pos: pick.to })
-  return { state: s, events: [{ type: 'UnitDisplaced', unitId, from, to: pick.to, cause: 'domino' }] }
+  return { state: s, events: [{ type: 'UnitDisplaced', unitId, from, to: pick.to, cause: 'stacking' }] }
 }
 
 function standPossibleAfterFall(state: GameState, id: UnitId): boolean {
@@ -796,10 +891,20 @@ export function executeMove(state: GameState, action: MoveAction): MoveOutcome |
   const plan = planMove(state, action) as MovePlan
   const id = action.unitId
   const events: GameEvent[] = []
-  const u0 = state.units[id]!
-  const mpAll = currentMp(state, id)
-  const cap = action.mode === 'jump' ? mpAll.jump : action.mode === 'run' ? mpAll.run : action.mode === 'walk' ? mpAll.walk : 0
   let s = state
+  // MASC (EQUIP-021): the activation roll comes before the unit spends any MP; a failure caps the move at normal Run MP
+  let mascCap: number | null = null
+  if (action.masc && !mascOn(s, s.units[id]!)) {
+    const a = activateMascHooks(s, id)
+    s = a.state
+    events.push(...a.events)
+    const ua = s.units[id]!
+    if (ua.status === 'destroyed' || ua.doomed) return { state: setRecord(s, id, { done: true }), events, next: 'done' }
+    if (!a.ok) mascCap = currentMp(s, id).run
+  }
+  const u0 = s.units[id]!
+  const mpAll = currentMp(s, id)
+  const cap = action.mode === 'jump' ? mpAll.jump : action.mode === 'run' ? mpAll.run : action.mode === 'walk' ? mpAll.walk : 0
   const fa = firstAction(s, u0, action.mode, cap)
   s = fa.state
   events.push(...fa.events)
@@ -818,6 +923,11 @@ export function executeMove(state: GameState, action: MoveAction): MoveOutcome |
     for (let i = 0; i < plan.steps.length; i++) {
       const st = plan.steps[i]!
       const cur = s.units[id]!
+      if (mascCap !== null && spent + st.cost.total > mascCap) {
+        // MASC failed: the unit stops where its normal Run MP runs out (RULING in 10 EQUIP-021)
+        events.push({ type: 'MoveTruncated', unitId: id, at: cur.pos ?? st.from, stepsDiscarded: plan.steps.length - i })
+        break
+      }
       spent += st.cost.total
       if (st.op === 'jump') {
         s = patchUnit(s, id, { pos: st.to, facing: st.facing })

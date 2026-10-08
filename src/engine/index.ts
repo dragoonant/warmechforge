@@ -125,6 +125,8 @@ export interface ReachEntry {
   physical: { kind: 'charge' | 'dfa'; targetId: UnitId; fromHex?: Hex } | null
   action: MoveAction
 }
+/** query.reachable options (M6): `masc` = run entries use MASC run MP (walk x 2) and their actions carry `masc: true`. */
+export interface ReachOptions { masc?: boolean }
 export interface LosReason {
   code: 'clear' | 'adjacent' | 'hill' | 'woods' | 'woodsBlock' | 'waterLine' | 'partialCoverHill' | 'partialCoverWater'
     | 'divided' | 'offBoard' | 'sameHex'
@@ -193,7 +195,16 @@ export interface HeatEffects {
   lifeSupportPilotHits: number
 }
 export interface HeatScaleRow { level: number; effects: { code: 'mp' | 'toHit' | 'shutdown' | 'autoShutdown' | 'ammo' | 'lifeSupport'; value: number }[] }
-export interface HeatPlan { mode?: MoveMode; hexesJumped?: number; mounts?: LocalId[]; rapidShots?: Record<LocalId, number> }
+export interface HeatPlan {
+  mode?: MoveMode
+  hexesJumped?: number
+  mounts?: LocalId[]
+  rapidShots?: Record<LocalId, number>
+  /** PPC mounts whose capacitor would charge (5 heat each, EQUIP-016). */
+  charge?: LocalId[]
+  /** A coolant pod mount that would be vented this turn (extra dissipation, EQUIP-017). */
+  coolantPod?: LocalId
+}
 export interface HeatProjection {
   now: number
   entries: HeatEntry[] // this turn's ledger so far plus the plan
@@ -202,7 +213,15 @@ export interface HeatProjection {
   end: number
   effects: HeatEffects
 }
-export interface FirePlan { twist?: Twist; flip?: boolean; shots: { mountId: LocalId; targetId: UnitId; binId?: LocalId; aimedAt?: Loc; rapidShots?: number }[]; propArm?: ArmLoc }
+export interface FirePlan {
+  twist?: Twist
+  flip?: boolean
+  shots: { mountId: LocalId; targetId: UnitId; binId?: LocalId; aimedAt?: Loc; rapidShots?: number }[]
+  propArm?: ArmLoc
+  /** As DeclareFireAction.charge / coolantPod: the heat projection includes them. */
+  charge?: LocalId[]
+  coolantPod?: LocalId
+}
 export interface FirePreview { weapons: AttackPreview[]; primaryTargetId: UnitId | null; heat: HeatProjection & { move: number; weapons: number } }
 export interface PhysicalPreviewRequest { attackerId: UnitId; kind: PhysicalKind; limb?: ArmLoc | LegLoc; targetId: UnitId; attackerAt?: UnitAt; targetAt?: UnitAt }
 export interface PhysicalPreview {
@@ -237,9 +256,15 @@ export interface SheetView {
   weapons: { mountId: LocalId; name: string; location: Loc; rear: boolean; heat: number; damage: string; ranges: string; destroyed: boolean; firedThisTurn: boolean }[]
   ammo: { binId: LocalId; name: string; location: Loc; shots: number; capacity: number }[]
   mp: { baseWalk: number; baseRun: number; baseJump: number; walk: number; run: number; jump: number; walkMods: Mod[] }
-  sinks: { count: number; type: 'single' | 'double'; operable: number; dissipation: number }
+  sinks: { count: number; type: 'single' | 'double'; operable: number; dissipation: number; dissipationParts?: { base: number; water: number; hooks: number } }
   status: { prone: boolean; shutdown: boolean; immobile: boolean; jumped: boolean; twist: Twist | null; flipped: boolean }
   heat: number
+  /**
+   * Equipment with a state of its own (M6): PPC capacitors, coolant pods, MASC, jammed rapid-fire weapons. `state`: 'ready',
+   * 'charging' / 'charged' (capacitor), 'used' (pod), 'active' (MASC this turn), 'jammed', 'destroyed'. `avoidTn`: MASC's next
+   * activation roll. `mascRun`: run MP with MASC active.
+   */
+  equipment?: { mountId: LocalId; name: string; location: Loc; kind: 'capacitor' | 'coolantPod' | 'masc' | 'rapidFire'; state: 'ready' | 'charging' | 'charged' | 'used' | 'active' | 'jammed' | 'destroyed'; avoidTn?: number; mascRun?: number }[]
   pilot: { name: string; gunnery: number; piloting: number; hits: number; conscious: boolean; consciousnessTn: number | null; consciousnessTns: number[] /* TN for hits 1..5 */ }
 }
 export interface TerrainInfo { label: HexLabel; level: number; terrain: string[]; depth: number | null; moveCost: { walk: number | null; run: number | null; jump: number | null }; losEffect: string }
@@ -249,7 +274,7 @@ export const query = {
   /** Hex distance (HEX-005). */
   distance: (a: Hex, b: Hex): number => hexDistance(a, b),
   /** Every (hex, facing, mode) the unit can end its move in, cheapest path each, with a ready MoveAction; plus one entry per legal charge/DFA (00 §9.6). */
-  reachable: (state: GameState, unitId: UnitId): ReachEntry[] => reachableImpl(state, unitId),
+  reachable: (state: GameState, unitId: UnitId, opts?: ReachOptions): ReachEntry[] => reachableImpl(state, unitId, opts),
   /** LOS between two units (or a unit and a hex) with reasons and blockers (LOS-020). */
   los: (state: GameState, from: UnitId | Hex, to: UnitId | Hex, opts?: LosOptions): LosVerdict => losQuery(state, from, to, opts),
   arcs: (state: GameState, unitId: UnitId, twist?: Twist): ArcsView => arcsQuery(state, unitId, twist),

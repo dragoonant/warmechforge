@@ -1,5 +1,6 @@
 // Tuning constants for the utility AI, set from `npm run bench:ai` sweeps (seeds 1-16, normal vs random / easy).
-// AI_TUNE (a JSON object in the environment; node only, absent in the browser) overrides them for bench experiments.
+// TUNE is the base set (easy uses it as is); TUNE_NORMAL layers the normal tier's overrides on top. AI_TUNE (a JSON object in
+// the environment; node only, absent in the browser) overrides the normal tier only, so bench sweeps never move the easy bot.
 export interface Tune {
   /** Flat part of FALL_COST (40-ai §3.7 says 10): pilot-hit risk and the tempo lost standing up. 30 won ~4% more games. */
   fallTempo: number
@@ -17,9 +18,17 @@ export interface Tune {
   approachFar: number
   /** Normal tier's weight on damage taken (the tier table's wT). */
   wT: number
+  /** Position bonus per level of height advantage over the nearest enemy (normal; hills on Sodden Hills / Arid Canyons). */
+  heightW: number
+  /** Bonus per point of a friend's firepower within 3 hexes, capped (normal: lance cohesion, mutual support). */
+  supportW: number
+  /** Withdrawing units: weight per hex of distance to the home edge. */
+  withdrawW: number
   /** Optional overrides used by experiments: threat λ and the soft heat cost scale. */
   lambda?: number
   heatW?: number
+  /** Normal tier's default end-of-turn heat cap (the tier table's heatCap). */
+  heatCap?: number
 }
 
 function fromEnv(): Partial<Tune> {
@@ -34,9 +43,22 @@ export const TUNE: Tune = {
   woodsL: 1.0,
   woodsH: 1.8,
   tmmW: 0.5,
-  rearW: 0.6,
+  rearW: 1.0,
   approach: 0.5,
   approachFar: 4,
   wT: 0.9,
+  heightW: 0,
+  supportW: 0,
+  withdrawW: 3,
+}
+
+/**
+ * Normal tier: weighs damage taken more (wT 1.3) and accepts end heat up to 13 (+2 to-hit, -2 MP, still no shutdown roll);
+ * the soft heat cost still prices every threshold. Bench (intro, 80 games over seeds 1 and 7): 54 -> 67 wins against easy.
+ */
+export const TUNE_NORMAL: Tune = {
+  ...TUNE,
+  wT: 1.3,
+  heatCap: 13,
   ...fromEnv(),
 }

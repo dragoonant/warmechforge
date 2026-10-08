@@ -69,7 +69,7 @@ Conventions used below:
 | MOVE-009 | An immobile unit gets no Movement selection and is excluded from the alternation counts | P1 |
 | MOVE-010 | Walking forward into the facing hex is legal; entering a hex that is neither ahead nor behind without turning first is rejected | P1 |
 | MOVE-011 | Turning 3 hexsides costs 3 MP | P1 |
-| MOVE-012 | May pass through a friendly unit and through a shut-down enemy; may not enter a mobile enemy's hex (except charge); may not end in any occupied hex | P1 |
+| MOVE-012 | May pass through a friendly unit and through a shut-down enemy; may not enter a mobile enemy's hex (except charge); may not end in any occupied hex. Involuntary stacking: a unit that fell in a friend's hex may finish its move in place, and when the move ends it is moved to an adjacent empty hex nearest its start (`UnitDisplaced` cause `stacking`, no PSR) | P1 |
 | MOVE-013 | Forward 3 then backward 2 → TMM count 2; facing changes add 0; a 4-hex jump path → 4 | P1 |
 | MOVE-014 | Walk 1 'Mech facing heavy woods (cost 3), no other MP spent: entering it is legal and counts as Run (heat 2, +2). Prone with exactly 1 MP: one stand attempt is legal and counts as Run | P1 |
 | MOVE-015 | Entering a hex 2 levels up costs +2 and is legal; 3 levels up or down is rejected | P1 |
@@ -443,12 +443,18 @@ Conventions used below:
 | EQUIP-001 | Targeting computer: −1 for a large laser, 0 for an LRM, flamer or machine gun; destroyed TC → 0 | P2 |
 | EQUIP-002 | TC aimed shots follow TOHIT-034 | P2 |
 | EQUIP-010 | AC/10 takes its first crit: still fires with no penalty; second crit on any of its slots: destroyed | P1 |
-| EQUIP-011 | Ultra AC firing at double rate never jams (no jam roll exists) | P1 |
+| EQUIP-011 | Ultra AC firing at double rate never jams (no jam roll exists): a natural 2 leaves it working, its `ultraRapid` hook is called once; 2 shots = 2 rounds, 6 heat for a UAC/10, a Cluster Hits roll with rack size 2 | P1 |
 | EQUIP-012 | Firing a heavy Gauss rifle triggers no PSR | P2 |
 | EQUIP-013 | Capacitor PPC attack roll `[1,1]` does not destroy the capacitor | P2 |
 | EQUIP-014 | Ferro-lamellor: 5 points to armored LA land as 4, 6 as 4, 1 as 0 (no pilot hit on the head); bare structure and explosions are not reduced | P2 |
 | EQUIP-015 | Guardian ECM: Artemis +2 drops to 0 when the attacker or target is within 6 hexes of an operating hostile ECM; friendly or shut-down ECM does nothing | P2 |
-| EQUIP-020 | MASC used 3 turns running: avoid TNs 3, 5, 7; a failure makes one crit check on a random leg | P2 |
+| EQUIP-016 | Regent A in a real game: charging the RA ER PPC adds 5 equipment heat and `EquipmentUsed capacitorCharged`; next turn the preview and the hit show 20 for that PPC (15 for the uncharged one), `capacitorDischarged` is emitted, and the turn after it is 15 again. Charging and firing the same PPC → E_WEAPON_USED; a non-PPC → E_UNKNOWN_WEAPON; no working capacitor → E_BAD_PAYLOAD | P2 |
+| EQUIP-017 | Regent A vents its pod: that Heat Phase dissipates 52 + 26; a second use → E_WEAPON_USED. A crit on the unused pod → `ComponentExploded` 10 and 1 pilot hit; on a used pod → destroyed, no explosion | P2 |
+| EQUIP-018 | Eris ERS-2N: jump 7 (5 jets + 2), a 7-hex jump is reachable, Heat Phase dissipation = sinks + 3; one wing crit → jump 6, dissipation +2; a destroyed side torso takes its wing's 4 slots | P2 |
+| EQUIP-020 | MASC used 3 turns running: avoid TNs 3, 5, 7; a failure makes one crit check on a random leg. Then unused on turn 4 and used on 5: TN 7 again (End Phase step-down, never 10) | P2 |
+| EQUIP-021 | Solitaire 2: `query.reachable(.., {masc: true})` reaches moves of 16-20 MP (run 15 without), `legalActions` includes them, a MASC walk → E_BAD_MODE. A failed roll: `EquipmentUsed mascFailed`, MASC destroyed, a `CritCheckRolled` why `masc` on the leg the 1d6 picks, `MoveTruncated`, MP spent ≤ 15 | P2 |
+| EQUIP-022 | Fixture RAC: 6 shots with a natural 4 → `WeaponJamChanged` jammed; next Movement Phase the unjam roll (TN gunnery + 3) clears it and the unit may fire that turn; 2 shots with a natural 3 does not jam | P2 |
+| EQUIP-023 | Uziel UZL-2S: the `beagleProbe` setup hook runs once at game start and emits nothing | P3 |
 | EQUIP-030 | Data containing flail, flechette/fragmentation ammo, full-head ejection, industrial weapons, mechanical jump boosters or UMUs fails validation | P1 |
 
 ## 18. BV

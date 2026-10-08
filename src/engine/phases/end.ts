@@ -10,6 +10,7 @@ import { roll } from '../rng'
 import { isSubmerged } from '../terrain'
 import type { DataBundle, DecisionContext, GameResult, GameState, MoveRecord, AttackRecord, PlayerId, UnitId, UnitState } from '../types'
 import { applyDoomed, checkVictory, endGame, refreshStatus } from '../victory'
+import { collectHooks } from '../hooks'
 
 /** The fresh per-turn records (00 4.3). */
 export const freshMove = (facing: UnitState['facing'] = 0): MoveRecord => ({
@@ -59,6 +60,25 @@ export function resetTwists(state: GameState): Stepped {
   return { state: s, events }
 }
 
+/**
+ * Hook point 'endPhase' (00 §11.4), once per unit on the map, in initiative order: escalating-failure items not used this turn
+ * step their avoid number down (EQUIP-020). Runs with the twist reset (end.reset), before the turn's records are cleared.
+ */
+export function equipmentUpkeep(state: GameState): Stepped {
+  let s = state
+  const events: GameEvent[] = []
+  for (const id of initiativeOrder(s)) {
+    if (!onMap(s.units[id]!)) continue
+    let bound
+    try { bound = collectHooks(s, id, 'endPhase') } catch { continue }
+    for (const b of bound) {
+      const r = b.hook.endPhase?.({ state: s, point: 'endPhase', unitId: id, sourceId: b.sourceId, ...(b.mountId ? { mountId: b.mountId } : {}) })
+      if (r) { s = r.state; events.push(...r.events) }
+    }
+  }
+  return { state: s, events }
+}
+
 /** Steps 1-3 plus the consciousness check for pilots hurt in step 2 (00 5.1: end.consciousness). */
 export function runEndPhaseA(state: GameState): Stepped {
   let s: GameState = { ...state, step: 'end.recovery', ledger: { ...state.ledger, phase: 'end' } }
@@ -71,6 +91,7 @@ export function runEndPhaseA(state: GameState): Stepped {
   push(consciousnessChecks(s))
   s = { ...s, step: 'end.reset' }
   push(resetTwists(s))
+  push(equipmentUpkeep(s))
   return { state: { ...s, step: 'end.power' }, events }
 }
 

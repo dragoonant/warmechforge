@@ -47,6 +47,7 @@ export function SettingsButton() {
           <Seg label="Odds shown as" value={s.odds} testid="set-odds" onPick={(v) => set({ odds: v })} options={[{ v: 'percent', text: 'Percent' }, { v: 'tn', text: 'Target number' }]} />
           <label className="set-row set-check"><input type="checkbox" data-testid="set-narration" checked={s.narration} onChange={(e) => set({ narration: e.target.checked })} /> Narration lines</label>
           <label className="set-row set-check"><input type="checkbox" data-testid="set-tips" checked={s.tips} onChange={(e) => set({ tips: e.target.checked })} /> Tips</label>
+          <label className="set-row set-check"><input type="checkbox" data-testid="set-follow" checked={s.followAction} onChange={(e) => set({ followAction: e.target.checked })} /> Follow action (camera frames bot moves and shots)</label>
           <label className="set-row set-check"><input type="checkbox" data-testid="set-grid" checked={s.grid} onChange={(e) => set({ grid: e.target.checked })} /> Hex grid lines</label>
           <p className="hud-dim over-note" data-testid="fan-notice">{FAN_NOTICE}</p>
         </div>

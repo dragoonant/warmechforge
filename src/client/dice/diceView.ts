@@ -34,6 +34,15 @@ const locationVerdict = (c: RollCtx): Verdict => {
   return { word: `${LOC_SHORT[h.location]}${h.side === 'rear' ? ' (rear)' : ''}${h.tac ? ' · possible crit' : ''}`, tone: 'neutral' }
 }
 
+/** Slot index (0-based) a critSlot roll points at: two dice name the half and the slot; one die names only the slot within a half. */
+export function critSlotPointed(ev: DiceRolled): number | null {
+  if (ev.dice.length >= 2) return (ev.dice[0]! <= 3 ? 0 : 6) + ev.dice[1]! - 1
+  return null
+}
+function critSlotWhere(ev: DiceRolled, index: number): string {
+  return ev.dice.length >= 2 ? `${index < 6 ? 'upper' : 'lower'} half, slot ${index + 1}` : `slot ${index + 1}`
+}
+
 /** One renderer per roll purpose. Adding a purpose to the engine fails typecheck here until it is handled. */
 export const PURPOSE_RENDERERS: Record<RollPurpose, (c: RollCtx) => Verdict> = {
   initiative: (c) => {
@@ -65,8 +74,17 @@ export const PURPOSE_RENDERERS: Record<RollPurpose, (c: RollCtx) => Verdict> = {
     return { word: k.crits === 0 ? 'no crit' : k.crits === 1 ? '1 crit' : `${k.crits} crits`, tone: k.crits === 0 ? 'good' : 'bad' }
   },
   critSlot: (c) => {
-    const k = first(c, 'CritSlotHit', (e) => e.unitId === c.ev.unitId && (!c.ev.reason || e.location === c.ev.reason))
-    return k ? { word: `slot ${k.index + 1}: ${k.itemName ?? k.token}`, tone: 'bad' } : total(c)
+    const same = (e: GameEvent): boolean => e.type === 'DiceRolled' && e.purpose === 'critSlot' && e.unitId === c.ev.unitId && e.reason === c.ev.reason
+    // the roll that was accepted is the last slot roll before the slot hit; an earlier one pointed at a slot already hit
+    let hit: Extract<GameEvent, { type: 'CritSlotHit' }> | undefined
+    for (const e of c.after) {
+      if (same(e)) break
+      if (e.type === 'CritSlotHit' && e.unitId === c.ev.unitId && (!c.ev.reason || e.location === c.ev.reason)) { hit = e; break }
+    }
+    const pointed = critSlotPointed(c.ev)
+    if (hit) return { word: `${critSlotWhere(c.ev, hit.index)}: ${hit.itemName ?? hit.token}`, tone: 'bad' }
+    if (c.after.some(same)) return { word: pointed !== null ? `${critSlotWhere(c.ev, pointed)} already hit, roll again` : 'slot already hit, roll again', tone: 'neutral' }
+    return pointed !== null ? { word: critSlotWhere(c.ev, pointed), tone: 'neutral' } : total(c)
   },
   psr: words('PASS', 'FAIL: falls'),
   seatbelt: words('pilot steady', 'pilot hurt'),
@@ -108,6 +126,8 @@ export interface RollView {
   target: number | null
   targetWord: string
   verdict: Verdict
+  /** A slot roll's 2d6 sum means nothing, so the tray and log leave it out. */
+  hideTotal?: boolean
 }
 
 /** Which dice survived (multiset match, so equal faces are handled). */
@@ -137,6 +157,6 @@ export function viewRoll(shown: Pick<ShownRoll, 'seq' | 'event' | 'label'>, stat
   const actors = ev.unitId && ev.targetId ? `${unitName(state, ev.unitId)} → ${unitName(state, ev.targetId)}` : ev.unitId ? unitName(state, ev.unitId) : ''
   return {
     rollId: ev.rollId, seq: shown.seq, purpose: ev.purpose, label: shown.label, actors, dice: keptFlags(ev.dice, ev.kept),
-    mods: (ev.mods ?? []).map(modText), total: ev.total, target, targetWord: TARGET_WORD[ev.purpose] ?? 'needs', verdict,
+    mods: (ev.mods ?? []).map(modText), total: ev.total, target, targetWord: TARGET_WORD[ev.purpose] ?? 'needs', verdict, ...(ev.purpose === 'critSlot' ? { hideTotal: true } : {}),
   }
 }

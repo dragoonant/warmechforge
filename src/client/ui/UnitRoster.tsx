@@ -1,3 +1,4 @@
+import { crippledReason } from './format'
 import { game, uiActions, useActiveUnitId, useForceColour, useHoverUnitId, usePresentedUnit, usePrompt, useSelectedId, useSheet, useSideName, useUnitIds, usePresentedUnits } from '../contract'
 import type { PlayerId, UnitId } from '../../engine/index'
 import './hud.css'
@@ -16,7 +17,7 @@ function RosterRow({ id }: { id: UnitId }) {
   const icons: string[] = []
   if (unit.status === 'destroyed') icons.push('destroyed')
   else if (gone) icons.push(unit.status)
-  if (unit.crippled && !gone) icons.push('crippled')
+  if (unit.crippled && !gone) icons.push(`crippled: ${crippledReason(unit)}`)
   if (unit.prone) icons.push('prone')
   if (unit.shutdown) icons.push('shutdown')
   if (!unit.pilot.conscious && !unit.pilot.dead) icons.push('unconscious')

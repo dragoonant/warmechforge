@@ -30,7 +30,7 @@ export function DiceLog() {
             >
               <span className="dlog-label">{v.label}</span>
               <span className="dlog-dice">{v.dice.map((d) => d.value).join(' ')}</span>
-              <span className="dlog-total">{v.total}{v.target !== null ? `/${v.target}` : ''}</span>
+              <span className="dlog-total">{v.hideTotal ? '' : v.total}{v.target !== null ? `/${v.target}` : ''}</span>
               <span className="dlog-verdict">{v.verdict.word}</span>
             </button>
           </li>

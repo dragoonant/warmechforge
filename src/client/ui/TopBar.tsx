@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import {
-  settings, uiActions, useBanner, useControllers, usePresentedState, usePrompt, useSettings, useShowRanges, useUiMode, useWaitingFor,
+  settings, uiActions, useBanner, useControllers, usePresentedState, usePrompt, useSettings, useShowRanges, useShowThreat, useUiMode, useWaitingFor,
 } from '../contract'
 import './hud.css'
 import { SettingsButton } from './SettingsPopover'
@@ -25,6 +25,7 @@ export function TopBar({ extra }: { extra?: ReactNode }) {
   const prompt = usePrompt()
   const mode = useUiMode()
   const showRanges = useShowRanges()
+  const showThreat = useShowThreat()
   const { grid } = useSettings()
   const strip = useMemo(() => (state ? initiativeStrip(state) : null), [state])
   if (!state) return null
@@ -57,6 +58,7 @@ export function TopBar({ extra }: { extra?: ReactNode }) {
           <button type="button" data-testid="topbar-ruler" className={`hud-btn hud-btn-sm${mode === 'measure' ? ' hud-btn-primary' : ''}`} title="Ruler (M)" onClick={() => uiActions.toggleTool('measure', fallback)}>Ruler</button>
           <button type="button" data-testid="topbar-los" className={`hud-btn hud-btn-sm${mode === 'los' ? ' hud-btn-primary' : ''}`} title="Line of sight (L)" onClick={() => uiActions.toggleTool('los', fallback)}>Line of sight</button>
           <button type="button" data-testid="topbar-ranges" className={`hud-btn hud-btn-sm${showRanges ? ' hud-btn-primary' : ''}`} title="Range rings (R)" onClick={() => uiActions.toggleRanges()}>Ranges</button>
+          <button type="button" data-testid="topbar-threat" className={`hud-btn hud-btn-sm${showThreat ? ' hud-btn-primary' : ''}`} aria-pressed={showThreat} title="Threat overlay: where the enemy can hurt you next turn (T)" onClick={() => uiActions.toggleThreat()}>Threat</button>
           <button type="button" data-testid="topbar-grid" className={`hud-btn hud-btn-sm${grid ? ' hud-btn-primary' : ''}`} title="Hex grid (G)" onClick={() => settings.set({ grid: !grid })}>Grid</button>
           <SettingsButton />
           {extra}

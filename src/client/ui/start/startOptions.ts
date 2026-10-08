@@ -264,7 +264,14 @@ export function cleanSeed(raw: string): string | undefined {
 export function buildStartOptions(form: StartForm, cat?: StartCatalogue): NewGameOptions {
   const seed = cleanSeed(form.seed)
   const skirmish = isSkirmish((cat ?? catalogue()).missions.find((m) => m.id === form.mission))
-  const lineups: NonNullable<NewGameOptions['lineups']> = [{ units: form.picks[0].map((p) => ({ ...p })) }, { units: form.picks[1].map((p) => ({ ...p })) }]
+  const c = cat ?? catalogue()
+  // picks that are exactly a preset lance keep that lance's name and colour, so the board says "Regent Lance", not "Blue Lance"
+  const presetOf = (picks: readonly MechPick[]) => c.forces.find((f) => f.units.length === picks.length && [...f.units.map((u) => u.mech)].sort().join('|') === picks.map((x) => x.mech).sort().join('|'))
+  const pa = presetOf(form.picks[0]), pb = presetOf(form.picks[1])
+  const named = (preset: ReturnType<typeof presetOf>, other: ReturnType<typeof presetOf>) => (preset && preset !== other ? { name: preset.name, ...(preset.color ? { color: preset.color } : {}) } : {})
+  const lineups: NonNullable<NewGameOptions['lineups']> = [
+    { ...named(pa, pb), units: form.picks[0].map((p) => ({ ...p })) }, { ...named(pb, pa), units: form.picks[1].map((p) => ({ ...p })) },
+  ]
   return {
     mission: form.mission,
     ...(skirmish ? { lineups } : { forces: [form.forces[0], form.forces[1]] as [string, string] }),

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { SheetView } from '../../../engine/index'
 import { LOC_LABELS } from '../../contract'
-import { buildCrits } from './sheetView'
+import { tipProps } from '../Tip'
+import { buildCrits, critTip } from './sheetView'
 
 /** Per location, 6 or 12 rows. A hit slot is struck through with a red tick; empty slots are dim. */
 export function CritSlots({ sheet }: { sheet: SheetView }) {
@@ -20,6 +21,7 @@ export function CritSlots({ sheet }: { sheet: SheetView }) {
               {l.slots.map((s) => (
                 <li
                   key={s.index} data-testid={`sheet-crit-${l.loc}-${s.index + 1}`} data-hit={s.hit ? 'true' : 'false'}
+                  {...tipProps(critTip(l.loc, s))}
                   className={`crit-slot${s.destroyed ? ' crit-hit' : ''}${s.empty ? ' crit-empty' : ''}${s.ammo ? ' crit-ammo' : ''}`}
                 >
                   <span className="crit-n">{s.index + 1}</span>

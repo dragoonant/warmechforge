@@ -14,7 +14,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { useUiStore } from '../store/uiStore'
 import { ambientFrame } from '../vfx/frames'
 import { COLOURS, puff, sparks } from '../vfx/particles'
-import { BASE_THICKNESS } from './figureConstants'
+import { BASE_THICKNESS, FIGURE_SCALE } from './figureConstants'
 import { yawForFacing } from './facing'
 import { cloneGlb, useGlbScene } from './glbLoader'
 import { glbSlugFor, useGlbManifestReady } from './glbModels'
@@ -159,6 +159,8 @@ export const Figure = memo(function Figure({ id }: FigureProps): ReactElement | 
   } : null)
   if (!unit || !rig || !prof) return null
   const r = rig.radius
+  // the pick volume keeps the data height (not the enlarged drawing) so it never covers the hexes behind a figure
+  const pickH = rig.height / FIGURE_SCALE
   const selected = selectedId === id
   const hovered = hoverId === id
   const active = activeId === id
@@ -167,12 +169,12 @@ export const Figure = memo(function Figure({ id }: FigureProps): ReactElement | 
       <primitive object={rig.root} />
       {/* invisible pick volume */}
       <mesh
-        material={HIT_MATERIAL} position={[0, (rig.height + BASE_THICKNESS) / 2, 0]}
+        material={HIT_MATERIAL} position={[0, (pickH + BASE_THICKNESS) / 2, 0]}
         onClick={(e) => { if (e.nativeEvent.button !== 0 || e.delta > 4) return; e.stopPropagation(); handleUnitClick(id) }}
         onPointerOver={(e) => { e.stopPropagation(); uiActions.hoverUnit(id) }}
         onPointerOut={() => uiActions.hoverUnit(null)}
       >
-        <cylinderGeometry args={[r + 0.05, r + 0.05, rig.height + BASE_THICKNESS, 12]} />
+        <cylinderGeometry args={[r + 0.05, r + 0.05, pickH + BASE_THICKNESS, 12]} />
       </mesh>
       {/* rings on the base edge: selected gold, active pulsing gold, target red, hovered white, eligible soft gold */}
       {eligible && !selected && <mesh geometry={RING_GEO} material={ringMat(ELIGIBLE, 0.5)} position={[0, 0.02, 0]} scale={[r + 0.12, 1, r + 0.12]} />}

@@ -3,7 +3,8 @@ import {
   useFireDraftPreview, useHeatProjection, useHeatScale, useMoveDraft, useMoveDraftEntry, usePrompt, usePresentedUnit, useSelectedId,
 } from '../contract'
 import { heatTotalText, heatParts, heatEffectChips, heatRisk } from './format'
-import { buildSegments, buildThresholds } from './heatView'
+import { buildSegments, buildThresholds, thresholdTip } from './heatView'
+import { tipProps } from './Tip'
 
 /**
  * Vertical thermometer with the engine's threshold rows. Solid marker = heat now; ghost marker = projected end-of-turn heat while
@@ -27,7 +28,8 @@ export function HeatScale() {
   const projected = proj ? proj.end : null
   const maxLevel = scale.length ? scale[scale.length - 1]!.level : 30
   const segs = useMemo(() => buildSegments(maxLevel, now, projected), [maxLevel, now, projected])
-  const thr = useMemo(() => buildThresholds(scale, now, projected), [scale, now, projected])
+  const lifeSupportDamaged = !!unit && Object.values(unit.slots).some((l) => l.some((s) => s.token === 'lifeSupport' && s.hit))
+  const thr = useMemo(() => buildThresholds(scale, now, projected, lifeSupportDamaged), [scale, now, projected, lifeSupportDamaged])
   if (!unit) return null
   const parts = proj ? heatParts(proj) : null
   const risk = proj ? heatRisk(proj.effects) : 'none'
@@ -50,8 +52,8 @@ export function HeatScale() {
             <div className="chips" data-testid="heat-projected-effects">{heatEffectChips(proj.effects).map((c) => <span key={c} className={`chip${risk === 'danger' ? ' chip-bad' : ''}`}>{c}</span>)}</div>
           )}
           <ul className="heat-thr">
-            {thr.map((t) => (
-              <li key={t.level} className={`${t.active ? 'thr-active' : ''}${t.projected ? ' thr-projected' : ''}`} data-testid={`heat-threshold-${t.level}`}>
+            {thr.map((t, i) => (
+              <li key={t.level} tabIndex={0} {...tipProps(thresholdTip(t, thr[i + 1]))} className={`${t.active ? 'thr-active' : ''}${t.projected ? ' thr-projected' : ''}`} data-testid={`heat-threshold-${t.level}`}>
                 <span className="thr-level">{t.level}</span><span className="thr-chips">{t.chips.join(', ')}</span>
               </li>
             ))}

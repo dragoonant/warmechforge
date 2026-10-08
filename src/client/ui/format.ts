@@ -1,6 +1,6 @@
 // Small pure formatters shared by the HUD. Numbers always come from the engine (mods, TN, odds, heat parts); this file only
 // words them, in the engine's order, so the printed parts always add up to the engine's total.
-import type { HeatEffects, HeatProjection, Mod, MoveMode, RangeBand, GameState, UnitId } from '../../engine/index'
+import type { HeatEffects, HeatProjection, Mod, MoveMode, RangeBand, GameState, UnitId, UnitState } from '../../engine/index'
 import { HEAT_EFFECT_LABELS, MOD_LABELS, RANGE_LABELS, formatMod, formatOdds, unitName, type Settings } from '../contract'
 
 export interface ModCtx {
@@ -65,7 +65,7 @@ export function heatEffectChips(e: HeatEffects): string[] {
   if (e.autoShutdown) out.push(HEAT_EFFECT_LABELS.autoShutdown())
   else if (e.shutdownTn !== null) out.push(`shutdown avoid ${e.shutdownTn}+`)
   if (e.ammoTn !== null) out.push(`ammo avoid ${e.ammoTn}+`)
-  if (e.lifeSupportPilotHits) out.push(`pilot hit ${e.lifeSupportPilotHits} if life support is damaged`)
+  if (e.lifeSupportPilotHits) out.push('pilot takes 1 hit if life support is damaged')
   return out
 }
 
@@ -106,3 +106,16 @@ export function heatTotalText(p: HeatParts): string {
 export const nameOf = (state: GameState | null, id: UnitId | null | undefined): string => unitName(state, id)
 
 export const signed = formatMod
+
+/** Why a 'Mech counts as crippled (11 §2.2): the first condition that holds, in our words. */
+export function crippledReason(u: UnitState): string {
+  const hits = (token: string): number => Object.values(u.slots).reduce((n, l) => n + l.filter((s) => s.hit && s.token === token).length, 0)
+  const legs = (['LL', 'RL'] as const).filter((l) => u.locs[l].destroyed).length
+  if (legs > 0) return legs === 2 ? 'both legs destroyed' : 'a leg destroyed'
+  if (u.locs.CT.destroyed) return 'centre torso destroyed'
+  const gyro = hits('gyro')
+  if (gyro >= 2) return 'gyro destroyed'
+  const engine = hits('engine')
+  if (engine >= 2) return `${engine} engine hits`
+  return 'no weapon can fire'
+}

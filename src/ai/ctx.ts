@@ -2,14 +2,14 @@
 // the value model (40-ai §3: firepower, KILL, focus multiplier, location destruction and crit slot values) and caches.
 // Reads only the public engine API (view state, query.*, bundleFor) and data records; never mutates anything.
 import type {
-  GameState, Hex, Loc, LocalId, PlayerId, UnitId, UnitState,
+  Action, GameState, Hex, Loc, LocalId, PlayerId, UnitId, UnitState,
 } from '../engine/index'
 import { bundleFor, deriveSeed, nextFloat, query, HEX_DIRS, FACINGS } from '../engine/index'
 import type { Facing } from '../engine/index'
 import type { Ammo, Weapon } from '../data/types'
 import { clusterTable, meanOf, p2d6, LOC_LIST } from './prob'
 import type { TierParams } from './tiers'
-import { TUNE } from './tune'
+import { TUNE, TUNE_NORMAL, type Tune } from './tune'
 
 export type Rng = () => number
 /** AI rng: deriveSeed(gameSeed, 'ai', side, decisionSeq, tier) fed to an sfc32 stream private to the AI (40-ai intro). */
@@ -50,6 +50,8 @@ export interface WeaponInfo {
   /** Damage per range band (energy weapons with variable damage). */
   bandDamage: { short: number; medium: number; long: number }
   toHitMod: number
+  /** Rapid-fire shot counts above 1 the weapon may declare (Ultra AC: [2]). */
+  rapidModes: number[]
 }
 
 export interface UnitFacts {
@@ -69,6 +71,8 @@ export class AiCtx {
   readonly state: GameState
   readonly me: PlayerId
   readonly tier: TierParams
+  /** Tuning constants for this tier (normal layers its overrides on the base set). */
+  readonly tune: Tune
   readonly rng: Rng
   readonly t0: number
   readonly deadline: number
@@ -76,6 +80,10 @@ export class AiCtx {
   private boardKeys: Set<string> | null = null
   private sideMaxFp = new Map<PlayerId, number>()
   readonly memo = new Map<string, unknown>()
+  /** Scored candidates of the current decision (AI trace panel); null when the caller did not ask for a trace. */
+  cands: { action: Action; score: number; parts?: Record<string, number> }[] | null = null
+  /** Record a scored candidate for the trace (no-op when not tracing). */
+  note(action: Action, score: number, parts?: Record<string, number>): void { this.cands?.push({ action, score, ...(parts ? { parts } : {}) }) }
   /** The mission counts crippled units as eliminated (11-missions victory {type: eliminate, cripple: true}). */
   readonly crippleWins: boolean
 
@@ -83,6 +91,7 @@ export class AiCtx {
     this.state = state
     this.me = me
     this.tier = tier
+    this.tune = tier.id === 'normal' ? TUNE_NORMAL : TUNE
     this.rng = rng
     this.t0 = now()
     this.deadline = this.t0 + budgetMs
@@ -112,6 +121,20 @@ export class AiCtx {
   }
   /** Number of on-board neighbours (6 inside the map, fewer at the edge). */
   boardNeighbours(h: Hex): number { let n = 0; for (const f of FACINGS) if (this.onBoard(neighbour(h, f))) n++; return n }
+  /** Hexes from h to the side's home edge (withdrawal heuristic: edge hexes are on-board hexes with an off-board neighbour that way). */
+  edgeDistance(side: PlayerId, h: Hex): number {
+    const edge = this.state.sides[side]?.homeEdge ?? (side === 'A' ? 'south' : 'north')
+    const k = `edge:${edge}`
+    let hexes = this.memo.get(k) as Hex[] | undefined
+    if (!hexes) {
+      const dirs: Facing[] = edge === 'north' ? [0] : edge === 'south' ? [3] : edge === 'east' ? [1, 2] : [4, 5]
+      hexes = Object.values(this.state.board.hexes).map((b) => b.hex).filter((x) => dirs.some((f) => !this.onBoard(neighbour(x, f))))
+      this.memo.set(k, hexes)
+    }
+    let d = Infinity
+    for (const x of hexes) d = Math.min(d, query.distance(x, h))
+    return Number.isFinite(d) ? d : 0
+  }
   private hexMap: Map<string, { woods: string; depth: number; level: number }> | null = null
   hexInfo(h: Hex): { woods: string; depth: number; level: number } | null {
     if (!this.hexMap) this.hexMap = new Map(Object.values(this.state.board.hexes).map((b) => [hexKey(b.hex), { woods: b.woods, depth: b.depth, level: b.level }]))
@@ -159,7 +182,7 @@ export class AiCtx {
       const destroyed = dmg >= armor + L.structure ? 1 : 0
       v += p * (toArmor + 1.5 * toStruct + destroyed * lv[l].ld + (toStruct > 0 ? (22 / 36) * lv[l].crit : 0))
     }
-    v = 1.2 * this.focus(id) * v + TUNE.fallTempo + fp.pPilotHit * 5
+    v = 1.2 * this.focus(id) * v + this.tune.fallTempo + fp.pPilotHit * 5
     this.memo.set(k, v)
     return v
   }
@@ -219,7 +242,7 @@ export function weaponsOf(state: GameState, id: UnitId): WeaponInfo[] {
       mountId: m.id, location: m.location, rear: m.rear, heat: w.heat ?? 0, damage, cluster, usesAmmo,
       ammo: [...byType.values()].sort((a, b) => (a.ammoId < b.ammoId ? -1 : 1)),
       ranges: { min: ranges?.min ?? 0, short: ranges?.short ?? 0, medium: ranges?.medium ?? 0, long: ranges?.long ?? 0 },
-      bandDamage: bd, toHitMod: w.toHitMod ?? 0,
+      bandDamage: bd, toHitMod: w.toHitMod ?? 0, rapidModes: (w.rapidFire?.modes ?? []).filter((n) => n > 1),
     })
   }
   return out
@@ -249,11 +272,13 @@ function slotValue(ctx: AiCtx, u: UnitState, token: string, killV: number, weapo
   if (token.startsWith('#')) {
     const id = token.slice(1)
     const w = weapons.get(id)
-    if (w) return 2 * w.damage * (w.cluster ? expHits(w.cluster.rackSize) : 1)
+    const m = u.mounts[id]
+    // a critical hit on an explosive component (Gauss rifle, charged capacitor...) blows like an ammo bin: price the blast too
+    const boom = m && !m.destroyed ? explosionValue(ctx, u, m.location, id, killV) : 0
+    if (w) return 2 * w.damage * (w.cluster ? expHits(w.cluster.rackSize) : 1) + boom
     const b = u.bins[id]
     if (b) return b.shots > 0 && !b.exploded ? explosionValue(ctx, u, b.location, id, killV) : 0
-    const m = u.mounts[id]
-    if (m) return m.item.includes('heat-sink') ? (u.sinks.type === 'double' ? 4 : 2) : 2
+    if (m) return (m.item.includes('heat-sink') ? (u.sinks.type === 'double' ? 4 : 2) : 2) + boom
   }
   return 2
 }
@@ -262,6 +287,7 @@ function explosionValue(ctx: AiCtx, u: UnitState, loc: Loc, binId: string, killV
   const idx = u.slots[loc].findIndex((s) => s.token === `#${binId}`)
   if (idx < 0) return 0
   const pv = query.explosionPreview(ctx.state, u.id, { location: loc, index: idx })
+  if (pv.damage <= 0) return 0
   if (pv.destroysUnit) return killV
   return 1.5 * pv.damage + 5 + 6 * pv.transfersTo.length
 }

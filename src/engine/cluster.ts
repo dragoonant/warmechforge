@@ -4,6 +4,7 @@ import type { AttackId, DataBundle, GameState, Hex, Id, LocalId, UnitId, UnitSta
 import { distance } from './hex'
 import type { Work } from './dice'
 import { clamp, roll2d6 } from './dice'
+import { collectHooksWith } from './hooks'
 
 /** Rows = weapon size 2..20, columns = modified 2d6 2..12 (CLUS-002). */
 export const CLUSTER_TABLE: Readonly<Record<number, readonly number[]>> = {
@@ -137,6 +138,13 @@ export function ecmBlocksArtemis(data: DataBundle, state: GameState, attacker: U
   for (const id of state.unitOrder) {
     const e = state.units[id]
     if (!e || e.owner === attacker.owner || !e.pos || !hasOperatingEcm(data, e)) continue
+    // hook point 'cluster': a Guardian suite naming guardianEcm reports the Artemis bonus it removes (-2 = cancelled)
+    const bound = collectHooksWith(data, state, e.id, 'cluster').filter((b) => b.hook.cluster)
+    if (bound.length > 0) {
+      const ctx = { state, point: 'cluster' as const, unitId: e.id, params: { attackerId: attacker.id, targetHex } }
+      if (bound.some((b) => b.hook.cluster!({ ...ctx, sourceId: b.sourceId, ...(b.mountId ? { mountId: b.mountId } : {}) }) < 0)) return true
+      continue
+    }
     if (attacker.pos && distance(e.pos, attacker.pos) <= ECM_RADIUS) return true
     if (targetHex && distance(e.pos, targetHex) <= ECM_RADIUS) return true
   }

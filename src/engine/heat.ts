@@ -7,6 +7,8 @@ import { roll } from './rng'
 import { bundleFor } from './bundles'
 import type { BoardHex, GameState, HeatEntry, HeatSource, LocalId, MoveMode, UnitId, UnitState } from './types'
 import { EngineInvariantError } from './types'
+import { collectHooks } from './hooks'
+import { CAPACITOR_HEAT, coolantBonus } from './equipment'
 
 // ---------- heat scale (HEAT-020..025), thresholds high to low ----------
 const MP_LOSS: readonly [number, number][] = [[25, 5], [20, 4], [15, 3], [10, 2], [5, 1]]
@@ -92,15 +94,22 @@ export function waterBonus(state: GameState, u: UnitState): number {
   return Math.min(6, ok.filter((m) => m.location === 'LL' || m.location === 'RL').length)
 }
 
-/** Partial wing: +3 in all (Lostech/TO, unconfirmed: our BMM extract lacks the p.116 body), scaled down by lost wing mounts. */
-export function wingBonus(u: UnitState): number {
-  const wings = Object.values(u.mounts).filter((m) => m.item === 'is.eq.partial-wing')
-  if (wings.length === 0) return 0
-  const ok = wings.filter((m) => !m.destroyed && !u.locs[m.location].destroyed).length
-  return Math.floor((3 * ok) / wings.length)
+/**
+ * Hook point 'heat' (00 §11.4): dissipation the unit's items add this turn (partial wing +3 less crits, EQUIP-018; a coolant pod
+ * vented this turn, EQUIP-017). A unit missing from the state's bundle (bare test states) gets 0.
+ */
+export function hookDissipation(state: GameState, u: UnitState): number {
+  let bound
+  try { bound = collectHooks(state, u.id, 'heat') } catch { return 0 }
+  let n = 0
+  for (const b of bound) {
+    const r = b.hook.heat?.({ state, point: 'heat', unitId: u.id, sourceId: b.sourceId, ...(b.mountId ? { mountId: b.mountId } : {}) })
+    n += r?.dissipationDelta ?? 0
+  }
+  return n
 }
 
-export const dissipation = (state: GameState, u: UnitState): number => baseDissipation(u) + waterBonus(state, u) + wingBonus(u)
+export const dissipation = (state: GameState, u: UnitState): number => baseDissipation(u) + waterBonus(state, u) + hookDissipation(state, u)
 
 /** HEAT-013. */
 export const nextHeat = (before: number, generated: number, dissipated: number): number => Math.max(0, before + generated - dissipated)
@@ -116,9 +125,10 @@ export function projectHeat(state: GameState, unitId: UnitId, plan: HeatPlan = {
     const m = u.mounts[id]
     if (m) add('weapon', (weapons[m.item]?.heat ?? 0) * (plan.rapidShots?.[id] ?? 1), id)
   }
+  for (const id of plan.charge ?? []) add('equipment', CAPACITOR_HEAT, u.mounts[id] ? id : null)
   add('engine', engineHeat(u), null)
   const generated = entries.reduce((a, x) => a + x.amount, 0)
-  const diss = dissipation(state, u)
+  const diss = dissipation(state, u) + (plan.coolantPod && u.mounts[plan.coolantPod]?.firedTurn !== state.turn ? coolantBonus(u) : 0)
   const end = nextHeat(u.heat, generated, diss)
   return { now: u.heat, entries, generated, dissipation: diss, end, effects: heatEffects(u, end) }
 }

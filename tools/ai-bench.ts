@@ -1,5 +1,7 @@
 // AI bench (40-ai §15): `npm run bench:ai -- --games N --seed S [--pairs normal:random,normal:easy] [--turnLimit 30]`
-// [--map map.x] [--forces A,B | random] (as in tools/sim.ts; --forces switches to the skirmish mission).
+// [--map map.x[,map.y...] | all] [--forces A,B[;C,D...] | random] [--withdrawal] (as in tools/sim.ts; --forces switches to the
+// skirmish mission). Several maps and/or force pairs make a sweep: every pair of tiers plays N games on each (map, forces) cell.
+// --withdrawal turns forced withdrawal on (11 §3).
 // Plays each pair on the intro mission with sides alternated (the first tier plays side A in even games, side B in odd
 // games). Prints wins by cause, mean turns, mean and p95 ms per AI decision, rejections, stalls and fallbacks, and writes
 // tools/out/bench-<date>.json. Exit 1 when any game has a rejection, stall, decision-cap hit, fallback or unhandled kind.
@@ -17,13 +19,15 @@ type Tier = 'random' | 'easy' | 'normal'
 const DECISION_CAP = 5000
 const STALL_CAP = 200
 
-interface Args { games: number; seed: string; turnLimit: number; pairs: [Tier, Tier][]; mission: string; quiet: boolean; map?: string; forces?: string }
+interface Args { games: number; seed: string; turnLimit: number; pairs: [Tier, Tier][]; mission: string; quiet: boolean; map?: string; forces?: string; withdrawal?: boolean }
+/** Core Box maps (`--map all`). */
+const ALL_MAPS = ['map.scorched-oasis', 'map.arid-canyons', 'map.headwater-crossing', 'map.sodden-hills']
 function parseArgs(argv: string[]): Args {
   const get = (k: string, d: string): string => { const i = argv.indexOf(`--${k}`); return i >= 0 && argv[i + 1] ? argv[i + 1]! : d }
   const pairs = get('pairs', get('pair', 'normal:random,normal:easy')).split(',').map((p) => p.split(':') as [Tier, Tier])
   const forces = get('forces', ''), map = get('map', '')
   const mission = get('mission', forces ? 'mission.skirmish' : 'mission.intro')
-  return { games: Number(get('games', '20')), seed: get('seed', '1'), turnLimit: Number(get('turnLimit', '30')), pairs, mission, quiet: argv.includes('--quiet'), ...(map ? { map } : {}), ...(forces ? { forces } : {}) }
+  return { games: Number(get('games', '20')), seed: get('seed', '1'), turnLimit: Number(get('turnLimit', '30')), pairs, mission, quiet: argv.includes('--quiet'), ...(map ? { map } : {}), ...(forces ? { forces } : {}), ...(argv.includes('--withdrawal') ? { withdrawal: true } : {}) }
 }
 
 interface GameOut {
@@ -35,6 +39,7 @@ interface GameOut {
 function playOne(bundle: ReturnType<typeof loadBundle>, args: Args, tiers: Record<PlayerId, Tier>, seed: string, index: number): GameOut {
   const forces: [string, string] | null = args.forces === 'random' ? randomForces(bundle, args.seed, index) : args.forces ? (args.forces.split(',') as [string, string]) : null
   const setup = customSetup(bundle, args, forces)
+  if (args.withdrawal) setup.forcedWithdrawal = true
   const out: GameOut = {
     index, seed, tierA: tiers.A, tierB: tiers.B, winnerTier: null, winner: null, reason: 'unfinished', turns: 0, decisions: 0, rejections: 0,
     stall: false, capHit: false, engineErrors: [], fallbacks: [], unhandled: [], ms: [], msByKind: {}, shutdowns: { A: 0, B: 0 }, ammoExplosions: { A: 0, B: 0 },
@@ -90,10 +95,46 @@ function playOne(bundle: ReturnType<typeof loadBundle>, args: Args, tiers: Recor
 const pct = (xs: number[], p: number): number => { if (!xs.length) return 0; const a = [...xs].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(p * a.length))]! }
 const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
 
-export function runBench(args: Args): { games: GameOut[]; summary: string[]; bad: boolean } {
+/** The (map, forces) cells of a sweep: --map a,b or all, --forces "A,B;C,D". One cell when neither lists more than one. */
+export function benchCells(args: Args): Args[] {
+  const maps: (string | undefined)[] = args.map === 'all' ? ALL_MAPS : args.map ? args.map.split(',').filter(Boolean) : [undefined]
+  const forces: (string | undefined)[] = args.forces ? args.forces.split(';').filter(Boolean) : [undefined]
+  const out: Args[] = []
+  for (const m of maps) for (const f of forces) {
+    const { map: _m, forces: _f, ...rest } = args
+    out.push({ ...rest, ...(m ? { map: m } : {}), ...(f ? { forces: f } : {}) })
+  }
+  return out
+}
+
+/** One line per (cell, pair) for the sweep table. */
+export interface BenchRow { cell: string; pair: string; games: number; wins: number; losses: number; draws: number; p95: number; max: number; bad: number }
+
+export function runBench(args: Args): { games: GameOut[]; summary: string[]; rows: BenchRow[]; bad: boolean } {
   const bundle = loadBundle()
   const games: GameOut[] = []
   const summary: string[] = []
+  const rows: BenchRow[] = []
+  let bad = false
+  const cells = benchCells(args)
+  for (const cell of cells) {
+    const label = `${cell.map ?? '(mission map)'} | ${cell.forces ?? cell.mission}`
+    if (cells.length > 1) summary.push(`== ${label}`)
+    const r = runCell(bundle, cell, label)
+    games.push(...r.games); summary.push(...r.summary); rows.push(...r.rows)
+    if (r.bad) bad = true
+  }
+  if (cells.length > 1) {
+    summary.push('== sweep')
+    for (const r of rows) summary.push(`  ${r.cell} | ${r.pair}: ${r.wins}/${r.games} (losses ${r.losses}, draws ${r.draws}), p95 ${r.p95.toFixed(0)} ms, max ${r.max.toFixed(0)} ms, rejections+stalls+fallbacks ${r.bad}`)
+  }
+  return { games, summary, rows, bad }
+}
+
+function runCell(bundle: ReturnType<typeof loadBundle>, args: Args, label: string): { games: GameOut[]; summary: string[]; rows: BenchRow[]; bad: boolean } {
+  const games: GameOut[] = []
+  const summary: string[] = []
+  const rows: BenchRow[] = []
   let bad = false
   for (const [x, y] of args.pairs) {
     const pairGames: GameOut[] = []
@@ -119,9 +160,14 @@ export function runBench(args: Args): { games: GameOut[]; summary: string[]; bad
     const asX = (g: GameOut): PlayerId => (g.tierA === x ? 'A' : 'B')
     const shut = pairGames.reduce((n, g) => n + g.shutdowns[asX(g)], 0)
     const boom = pairGames.reduce((n, g) => n + g.ammoExplosions[asX(g)], 0)
-    const winsAsA = pairGames.filter((g) => g.winnerTier === x && g.tierA === x).length
+    const winsAsA = pairGames.filter((g) => g.winnerTier === x && g.tierA === x && g.winner === 'A').length
+    const sideA = pairGames.filter((g) => g.winner === 'A').length
+    const sideB = pairGames.filter((g) => g.winner === 'B').length
+    const decided = pairGames.filter((g) => g.winner !== null).length
     summary.push(
-      `${x} vs ${y}: ${x} wins ${wins}/${pairGames.length} (as A ${winsAsA}, as B ${wins - winsAsA}), losses ${losses}, draws/unfinished ${pairGames.length - wins - losses}`,
+      x === y
+        ? `${x} vs ${y} (mirror): side A wins ${sideA}, side B wins ${sideB}, draws/unfinished ${pairGames.length - decided}`
+        : `${x} vs ${y}: ${x} wins ${wins}/${pairGames.length} (as A ${winsAsA}, as B ${wins - winsAsA}), losses ${losses}, draws/unfinished ${pairGames.length - wins - losses}; side A wins ${sideA}, side B ${sideB}`,
       `  wins by cause: ${Object.entries(causes).map(([k, n]) => `${k} ${n}`).join(', ')}`,
       `  mean turns ${mean(pairGames.map((g) => g.turns)).toFixed(1)}; AI ms/decision mean ${mean(ms).toFixed(1)} p95 ${pct(ms, 0.95).toFixed(1)} max ${pct(ms, 1).toFixed(1)} (${ms.length} decisions)`,
       `  rejections ${rej}, stalls ${stalls}, fallbacks ${fb}, unhandled ${un}, engine errors ${engineErr}; ${x} heat shutdowns ${shut}, heat ammo explosions ${boom}`,
@@ -130,20 +176,25 @@ export function runBench(args: Args): { games: GameOut[]; summary: string[]; bad
     const kinds = [...new Set(pairGames.flatMap((g) => Object.keys(g.msByKind)))].sort()
     summary.push(`  ms by kind (p50/p95/max): ${kinds.map((k) => { const xs = pairGames.flatMap((g) => g.msByKind[k] ?? []); return `${k} ${pct(xs, 0.5).toFixed(0)}/${pct(xs, 0.95).toFixed(0)}/${pct(xs, 1).toFixed(0)}` }).join(', ')}`)
     if (rej || stalls || fb || un || engineErr) bad = true
+    const mirror = x === y
+    rows.push({
+      cell: label, pair: `${x}:${y}`, games: pairGames.length, wins: mirror ? sideA : wins, losses: mirror ? sideB : losses,
+      draws: pairGames.length - (mirror ? decided : wins + losses), p95: pct(ms, 0.95), max: pct(ms, 1), bad: rej + stalls + fb + un + engineErr,
+    })
   }
-  return { games, summary, bad }
+  return { games, summary, rows, bad }
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))
 if (isMain) {
   const args = parseArgs(process.argv.slice(2))
-  const { games, summary, bad } = runBench(args)
+  const { games, summary, rows, bad } = runBench(args)
   for (const line of summary) console.log(line)
   try {
     const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out')
     fs.mkdirSync(outDir, { recursive: true })
     const date = new Date().toISOString().slice(0, 10)
-    fs.writeFileSync(path.join(outDir, `bench-${date}.json`), JSON.stringify({ args, summary, games: games.map(({ ms, msByKind: _k, ...g }) => ({ ...g, msMean: mean(ms), msMax: pct(ms, 1) })) }, null, 1))
+    fs.writeFileSync(path.join(outDir, `bench-${date}.json`), JSON.stringify({ args, summary, rows, games: games.map(({ ms, msByKind: _k, ...g }) => ({ ...g, msMean: mean(ms), msMax: pct(ms, 1) })) }, null, 1))
   } catch { /* the report file is optional */ }
   process.exit(bad ? 1 : 0)
 }

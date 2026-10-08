@@ -1,6 +1,7 @@
 // Tier parameters (40-ai §12, §11). 'random' is the sensible random bot in random.ts; 'easy' and 'normal' are the utility AI.
-// Heat caps follow the M4 brief: normal keeps end-of-turn heat at 9 or less unless a kill shot is likely or the unit is about
-// to die, and never accepts a shutdown avoid roll of 8+ without a kill shot; easy uses a flat cap of 13 and no threat model.
+// Heat caps: the M4 brief set normal to end-of-turn heat 9 or less; M6 bench sweeps raised it to 13 (tune.ts TUNE_NORMAL.heatCap,
+// still no shutdown roll) unless a kill shot is likely or the unit is about to die, and normal never accepts a shutdown avoid
+// roll of 8+ without a kill shot; easy uses a flat cap of 13 and no threat model.
 
 export type UtilityTier = 'easy' | 'normal'
 

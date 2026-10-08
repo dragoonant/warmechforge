@@ -8,7 +8,7 @@ import {
   AdditiveBlending, Box3, BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, RingGeometry, Shape,
   ShapeGeometry, TorusGeometry, Vector3, type BufferGeometry, type Material, type Object3D,
 } from 'three'
-import { BASE_RADIUS_BY_CLASS, BASE_THICKNESS, HEIGHT_BY_CLASS, SLUMP_ANGLE, TIP_ANGLE, WRECK_TILT, type WeightClass } from './figureConstants'
+import { BASE_RADIUS_BY_CLASS, BASE_THICKNESS, FIGURE_SCALE, HEIGHT_BY_CLASS, SLUMP_ANGLE, TIP_ANGLE, WRECK_TILT, type WeightClass } from './figureConstants'
 import { twistYaw } from './facing'
 import { isBaseMesh, ownMaterial, variantMaterial } from './glbPaint'
 import { darken, type ResolvedPaint } from './paintStore'
@@ -111,6 +111,9 @@ function makeNode(name: string, parent: Object3D, y = 0, x = 0, z = 0): Group {
 
 /** Common tail of both builders: rim ring, facing arrow, jets, dispose. */
 function finish(rig: Omit<MechRig, 'jets' | 'arrow' | 'rim' | 'dispose'>, paint: ResolvedPaint, ownMats: Material[], extraDispose: (() => void)[] = []): MechRig {
+  rig.body.scale.setScalar(FIGURE_SCALE) // setPose keeps the feet on the base
+  rig.height *= FIGURE_SCALE
+  rig.halfWidth *= FIGURE_SCALE
   const rimMat = new MeshBasicMaterial({ color: paint.primary })
   const rim = new Mesh(GEO.rim, rimMat)
   rim.name = 'rim'
@@ -342,7 +345,8 @@ export function setPose(rig: MechRig, p: RigPose): void {
   const tip = p.tip * TIP_ANGLE
   const lift = p.tip > 0 ? Math.max(0, rig.halfWidth * Math.sin(tip)) : 0
   rig.body.rotation.z = tip
-  rig.body.position.y = lift + p.bob + (rig.kind === 'procedural' ? BASE_THICKNESS : 0)
+  // procedural bodies start at the base top; GLB bodies carry the base in their own coordinates, so the enlarged feet drop back
+  rig.body.position.y = lift + p.bob + (rig.kind === 'procedural' ? BASE_THICKNESS : -(FIGURE_SCALE - 1) * BASE_THICKNESS)
   rig.upper.rotation.y = rig.capabilities.twist ? twistYaw(p.twist) : 0
   rig.upper.rotation.x = p.slump * SLUMP_ANGLE + p.wreck * (WRECK_TILT - SLUMP_ANGLE)
   if (rig.nodes.armL) rig.nodes.armL.rotation.y = p.flip * Math.PI

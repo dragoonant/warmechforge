@@ -12,6 +12,7 @@ import {
 import type { Stepped } from './damage'
 import { bundleFor } from './bundles'
 import type { ComponentDestroyed } from './events'
+import { codesOf, equipDeps, isPartialWing, partialWingBonuses, podUsed } from './equipment'
 
 export type CritWhy = 'structure' | 'tac' | 'explosive' | 'masc'
 export interface CritCheckInput { unitId: UnitId; location: Loc; why: CritWhy }
@@ -92,6 +93,8 @@ function effectOf(w: Work, u: UnitState, token: string): { effect: CritEffect; n
       if (m.destroyed) return { effect: 'none', name }
       if (isPartialWing(m.item)) return { effect: 'componentDamaged', name } // v7.01 errata: each wing crit trims the bonuses (see partialWingBonuses)
       if (weapon?.flags?.includes('explodes') || eq?.explodes) return { effect: 'componentExplosion', name }
+      // EQUIP-017: an unused coolant pod bursts like an ammo bin (its crit hook does the explosion)
+      if (codesOf(w.data, m.item).includes('coolantPod') && !podUsed(m)) return { effect: 'componentExplosion', name }
       if (weapon && hasFlag(weapon, 'ac') && m.critHits < 1) return { effect: 'componentDamaged', name } // EQUIP-010: the second crit destroys it
       if ((eq as { critEffect?: string } | null)?.critEffect === 'none') return { effect: 'none', name }
       if (eq?.kind === 'heatSink') return { effect: 'heatSink', name }
@@ -117,20 +120,8 @@ const binShots = (data: DataBundle, u: UnitState, id: LocalId): number => {
   return isExplosiveSlot(data, u, `#${id}`) ? b.shots : 0
 }
 
-/** Partial wing items (data id ends with eq.partial-wing). */
-export const isPartialWing = (item: string): boolean => item.endsWith('eq.partial-wing')
-
-/**
- * Partial wing bonuses after crits (BattleMech Manual errata v7.01): jump +2 (light/medium) or +1 (heavy/assault), heat dissipation +3;
- * each wing crit cuts both by 1, minimum 0. No jump MP at all means no jump bonus. Callers add these to jump MP / dissipation.
- */
-export function partialWingBonuses(u: UnitState): { jump: number; heat: number } {
-  const wings = Object.values(u.mounts).filter((m) => isPartialWing(m.item))
-  if (wings.length === 0) return { jump: 0, heat: 0 }
-  const crits = wings.reduce((n, m) => n + m.critHits, 0)
-  const baseJump = u.baseMp.jump > 0 ? (u.tonnage <= 55 ? 2 : 1) : 0
-  return { jump: Math.max(0, baseJump - crits), heat: Math.max(0, 3 - crits) }
-}
+// Partial wing rules live in equipment.ts (hook partialWing); re-exported here for existing callers.
+export { isPartialWing, partialWingBonuses }
 
 const LEG_PSR: Partial<Record<string, PsrReason>> = { hip: 'hipCrit', upperLeg: 'upperLegCrit', lowerLeg: 'lowerLegCrit' }
 
@@ -145,7 +136,7 @@ function critHook(w: Work, unitId: UnitId, loc: Loc, mountId: LocalId): boolean 
   let handled = false
   viaState(w, (s) => {
     for (const b of bound) {
-      const r = b.hook.crit!({ state: s, point: 'crit', unitId, sourceId: b.sourceId, mountId, location: loc })
+      const r = b.hook.crit!({ state: s, point: 'crit', unitId, sourceId: b.sourceId, mountId, location: loc, params: { data: w.data } })
       if (r.handled) { handled = true; return r.result ?? { state: s, events: [] } }
     }
     return { state: s, events: [] }
@@ -262,3 +253,6 @@ export function critCheck(state: GameState, p: CritCheckInput, data?: DataBundle
   return endWork(w)
 }
 
+
+// ---------- wire the equipment module's late-bound crit check (equipment.ts must not import this file) ----------
+equipDeps.critCheck = (state, p, data) => critCheck(state, p, data)

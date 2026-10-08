@@ -37,8 +37,8 @@
     { "id": "art-rt", "item": "is.eq.artemis-iv", "location": "RT", "linkedTo": "lrm-rt" }
   ],
   "ammoBins": [
-    { "id": "ammo-lrm-lt", "ammo": "is.ammo.lrm-10", "location": "LT" },
-    { "id": "ammo-lrm-rt", "ammo": "is.ammo.lrm-10", "location": "RT" }
+    { "id": "ammo-lrm-lt", "ammo": "is.ammo.lrm-10-artemis", "location": "LT" },
+    { "id": "ammo-lrm-rt", "ammo": "is.ammo.lrm-10-artemis", "location": "RT" }
   ],
   "bv": 1795,
   "source": { "ref": "megamek", "note": "Rakshasa MDG-1A MTF (3055U) cross-check; BV from MUL", "retrieved": "2026-10-08" },

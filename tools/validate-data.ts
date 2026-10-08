@@ -84,9 +84,10 @@ const BANNED_ITEMS = /flail|flechette|fragmentation|ejection|industrial|\bumu\b|
 const RESERVED_TERRAIN = new Set(['rubble', 'sand', 'mud', 'swamp', 'ice', 'snow', 'foliage', 'building', 'bridge'])
 const FIXED_HOOKS = ['racJam', 'ultraJam', 'xPulse', 'improvedHeavyGauss', 'ppcCapacitor', 'targetingComputer', 'supercharger', 'caseProtect', 'caseIIProtect', 'ferroLamellor']
 
+/** Hooks code-hooks.ts registers (60-testing §7: data naming an unregistered hook fails). FIXED_HOOKS only before M2. */
 function knownHooks(): Set<string> {
-  const s = new Set<string>(FIXED_HOOKS)
   const f = path.join(REPO, 'src', 'engine', 'code-hooks.ts')
+  const s = new Set<string>(fs.existsSync(f) ? [] : FIXED_HOOKS)
   if (fs.existsSync(f)) {
     const txt = fs.readFileSync(f, 'utf8')
     for (const m of txt.matchAll(/name:\s*['"]([A-Za-z0-9.]+)['"]/g)) s.add(m[1]!)

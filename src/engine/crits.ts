@@ -2,14 +2,15 @@
 // Explosions, PSR queueing, pilot hits and destruction are the damage pipeline's (damage.ts); this module decides what is hit.
 import type { CritEffect, CritSlotHit } from './events'
 import type { DataBundle, GameState, Loc, LocalId, PsrReason, UnitId, UnitState } from './types'
-import { beginWork, endWork, roll1d6, roll2d6, unitOf } from './dice'
+import { beginWork, endWork, roll1d6, roll2d6, snapshot, unitOf, viaState } from './dice'
+import { collectHooksWith } from './hooks'
 import type { Work } from './dice'
 import { caseAt, equipRec, hasExplosive, isExplosiveSlot, hasFlag, recName, weaponRec } from './ammo'
 import {
   TRANSFER, destroyLocationW, destroyUnitW, explodeBinW, explodeComponentW, killPilotW, queuePsrW,
 } from './damage'
 import type { Stepped } from './damage'
-import { bundleFor } from './index'
+import { bundleFor } from './bundles'
 import type { ComponentDestroyed } from './events'
 
 export type CritWhy = 'structure' | 'tac' | 'explosive' | 'masc'
@@ -133,11 +134,31 @@ export function partialWingBonuses(u: UnitState): { jump: number; heat: number }
 
 const LEG_PSR: Partial<Record<string, PsrReason>> = { hip: 'hipCrit', upperLeg: 'upperLegCrit', lowerLeg: 'lowerLegCrit' }
 
+/**
+ * Hook point `crit` (00 §11.4): a slot of a mount whose item names a code hook was hit. Each bound hook of that mount is asked
+ * in order; the first that reports `handled` replaces the normal effect (its result is applied). True = handled.
+ */
+function critHook(w: Work, unitId: UnitId, loc: Loc, mountId: LocalId): boolean {
+  const snap = snapshot(w)
+  const bound = collectHooksWith(w.data, snap, unitId, 'crit').filter((b) => b.mountId === mountId && b.hook.crit)
+  if (bound.length === 0) return false
+  let handled = false
+  viaState(w, (s) => {
+    for (const b of bound) {
+      const r = b.hook.crit!({ state: s, point: 'crit', unitId, sourceId: b.sourceId, mountId, location: loc })
+      if (r.handled) { handled = true; return r.result ?? { state: s, events: [] } }
+    }
+    return { state: s, events: [] }
+  })
+  return handled
+}
+
 /** Applies a slot's effect after CritSlotHit was emitted. */
 function applyEffect(w: Work, unitId: UnitId, loc: Loc, token: string, effect: CritEffect): void {
   if (token.startsWith('#')) {
     const id = token.slice(1)
     if (effect === 'ammoExplosion') { explodeBinW(w, unitId, id, 'crit'); return }
+    if (critHook(w, unitId, loc, id)) return
     const m = unitOf(w, unitId).mounts[id]
     if (!m) return
     m.critHits++

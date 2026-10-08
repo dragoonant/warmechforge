@@ -1,7 +1,10 @@
 // FROZEN after M0: named code-hook points for equipment and SPAs, and the hook interface (00 §11.4).
 // Data names a hook with `code` / `hook` (20 §12.2, §7.2); implementations are registered in src/engine/code-hooks.ts.
 import type { GameEvent } from './events'
-import type { AttackId, GameState, HeatEntry, Id, LocalId, Loc, Mod, PsrReason, RollPurpose, UnitId } from './types'
+import type { AttackId, DataBundle, GameState, HeatEntry, Id, LocalId, Loc, Mod, PsrReason, RollPurpose, UnitId } from './types'
+import { EngineInvariantError } from './types'
+import { CODE_HOOKS } from './code-hooks'
+import { bundleFor } from './bundles'
 
 // ---------- hook points ----------
 // Superset of the SPA `windows` vocabulary in 20 §7.2 (plus 'attackRolled').
@@ -76,7 +79,54 @@ export type CodeHookRegistry = Record<string, CodeHook>
 
 export interface BoundHook { hook: CodeHook; unitId: UnitId; sourceId: Id; mountId?: LocalId }
 
-// ---------- signatures (bodies land in M2, code-hooks.ts) ----------
-export function collectHooks(_state: GameState, _unitId: UnitId, _point: HookPoint): BoundHook[] {
-  throw new Error('hooks.collectHooks: not implemented (M2)')
+// ---------- registry and lookup (M2) ----------
+// code-hooks.ts holds the implementations as plain data (no runtime import of this module), so the registry is complete as soon
+// as any engine module loads hooks.ts, whichever entry point a caller or a test uses.
+const REGISTRY: CodeHookRegistry = Object.fromEntries(CODE_HOOKS.map((h) => [h.name, h]))
+/** Every registered hook by name (read-only view; tests and validate-data read it). */
+export function registeredHooks(): Readonly<CodeHookRegistry> { return REGISTRY }
+
+interface CodeCarrier { code?: string[] }
+interface SpaCarrier { hook?: string }
+function lookup(name: string): CodeHook {
+  const h = REGISTRY[name]
+  if (!h) throw new EngineInvariantError(`code hook ${name} is named in data but not registered in code-hooks.ts`)
+  return h
+}
+
+/**
+ * The hooks a unit carries at one point, in a fixed order: intact mounts (record order, each item's data `code` list), then
+ * ammo bins (loaded ammo's `code`), then pilot SPAs ('spa.<hook>'). A destroyed mount or a mount in a destroyed location
+ * carries no hook. Unknown names throw EngineInvariantError (validate-data refuses them first).
+ */
+export function collectHooks(state: GameState, unitId: UnitId, point: HookPoint): BoundHook[] {
+  if (!state.units[unitId]) return []
+  return collectHooksWith(bundleFor(state), state, unitId, point)
+}
+/** collectHooks with the bundle given (damage-pipeline Work contexts carry their own bundle). */
+export function collectHooksWith(data: DataBundle, state: GameState, unitId: UnitId, point: HookPoint): BoundHook[] {
+  const u = state.units[unitId]
+  if (!u) return []
+  const out: BoundHook[] = []
+  for (const m of Object.values(u.mounts)) {
+    if (m.destroyed || u.locs[m.location].destroyed) continue
+    for (const name of (data.byId[m.item] as CodeCarrier | undefined)?.code ?? []) {
+      const hook = lookup(name)
+      if (hook.points.includes(point)) out.push({ hook, unitId, sourceId: m.item, mountId: m.id })
+    }
+  }
+  for (const b of Object.values(u.bins)) {
+    if (b.exploded || u.locs[b.location].destroyed) continue
+    for (const name of (data.byId[b.ammo] as CodeCarrier | undefined)?.code ?? []) {
+      const hook = lookup(name)
+      if (hook.points.includes(point)) out.push({ hook, unitId, sourceId: b.ammo, mountId: b.id })
+    }
+  }
+  for (const spa of u.pilot.spas) {
+    const name = (data.spas[spa] as SpaCarrier | undefined)?.hook
+    if (!name) continue
+    const hook = lookup(name.startsWith('spa.') ? name : `spa.${name}`)
+    if (hook.points.includes(point)) out.push({ hook, unitId, sourceId: spa })
+  }
+  return out
 }

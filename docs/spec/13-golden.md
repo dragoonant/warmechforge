@@ -286,7 +286,8 @@ damage in groups of 5 and 4; its seatbelt check needs 5+. 2026 changes:
 - The stand PSR gets −1 (`[CL O2]`): TN 4 (AGoAC 5).
 - A stand attempt makes no heat (`[CL H1]`).
 - No facing roll (`[CL O7]`). The book rolled a 1 on the old facing table (front). In 2026 a side roll of 1 means
-  rear (`[CL O8]`), so the main script forces 3 (front) and variant 6b shows the 1.
+  rear (`[CL O8]`); 4, the old rear result, is now the front (RULING PSR-053: 2–3 right, 5–6 left), so the main
+  script forces 4 (front) and variant 6b shows the 1.
 - Seatbelt: Piloting + persistent modifiers + levels fallen = 5 + 0 + 0 = 5, as in the book.
 
 **Units:** a: F-BLR at `(6,6)` `0710`, facing 2, **prone**. b: F-DUMMY at `(6,1)` `0705`, facing 3.
@@ -298,7 +299,7 @@ damage in groups of 5 and 4; its seatbelt check needs 5+. 2026 changes:
    `#3 stand PSR [1,2] = 3` → fail. Expect: fall in `(6,6)`, 0 levels, still prone, facing **2**.
 3. `#4 seatbelt [2,3] = 5` vs TN 5 → pass, no pilot hit.
 4. Fall damage `ceil(85 / 10) × (0 + 1)` = **9** → groups 5, 4.
-   `#5 fall side [3]` → **Front** column.
+   `#5 fall side [4]` → **Front** column.
    `#6 location [3,4] = 7` → CT front 30 → 25.
    `#7 location [4,4] = 8` → LT front 20 → 16.
 5. Expect: F-BLR has 2 MP left and `legalActions` offers a second stand attempt and ending the move. The script ends

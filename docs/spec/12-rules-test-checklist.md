@@ -362,7 +362,7 @@ Conventions used below:
 | PSR-050 | A fall leaves the unit prone in its current facing (no facing roll) in the hex being entered or its own hex | P1 |
 | PSR-051 | Ordinary fall: 0 levels; pushed 3 levels down: 3 levels | P1 |
 | PSR-052 | 85 t fall 0 levels: 9 → groups 5, 4. 45 t fall 2 levels: 5 × 3 = 15 → 5, 5, 5 | P1 |
-| PSR-053 | Fall side d6: `[1]` → Rear column; `[2]`–`[6]` → Front column; one roll per fall | P1 |
+| PSR-053 | Fall side d6: `[1]` → Rear column; `[2]`–`[3]` → Right; `[4]` → Front; `[5]`–`[6]` → Left; one roll per fall | P1 |
 | PSR-054 | 85 t fall ending in depth 1 (0 levels): 9 → 4 | P1 |
 | PSR-055 | Fall damage applies at once, in any phase, and is added to that phase's damage tally (12 weapon damage + a 9-point fall in the same phase → tally 21) | P1 |
 | PSR-056 | Seatbelt check after each fall, before fall damage: Piloting 5, gyro crit, 0 levels → TN 7; 2 levels → TN 9; the stand −1 and the 20-damage +1 are not added; fail → 1 pilot hit | P1 |

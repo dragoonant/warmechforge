@@ -57,7 +57,7 @@
     "ranges": { "min": 6, "short": 7, "medium": 14, "long": 21 },
     "slots": 2,
     "tons": 5,
-    "ammo": ["is.ammo.lrm-10"],
+    "ammo": ["is.ammo.lrm-10", "is.ammo.lrm-10-artemis"],
     "flags": ["cluster", "missile", "indirect"],
     "linkable": ["artemis"],
     "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }

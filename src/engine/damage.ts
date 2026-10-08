@@ -5,7 +5,8 @@ import type { AmmoExploded, ComponentDestroyed, ComponentExploded, DamageApplied
 import type {
   ArmorSide, AttackContext, AttackDirection, AttackId, DataBundle, DestroyCause, GameState, HitTable, Loc, LocalId, LocState, RangedDeclaration, UnitId,
 } from './types'
-import { beginWork, endWork, roll1d6, roll2d6, unitOf, viaState } from './dice'
+import { beginWork, endWork, roll1d6, roll2d6, snapshot, unitOf, viaState } from './dice'
+import { collectHooksWith } from './hooks'
 import type { Work } from './dice'
 import { caseAt, hasExplosive, binExplosionRaw, CASE_CAP, EXPLOSION_CAP, effectiveProfile, hasFlag, ammoRec, weaponRec, spendAmmo, pickHeatExplosionBin } from './ammo'
 import { artemisClusterMod, rollCluster } from './cluster'
@@ -15,7 +16,7 @@ import { addPilotHit } from './pilot'
 import { queuePsr, fallDeps } from './psr'
 import type { PsrRequest } from './psr'
 import { heatDeps } from './heat'
-import { bundleFor } from './index'
+import { bundleFor } from './bundles'
 
 export interface Stepped { state: GameState; events: GameEvent[] }
 
@@ -344,7 +345,7 @@ export function resolveGroupW(w: Work, g: GroupInput): GroupResult {
 export interface AttackResult extends Stepped { hit: boolean; damageDealt: number; streakHit: boolean }
 export interface ResolveOptions { floatingCrits?: boolean; data?: DataBundle }
 
-function damagePer(prof: { damage: number | { short?: number; medium?: number; long?: number } }, band: RangedDeclaration['band']): number {
+export function damagePer(prof: { damage: number | { short?: number; medium?: number; long?: number } }, band: RangedDeclaration['band']): number {
   const d = prof.damage
   if (typeof d === 'number') return d
   return (band === 'long' ? d.long : band === 'medium' ? d.medium : d.short) ?? d.short ?? 0
@@ -389,6 +390,14 @@ export function resolveAttack(state: GameState, decl: RangedDeclaration, opts: R
     rolled = r.total
   }
   w.ev.push({ type: 'AttackRolled', attackId, attackerId, targetId, kind: 'ranged', mountId: decl.mountId, tn: decl.tn, roll: rolled, hit, auto })
+  // hook point 'attackRolled' (00 §11.4): items on the firing mount react to the to-hit roll (RAC jam, capacitor)
+  const rolledHooks = collectHooksWith(w.data, snapshot(w), attackerId, 'attackRolled').filter((b) => b.mountId === decl.mountId && b.hook.attackRolled)
+  for (const b of rolledHooks) {
+    viaState(w, (s) => b.hook.attackRolled!({
+      state: s, point: 'attackRolled', unitId: attackerId, sourceId: b.sourceId, mountId: decl.mountId, attackId, targetId,
+      roll: { purpose: 'toHit', total: rolled ?? 0, dice: [] },
+    }))
+  }
   if (!hit) return finish(false, 0)
 
   const streak = hasFlag(prof, 'streak')

@@ -622,7 +622,7 @@ No event exists for skidding, fall facing, ammo dumping or a shutdown PSR (INV-1
 | `terrainInfo(state, hex)` | label, level, terrain, depth, MP cost per mode, LOS effect text |
 | `hexToWorld(state, hex)` | centred world `{x, z}` |
 | `p2d6(tn)` | `P(2d6 ≥ tn)`; implemented (`p2d6AtLeast`) |
-| `threat(state, hex)` | M4 |
+| `threat(state, hex)` | `ThreatView {hex, bySide, sources}`: expected damage to a standing 'Mech at the hex from each side's units where they stand (release 1; the AI threat model is 40-ai §5, M4) |
 
 The client maps any naming difference inside `src/client/contract.ts` (50 §2). Odds are always engine values.
 
@@ -769,6 +769,9 @@ order the table lists them.
 | 2026-10-08 | index.ts, actions.ts | doc comments only: §9.6 meaning of `MoveAction.attack` / `ReachEntry.physical`; §9.7 composite `DeclareFireAction`, `E_PRIMARY_TARGET`, hold fire always legal; §11.5 `UnitAt` and `primaryTargetId` semantics | pre-freeze clarifications (WP-CORE 9, 11, 16, 17) |
 | 2026-10-08 | types.ts | comment on `PHASE_STEPS`: `*.endOfPhase` runs §5.4 (a)–(e) | §5.4 rewritten (consciousness before the PSR queue, extra check for fall hits) |
 | 2026-10-08 | 00 §5.4, §7 | §5.4 order (a) effects/removal, (b) consciousness, (c) PSR queue, (d) consciousness for fall hits, (e) crippled/victory; §7 step 5 sums history mods only for `endOfPhase` entries | matches 10 INIT-013 and PSR-001 (WP-CORE 13, 14) |
+| 2026-10-08 | hooks.ts | `collectHooks` body (M2); additive `registeredHooks()` and `collectHooksWith(data, state, unitId, point)` (the damage pipeline's Work carries its own bundle); the registry is built from `CODE_HOOKS` in `code-hooks.ts` | M2 hook wiring (60 §7) |
+| 2026-10-08 | index.ts | `query.threat(state, hex)` returns `ThreatView {hex, bySide, sources}` (was `never`, an M4 placeholder); `ThreatView` exported | release-1 threat view for the client overlay; the AI's model stays 40-ai §5 |
+| 2026-10-08 | index.ts | `registerBundle` / `bundleFor` live in `bundles.ts` and are re-exported from index under the same names; API bodies delegate to `machine.ts`, `queries.ts`, `describe.ts` | rules modules read the bundle without an import cycle through index |
 
 ### Rulings made in this spec
 

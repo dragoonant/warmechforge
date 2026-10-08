@@ -533,7 +533,7 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 | PSR-050 | A fall leaves the 'Mech **prone in the same facing** (2026 `[CL O7]`; no facing roll). Falling while moving between hexes: in the hex being entered. Otherwise in its current hex |
 | PSR-051 | Levels fallen: 0 for an ordinary fall (including jump-landing falls); for displacement 2+ levels down, the drop between the old and new hex floors |
 | PSR-052 | Damage = ceil(tonnage / 10) × (levels fallen + 1), in groups of 5 (HITLOC-010) |
-| PSR-053 | Side hit: roll 1d6 once per fall: **1 → Rear column** (rear armor), **2–6 → Front column** (2026 `[CL O8]`) |
+| PSR-053 | Side hit: roll 1d6 once per fall: **1 → Rear column** (rear armor), **2–3 → Right column**, **4 → Front column**, **5–6 → Left column** (2026 `[CL O8]` moves the rear result from 4 to 1; the side results of the old facing table stay. RULING) |
 | PSR-054 | Fall in water (ending in depth ≥1): damage halved, round down, one calculation (2026 `[CL O6]`) |
 | PSR-055 | Fall damage applies immediately (any phase) and counts toward the 20-damage tally |
 | PSR-056 | **Seatbelt check** after every fall, before the fall damage is applied: a PSR with TN = Piloting + persistent modifiers (PSR-010..014) + levels fallen (+1 per level, 0 for a 0-level fall) (2026 `[CL O12] [CL O13]`). Event modifiers, terrain and this phase's 20-damage modifier are not added (2026? reading of "straight PSR"). Fail → 1 pilot hit |

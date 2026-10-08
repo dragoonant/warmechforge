@@ -2,10 +2,10 @@
 import type { DamageSourceKind, GameEvent } from './events'
 import type { FallPreview } from './index'
 import { hitCount } from './heat'
-import { p2d6AtLeast } from './index'
 import { addPilotHit, initiativeOrder, patchUnit } from './pilot'
 import type { Stepped } from './pilot'
 import { roll } from './rng'
+import { pAtLeast2d6 } from './prob'
 import { HIT_TABLE, columnFor } from './hitloc'
 import type { Column } from './hitloc'
 import type {
@@ -105,7 +105,7 @@ export function fallPreview(state: GameState, unitId: UnitId, levels = 0): FallP
   const ways = [0, 0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1]
   const locations: Partial<Record<Loc, number>> = {}
   for (const c of ['front', 'right', 'left'] as Column[]) for (let t = 2; t <= 12; t++) locations[HIT_TABLE[c][t]!] = (locations[HIT_TABLE[c][t]!] ?? 0) + ways[t]! / 36 / 3
-  return { damage, groups: damageGroups(damage), locations, seatbeltTn: tn, pPilotHit: u.shutdown || !u.pilot.conscious ? 1 : 1 - p2d6AtLeast(tn) }
+  return { damage, groups: damageGroups(damage), locations, seatbeltTn: tn, pPilotHit: u.shutdown || !u.pilot.conscious ? 1 : 1 - pAtLeast2d6(tn) }
 }
 
 /** Makes a unit fall where it stands. Only a failed stand attempt reaches here while prone (MOVE-042: a 0-level fall). */
@@ -136,16 +136,6 @@ export function fall(state: GameState, unitId: UnitId, levels = 0): Stepped {
   const direction: AttackDirection = rear ? 'rear' : sideRoll <= 3 ? 'right' : sideRoll === 4 ? 'front' : 'left'
   const column: Column = columnFor(direction)
   const damage = fallDamage(u.tonnage, levels, inWater)
-  const hits: { amount: number; location: Loc; sideCol: ArmorSide; roll: number }[] = []
-  const rolls: GameEvent[] = [side.event]
-  for (const amount of damageGroups(damage)) {
-    const r = roll(s, { count: 2, sides: 6, purpose: 'fallLocation', unitId, reason: 'fall' })
-    s = r.state
-    rolls.push(r.event)
-    const location = HIT_TABLE[column][r.event.total]!
-    hits.push({ amount, location, sideCol: rear && isTorso(location) ? 'rear' : 'front', roll: r.event.total })
-  }
-
   const events: GameEvent[] = [{ type: 'UnitFell', unitId, hex, levels, facing: u.facing, damage, column: rear ? 'rear' : 'front', inWater }, ...staged]
   s = patchUnit(s, unitId, { prone: true, move: { ...u.move, fell: true } })
   if (seatbeltHit) {
@@ -153,11 +143,16 @@ export function fall(state: GameState, unitId: UnitId, levels = 0): Stepped {
     s = p.state
     events.push(...p.events)
   }
-  events.push(rolls[0]!)
-  hits.forEach((h, i) => {
-    events.push(rolls[i + 1]!)
-    events.push({ type: 'HitLocated', attackId: null, unitId, group: h.amount, damage: h.amount, table: 'standard', direction, roll: h.roll, location: h.location, side: h.sideCol, tac: false })
-    const d = fallDeps.applyDamage(s, { unitId, amount: h.amount, location: h.location, side: h.sideCol, source: 'fall' })
+  events.push(side.event)
+  // R5: one location roll per group, each group's damage (and its crit rolls) resolved before the next location roll
+  damageGroups(damage).forEach((amount, i) => {
+    const r = roll(s, { count: 2, sides: 6, purpose: 'fallLocation', unitId, reason: 'fall' })
+    s = r.state
+    events.push(r.event)
+    const location = HIT_TABLE[column][r.event.total]!
+    const sideCol: ArmorSide = rear && isTorso(location) ? 'rear' : 'front'
+    events.push({ type: 'HitLocated', attackId: null, unitId, group: i + 1, damage: amount, table: 'standard', direction, roll: r.event.total, location, side: sideCol, tac: false })
+    const d = fallDeps.applyDamage(s, { unitId, amount, location, side: sideCol, source: 'fall' })
     s = d.state
     events.push(...d.events)
   })

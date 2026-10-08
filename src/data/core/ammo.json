@@ -27,6 +27,16 @@
     "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }
   },
   {
+    "id": "is.ammo.lrm-10-artemis",
+    "name": "LRM 10 Artemis IV Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.lrm-10"],
+    "shotsPerTon": 12,
+    "explosionPerShot": 10,
+    "notes": "Artemis-capable rounds: with an intact linked Artemis IV the cluster roll gets +2 (CLUS-004). Same shots and explosion value as standard LRM 10 ammo.",
+    "source": { "ref": "sarna", "note": "Artemis IV FCS page (TechManual): Artemis-capable LRM ammo, same shots per ton" }
+  },
+  {
     "id": "is.ammo.mml-5-lrm",
     "name": "MML 5 LRM Ammo",
     "techBase": "IS",

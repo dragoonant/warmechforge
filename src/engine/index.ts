@@ -6,9 +6,25 @@ import type {
   LocalId, Mod, MoveMode, PendingDecision, PhysicalKind, PlayerId, PlayerView, PsrReason, RangeBand, Rejection,
   RejectionCode, SaveFile, SlotRef, StepOp, StepResult, Twist, UnitId, WorldXZ,
 } from './types'
-import { EngineInvariantError } from './types'
 import type { GameEvent } from './events'
 import { cyrb128 } from './rng'
+import { bundleFor, registerBundle } from './bundles'
+import { createGameImpl, legalActionsImpl, stepImpl, validateImpl } from './machine'
+import {
+  arcsQuery, attackPreviewQuery, explosionPreviewQuery, firePreviewQuery, heatEffectsQuery, heatScaleQuery, hexToWorldQuery,
+  isKillLocationQuery, losQuery, mustWithdrawQuery, psrPreviewQuery, sheetQuery, terrainInfoQuery, threatQuery,
+} from './queries'
+import type { ThreatView } from './queries'
+import { describeAction, describeDecision, describeEvent, describeUnit } from './describe'
+import { distance as hexDistance } from './hex'
+import { reachable as reachableImpl } from './movement'
+import { physicalOptions as physicalOptionsImpl, physicalPreview as physicalPreviewImpl } from './physical'
+import { hitLocationDistribution } from './hitloc'
+import { clusterDistribution } from './cluster'
+import { projectHeat } from './heat'
+import { fallPreview as fallPreviewImpl } from './psr'
+
+export type { ThreatView }
 
 export * from './types'
 export * from './actions'
@@ -19,32 +35,24 @@ export * from './decider'
 
 export const ENGINE_VERSION = '0.1.0'
 
-const todo = (what: string, m: string): never => { throw new Error(`${what}: not implemented (${m})`) }
 
 // ---------- data bundles ----------
-// step(state, action) takes no bundle, so the engine keeps the bundles it has seen, keyed by version (00 §2).
-const BUNDLES = new Map<string, DataBundle>()
-/** Makes a bundle available to step/validate/legalActions/query for states built from it. createGame/replay/load call it. */
-export function registerBundle(bundle: DataBundle): void { BUNDLES.set(bundle.version, bundle) }
-/** The bundle registered for state.dataVersion. Missing → EngineInvariantError. */
-export function bundleFor(state: GameState): DataBundle {
-  const b = BUNDLES.get(state.dataVersion)
-  if (!b) throw new EngineInvariantError(`no data bundle registered for version ${state.dataVersion}`)
-  return b
-}
+// step(state, action) takes no bundle, so the engine keeps the bundles it has seen, keyed by version (00 §2). The registry
+// lives in bundles.ts so rules modules can read it without importing this file.
+export { registerBundle, bundleFor }
 
 // ---------- reducer API (00 §2) ----------
 /** Builds turn 0. Bad setup → StepResult.rejection E_BAD_SETUP (never throws). First pending: deploy or initiativeAck. */
-export function createGame(_setup: GameSetup, _seed: string, bundle: DataBundle): StepResult {
+export function createGame(setup: GameSetup, seed: string, bundle: DataBundle): StepResult {
   registerBundle(bundle)
-  return todo('createGame', 'M2')
+  return createGameImpl(setup, seed, bundle)
 }
 /** Pure reducer. Illegal action → same state reference, events [ActionRejected], same pending, rejection. */
-export function step(_state: GameState, _action: Action): StepResult { return todo('step', 'M2') }
+export function step(state: GameState, action: Action): StepResult { return stepImpl(state, action, bundleFor(state)) }
 /** Answers to state.pending; never empty while a decision is open; every member passes validate. */
-export function legalActions(_state: GameState): Action[] { return todo('legalActions', 'M2') }
+export function legalActions(state: GameState): Action[] { return legalActionsImpl(state, bundleFor(state)) }
 /** Exactly the checks step runs, no mutation. */
-export function validate(_state: GameState, _action: Action): Rejection | null { return todo('validate', 'M2') }
+export function validate(state: GameState, action: Action): Rejection | null { return validateImpl(state, action, bundleFor(state)) }
 
 /** Folds step from createGame; stops at the first rejection and returns it. */
 export function replay(setup: GameSetup, seed: string, bundle: DataBundle, actions: readonly Action[]): StepResult {
@@ -239,35 +247,36 @@ export interface TerrainInfo { label: HexLabel; level: number; terrain: string[]
 // ---------- query.* : the ONLY source of numbers the UI and AI show (00 §11) ----------
 export const query = {
   /** Hex distance (HEX-005). */
-  distance: (_a: Hex, _b: Hex): number => todo('query.distance', 'M1'),
+  distance: (a: Hex, b: Hex): number => hexDistance(a, b),
   /** Every (hex, facing, mode) the unit can end its move in, cheapest path each, with a ready MoveAction; plus one entry per legal charge/DFA (00 §9.6). */
-  reachable: (_state: GameState, _unitId: UnitId): ReachEntry[] => todo('query.reachable', 'M1'),
+  reachable: (state: GameState, unitId: UnitId): ReachEntry[] => reachableImpl(state, unitId),
   /** LOS between two units (or a unit and a hex) with reasons and blockers (LOS-020). */
-  los: (_state: GameState, _from: UnitId | Hex, _to: UnitId | Hex, _opts?: LosOptions): LosVerdict => todo('query.los', 'M1'),
-  arcs: (_state: GameState, _unitId: UnitId, _twist?: Twist): ArcsView => todo('query.arcs', 'M1'),
-  attackPreview: (_state: GameState, _req: AttackPreviewRequest): AttackPreview => todo('query.attackPreview', 'M2'),
-  firePreview: (_state: GameState, _unitId: UnitId, _plan: FirePlan): FirePreview => todo('query.firePreview', 'M2'),
-  physicalPreview: (_state: GameState, _req: PhysicalPreviewRequest): PhysicalPreview => todo('query.physicalPreview', 'M2'),
+  los: (state: GameState, from: UnitId | Hex, to: UnitId | Hex, opts?: LosOptions): LosVerdict => losQuery(state, from, to, opts),
+  arcs: (state: GameState, unitId: UnitId, twist?: Twist): ArcsView => arcsQuery(state, unitId, twist),
+  attackPreview: (state: GameState, req: AttackPreviewRequest): AttackPreview => attackPreviewQuery(state, req),
+  firePreview: (state: GameState, unitId: UnitId, plan: FirePlan): FirePreview => firePreviewQuery(state, unitId, plan),
+  physicalPreview: (state: GameState, req: PhysicalPreviewRequest): PhysicalPreview => physicalPreviewImpl(state, req),
   /** Every physical option of attacker vs target (punch per arm, both arms, kick per leg, push), legal or not. */
-  physicalOptions: (_state: GameState, _attackerId: UnitId, _targetId: UnitId): PhysicalPreview[] => todo('query.physicalOptions', 'M2'),
-  hitTable: (_direction: AttackDirection, _table: HitTable, _opts?: { prone?: boolean; partialCover?: boolean }): HitTableView => todo('query.hitTable', 'M2'),
+  physicalOptions: (state: GameState, attackerId: UnitId, targetId: UnitId): PhysicalPreview[] => physicalOptionsImpl(state, attackerId, targetId),
+  hitTable: (direction: AttackDirection, table: HitTable, opts?: { prone?: boolean; partialCover?: boolean }): HitTableView => hitLocationDistribution(direction, table, opts ?? {}),
   /** P(hits = k) for k = 0..rackSize (index = hits). */
-  clusterTable: (_rackSize: number, _modifier: number): number[] => todo('query.clusterTable', 'M2'),
-  heatProjection: (_state: GameState, _unitId: UnitId, _plan: HeatPlan): HeatProjection => todo('query.heatProjection', 'M2'),
-  heatEffects: (_heat: number): HeatEffects => todo('query.heatEffects', 'M2'),
-  heatScale: (): HeatScaleRow[] => todo('query.heatScale', 'M2'),
-  psrPreview: (_state: GameState, _unitId: UnitId, _reason: PsrReason): { tn: number; mods: Mod[]; p: number; auto: boolean } => todo('query.psrPreview', 'M2'),
-  fallPreview: (_state: GameState, _unitId: UnitId, _levels?: number): FallPreview => todo('query.fallPreview', 'M2'),
-  explosionPreview: (_state: GameState, _unitId: UnitId, _slot: SlotRef): ExplosionPreview => todo('query.explosionPreview', 'M2'),
-  isKillLocation: (_state: GameState, _unitId: UnitId, _loc: Loc): boolean => todo('query.isKillLocation', 'M2'),
-  mustWithdraw: (_state: GameState, _unitId: UnitId): boolean => todo('query.mustWithdraw', 'M2'),
-  sheet: (_state: GameState, _unitId: UnitId): SheetView => todo('query.sheet', 'M2'),
-  terrainInfo: (_state: GameState, _hex: Hex): TerrainInfo => todo('query.terrainInfo', 'M1'),
+  clusterTable: (rackSize: number, modifier: number): number[] => clusterDistribution(rackSize, modifier),
+  heatProjection: (state: GameState, unitId: UnitId, plan: HeatPlan): HeatProjection => projectHeat(state, unitId, plan),
+  heatEffects: (heat: number): HeatEffects => heatEffectsQuery(heat),
+  heatScale: (): HeatScaleRow[] => heatScaleQuery(),
+  psrPreview: (state: GameState, unitId: UnitId, reason: PsrReason): { tn: number; mods: Mod[]; p: number; auto: boolean } => psrPreviewQuery(state, unitId, reason),
+  fallPreview: (state: GameState, unitId: UnitId, levels?: number): FallPreview => fallPreviewImpl(state, unitId, levels ?? 0),
+  explosionPreview: (state: GameState, unitId: UnitId, slot: SlotRef): ExplosionPreview => explosionPreviewQuery(state, unitId, slot),
+  isKillLocation: (state: GameState, unitId: UnitId, loc: Loc): boolean => isKillLocationQuery(state, unitId, loc),
+  mustWithdraw: (state: GameState, unitId: UnitId): boolean => mustWithdrawQuery(state, unitId),
+  sheet: (state: GameState, unitId: UnitId): SheetView => sheetQuery(state, unitId),
+  terrainInfo: (state: GameState, hex: Hex): TerrainInfo => terrainInfoQuery(state, hex),
   /** Hex centre in world units, board centred (00 §3.6). */
-  hexToWorld: (_state: GameState, _hex: Hex): WorldXZ => todo('query.hexToWorld', 'M1'),
+  hexToWorld: (state: GameState, hex: Hex): WorldXZ => hexToWorldQuery(state, hex),
   /** P(2d6 ≥ tn): tn ≤ 2 → 1, tn ≥ 13 → 0. */
   p2d6: (tn: number): number => p2d6AtLeast(tn),
-  threat: (_state: GameState, _hex: Hex): never => todo('query.threat', 'M4'),
+  /** Release-1 threat view: expected damage to a standing 'Mech at the hex from each side's units where they stand (00 §14). */
+  threat: (state: GameState, hex: Hex): ThreatView => threatQuery(state, hex),
 }
 
 const WAYS_2D6 = [0, 0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1] // index = total
@@ -283,10 +292,10 @@ export function p2d6AtLeast(tn: number): number {
 // ---------- describe.* : our words for the UI (00 §11.3) ----------
 export interface DecisionText { title: string; prompt: string; lines: string[] }
 export const describe = {
-  decision: (_state: GameState, _pending: PendingDecision): DecisionText => todo('describe.decision', 'M3'),
-  event: (_state: GameState, _event: GameEvent): string => todo('describe.event', 'M3'),
-  action: (_state: GameState, _action: Action): string => todo('describe.action', 'M3'),
-  unit: (_state: GameState, _unitId: UnitId): string => todo('describe.unit', 'M3'),
+  decision: (state: GameState, pending: PendingDecision): DecisionText => describeDecision(state, pending),
+  event: (state: GameState, event: GameEvent): string => describeEvent(state, event),
+  action: (state: GameState, action: Action): string => describeAction(state, action),
+  unit: (state: GameState, unitId: UnitId): string => describeUnit(state, unitId),
   location: (loc: Loc): string => LOC_NAMES[loc],
 }
 const LOC_NAMES: Record<Loc, string> = {

@@ -87,6 +87,7 @@ Return JSON: ok, summary (<=80 words), files, issues.`, { label: `impl:${m.key}`
   phase('Integrate')
   const integ = await agent(`${COMMON}
 All engine modules now exist. You may edit ANY src/engine, src/ai, src/data, tests or tools file, STATUS.md, HANDOFF.md, package.json (npm install allowed).
+0. Loose ends from the foundation stage: create src/engine/code-hooks.ts and make collectHooks work (every hook referenced in data registered AND called; a test per hook proving it fires); set fallDeps.applyDamage (psr.ts) and heatDeps.explodeAmmo (heat.ts) from damage/ammo; wire query.los/heatProjection/fallPreview; add ammo 'is.ammo.lrm-10-artemis' (12 shots/ton, explosionPerShot 10) to the data, list it on is.w.lrm-10, switch both Rakshasa bins to it and add linkedTo on the Artemis mount; dedupe docs/needs-rules-check.md so contradictory RULING lines on the same rule (consciousness timing; heat-explosion bin choice) keep only the one the code implements.
 1. Wire src/engine/index.ts: createGame, step (exactly one PendingDecision after each step), legalActions (never empty for an open decision; feasibility = some candidate passes full validation), validate, save/load/replay, view, query.* (reachable set, attackPreview with modifier breakdown + odds, losVerdict, heatProjection, threat), describe.*.
 2. 'npm run typecheck' and 'npm test' green.
 3. src/ai/random.ts: a random-legal Decider that plays sensibly (moves toward enemies, fires weapons in arc/range while keeping heat below shutdown, kicks when adjacent) so a human can play a full game against it.

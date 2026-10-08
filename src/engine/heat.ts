@@ -4,7 +4,7 @@ import type { HeatEffects, HeatPlan, HeatProjection } from './index'
 import { addPilotHit, initiativeOrder, patchUnit } from './pilot'
 import type { Stepped } from './pilot'
 import { roll } from './rng'
-import { bundleFor } from './index'
+import { bundleFor } from './bundles'
 import type { BoardHex, GameState, HeatEntry, HeatSource, LocalId, MoveMode, UnitId, UnitState } from './types'
 import { EngineInvariantError } from './types'
 

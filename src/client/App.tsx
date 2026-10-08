@@ -3,6 +3,7 @@
 // ?fps (frame meter, drawn by the game screen), ?speed=.
 import { Suspense, lazy, useEffect } from 'react'
 import { bootClient, game, setupFromUrl, startFromUrl, useHasGame, usePresentedPhase, type NewGameOptions } from './contract'
+import { audio, initAudio } from './audio'
 import { CoachLine } from './ui/help/CoachLine'
 import { HelpButton, HelpOverlay } from './ui/help/HelpGuide'
 import { StartScreen } from './ui/start/StartScreen'
@@ -30,6 +31,10 @@ function GameApp() {
   const toStart = useScreenStore((s) => s.toStart)
   const phase = usePresentedPhase()
   const ongoing = hasGame && phase !== 'ended'
+  // audio unlocks on the first pointer down; the title theme plays on the start screen, battle loops in the game
+  useEffect(() => { initAudio() }, [])
+  const inBattle = screen === 'game' && hasGame
+  useEffect(() => { audio.setMusicScene(inBattle ? 'battle' : 'title') }, [inBattle])
 
   useEffect(() => {
     const off = bootClient({ testHooks: params().get('test') === '1' })

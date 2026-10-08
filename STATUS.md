@@ -101,8 +101,24 @@
   random 19/20, normal vs easy 16/20, 0 rejections / stalls / fallbacks; Playwright 9/9.
 - Not yet: player controls for capacitor / pod / MASC / Ultra double tap (engine and AI have them); `tools/out/m7-followups.md`.
 
+## M6 done (audio: SFX, narrator and cockpit voice, audio manager)
+- Tools: `tools/gen-audio.ts` (ElevenLabs, idempotent, `--kind` / `--only` / `--dry`, `CREDIT_CEILING` / `RUN_BUDGET`),
+  `tools/measure-audio.ts` (RMS / peak / crest), `tools/compose-audio.ts` (layering from `tools/audio-src/`). Prompts live in
+  `tools/audio-manifest.json`, mirrored by `src/client/audio/manifest.ts`. Weapon flavours: `src/client/weaponFlavour.ts` (a test
+  fails if any weapon lacks one).
+- Assets: 65 files in `public/audio/`: 49 SFX (footsteps by weight class, twist, jump jets, fall / stand, 20 weapon flavours,
+  physicals, damage, heat, UI) and 16 voice lines (11 narrator, 5 cockpit computer; all lines our own). Loudness trims in
+  `src/client/audio/trims.ts`. Generation used 756 credits (account 27,876 of 59,062).
+- Client: `src/client/audio/` Web Audio manager (master / sfx / voice / music buses, sfx limiter, persisted volumes and mute in
+  Settings, unlock on first input, throttling with detune), beat-to-sound mapping in `beatAudio.ts` / `eventSounds.ts` hooked
+  into the presentation director. Music director (title, alternating battle loops, stingers, 2 s crossfades, ducking under
+  voice) is wired but silent: the 10 music items are `pending: true` in the runtime manifest and never requested.
+- Audition: `/warmechforge/sounds.html` lists every id. Verified headless: 65/65 decode, 0 failed, 0 console errors in a
+  human game and a bot-vs-bot game (weapons, impacts, crits, footsteps, falls, narrator all fire).
+- Not yet: music (about 12k credits, needs owner OK; when generated, drop `pending` from those manifest rows).
+
 ## Next
 - Owner playtest on Pages: Skirmish vs the normal AI with the threat overlay (T) and the new end screen.
 - Fire-panel and move-panel controls for PPC capacitor, coolant pod, MASC and Ultra AC double tap.
 - Ferro-lamellor in previews and the AI damage model; skirmish turn-limit / withdrawal options; 40-ai §4.5 Monte Carlo.
-- M8: smoke / hidden units (Beagle probe effects), figure gate follow-ups, audio once a fresh ElevenLabs key arrives.
+- M8: smoke / hidden units (Beagle probe effects), figure gate follow-ups, music once the owner OKs the spend.

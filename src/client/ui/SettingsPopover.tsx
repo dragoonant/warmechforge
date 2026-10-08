@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { FAN_NOTICE, SPEED_PRESETS, settings, uiActions, usePanel, useSettings, type Settings } from '../contract'
+import { SoundSettings } from '../audio/SoundSettings'
 import { SURROUNDINGS_OPTIONS, setSurroundings, useSurroundings, useSurroundingsForced } from '../environment/surroundings'
 import './hud.css'
 
@@ -49,6 +50,7 @@ export function SettingsButton() {
           <label className="set-row set-check"><input type="checkbox" data-testid="set-tips" checked={s.tips} onChange={(e) => set({ tips: e.target.checked })} /> Tips</label>
           <label className="set-row set-check"><input type="checkbox" data-testid="set-follow" checked={s.followAction} onChange={(e) => set({ followAction: e.target.checked })} /> Follow action (camera frames bot moves and shots)</label>
           <label className="set-row set-check"><input type="checkbox" data-testid="set-grid" checked={s.grid} onChange={(e) => set({ grid: e.target.checked })} /> Hex grid lines</label>
+          <SoundSettings />
           <p className="hud-dim over-note" data-testid="fan-notice">{FAN_NOTICE}</p>
         </div>
       )}

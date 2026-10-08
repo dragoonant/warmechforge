@@ -6,6 +6,7 @@ random bot, then walk, run or jump your two 'Mechs, pick facings, twist torsos, 
 number explained, and kick or punch at close range, until one side is down. The board sits on a table in a little game shop
 (Settings > Surroundings switches to a plain dark surround). Screenshots of a played game are in `e2e-out/` (local).
 M4 (utility AI in a worker, easy/normal tiers) is running/next; see Current state.
+M6 audio is in: audition every sound at https://dragoonant.github.io/warmechforge/sounds.html and name the ids to redo; music is not generated yet (needs your OK, about 12k credits).
 
 Data notes: the box's new variants (Solitaire 3, Rakshasa MDG-3D, Hollander BZK-W4, Vulture E...) have no public stats yet
 (Sarna, MegaMek, MUL checked 2026-10-08; only BVs known), so the slice uses stock Solitaire Prime and Rakshasa MDG-1A,
@@ -15,9 +16,8 @@ Questions:
 1. Figure gate: do the Solitaire and Regent look right (`art/figure-sheets/bt-solitaire.png`, `bt-regent.png`, and the
    torso-twist / arm-loss sheets `*-split.png`; in game: `?gallery`)? Proportions are close to the real sculpts, only
    lightly stylised. Approve, or say "chunkier" / "more stylised", and I'll make the other six to match.
-3. ElevenLabs key: the key in `WarMechForge\Tokens.txt` (same one Whirr used) now returns 401 "invalid API key", so no
-   audio was generated. Please paste a fresh key into that file (`EL=sk_...`); SFX + voice (~2k credits) then run
-   without asking, music (~12k) waits for your OK.
+3. Music: generate the title theme, two battle loops and victory / defeat stingers (two candidates each, about 12k
+   ElevenLabs credits)? SFX and voice are done (756 credits; account at 27,876 of 59,062).
 2. Rulings: `docs/needs-rules-check.md` has every judgement call (about 120 lines). Skim when convenient; a newer 2026
    rulebook would settle most of them.
 

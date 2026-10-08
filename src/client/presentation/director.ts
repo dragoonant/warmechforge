@@ -7,6 +7,7 @@ import { getSettings, scaled } from '../store/settingsStore'
 import { addNarration, clearBanner, resetAnnouncements, showBanner, type NarrationLine } from './announceStore'
 import { applyEvent } from './apply'
 import { buildBeats, type Beat, type SeqEvent } from './beats'
+import { playBeatAudio } from '../audio/beatAudio'
 import { narrate, rollLabel, rollVerdict } from './labels'
 import {
   DICE_LOG_LIMIT, FEED_LIMIT, INITIAL_PRESENTED, usePresentedStore,
@@ -85,6 +86,7 @@ function describeSafe(state: GameState, se: SeqEvent): string {
 function startBeat(beat: Beat, dur: number): void {
   if (!cur) return
   const now = clock.now()
+  playBeatAudio(beat, cur.state, dur)
   for (const se of beat.events) {
     draft.feed.push({ seq: se.seq, event: se.event, text: describeSafe(cur.state, se), turn: cur.state.turn })
     const line = narrate(cur.state, se.event)

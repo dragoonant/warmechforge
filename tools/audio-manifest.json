@@ -1,0 +1,608 @@
+{
+  "_comment": "Owned by the audio task. All prompts and lines are original wording, not imitating any BattleTech or MechWarrior sound or voice. Run `npx tsx tools/gen-audio.ts` to generate missing files into public/audio/<id>.mp3 (music into public/audio/music/<id>.mp3, opt-in with --kind=music). Mirrored by src/client/audio/manifest.ts.",
+  "voice": {
+    "voiceId": "N2lVS1w4EtoT3dr4eOWO",
+    "voiceName": "Callum - Husky Trickster",
+    "modelId": "eleven_flash_v2_5"
+  },
+  "voices": {
+    "narrator": {
+      "voiceId": "N2lVS1w4EtoT3dr4eOWO",
+      "voiceName": "Callum - Husky Trickster",
+      "modelId": "eleven_flash_v2_5"
+    },
+    "computer": {
+      "voiceId": "SAz9YHcvj6GT2YYXdXww",
+      "voiceName": "River - Relaxed, Neutral, Informative",
+      "modelId": "eleven_flash_v2_5"
+    }
+  },
+  "music": {
+    "endpoint": "/v1/music",
+    "modelId": "music_v1",
+    "forceInstrumental": true,
+    "outputFormat": "mp3_44100_128"
+  },
+  "items": [
+    {
+      "id": "mv-step-light",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "One loud, close-up footfall of a light, nimble walking war machine: a punchy metal servo thud of a small steel foot on gravel with a short hydraulic whine, mid-range clank with strong presence, no music, no voices",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-step-medium",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "One footfall of a medium walking war machine: a solid metallic thump of a heavy steel foot on packed earth, a short hydraulic hiss and a faint creak of armor plates, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-step-heavy",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "One loud, close-up footfall of a heavy walking war machine: a punchy, powerful mid-range steel clang and thud of a huge steel foot with a hydraulic hiss and rattling armor, strong presence, no music, no voices",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-step-assault",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "One loud, close-up footfall of a colossal assault walking war machine: a massive steel stomp with a punchy metallic impact, a hydraulic hiss and grinding gears, strong presence, no music, no voices",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-torso-twist",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "A mechanical servo whine as a giant machine torso rotates on its waist ring: rising then falling electric motor pitch with a gear grind and a soft metal clunk at the end, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "mv-jump-ignite",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "Jump jets igniting on a giant machine: a sharp percussive whump of ignition, then a rising hiss of rocket exhaust that fades in the last third, with dynamics, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-jump-thrust",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "Sustained rocket jump-jet thrust of a giant machine in flight: steady heavy roaring exhaust with a hot rushing hiss, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "mv-jump-land",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "A giant walking machine landing after a jump: a heavy double metal impact, a puff of exhaust hiss and settling armor rattle, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-fall",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "A huge walking war machine falling over: a groan of tearing metal, then a massive crash of armor on the ground with scraping and clattering debris, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "mv-standup",
+      "kind": "sfx",
+      "group": "movement",
+      "prompt": "A fallen giant machine pushing itself upright: straining hydraulic motors, grinding joints, scraping metal and a final heavy thud of both feet planting, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "wp-laser-small",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A small laser: a thin high-pitched electric zap, a quick sizzling beam burst. Single sharp report, fast attack, no music, no voices",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-laser-medium",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A medium laser: a loud, clean mid-pitched energy beam burst with a bright electric sizzle and a short decay. Single sharp report, fast attack, full volume, no music, no voices",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-laser-large",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A large laser: a deep powerful beam discharge, a rising charge-up whine then a thick searing blast with a lingering sizzle, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-laser-er",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "An extended-range laser: a sharp crackling energy beam, high bright electrical crackle with a tight cutting edge. Single sharp report, fast attack, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-laser-pulse",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A pulse laser: a rapid stutter of five to six fast energy zaps in a burst, like a staccato electric chatter, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-laser-heavy",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A heavy laser: a very deep thrumming beam, a heavy low pulsing throb with a thick searing tail, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-laser-xpulse",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "An X-pulse laser: a fast crackling triple pulse of erratic bright energy zaps with a harsh electric buzz, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-ppc",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A particle projector cannon: a charging whine then a violent crackling thunderclap discharge of a bolt of blue lightning with a booming tail, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-ppc-light",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A light particle cannon: a short snapping electric discharge, a sharp crack of lightning with a quick whine, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-ac",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A heavy autocannon firing one round: a deep punching cannon report with a metallic bolt clack and a short rolling echo. Single sharp report, fast attack, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-ac-lbx",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A shotgun-style cannon blast: one huge booming muzzle blast followed by a wide hissing rain of scattering pellets, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-ac-ultra",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "An ultra autocannon firing a double report: two heavy cannon shots in very fast succession, bang-bang, with brass clack. Single sharp report, fast attack, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-ac-rotary",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A rotary autocannon: a roaring spinning barrel assembly firing a continuous fast stream of heavy rounds, a mechanical chainsaw-like roar, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "wp-ac-proto",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A small compact autocannon: a quick light snapping cannon report, a fast double bark with a metallic ping. Single sharp report, fast attack, no music, no voices",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-gauss",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A gauss rifle: a rising electric capacitor charge whine, then a single violent supersonic magnetic slug crack with a deep thud, no music, no voices",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "wp-lrm",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A long-range missile launch: a sharp percussive thump of the first rocket leaving the rack, then a rapid ripple of rockets whooshing away with hissing motors that fades, strong fast attack, no music, no voices",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "wp-srm",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A short-range missile launch: a quick sharp whoosh of two to six rockets leaving a launcher with a fast hiss and a thump, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "wp-mml",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A multi-missile launcher: a medium whoosh of a rapid burst of rockets leaving a tube, hiss and thump with a slight rattle, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "wp-missile-impact",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A cluster of missiles impacting on armor: a rapid series of sharp small explosions popping one after another with metal ringing and debris, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "wp-mg",
+      "kind": "sfx",
+      "group": "weapon",
+      "prompt": "A machine gun: a fast rattling burst of small-caliber rounds, tight staccato mechanical rattle. Single sharp report, fast attack, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "ph-punch",
+      "kind": "sfx",
+      "group": "physical",
+      "prompt": "A giant machine punch: a heavy metal fist swinging through air then smashing into armor plating with a dull boom and ring, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "ph-kick",
+      "kind": "sfx",
+      "group": "physical",
+      "prompt": "A giant machine kick: a hydraulic swing whoosh and a heavy steel foot slamming into armor with a deep crunching thud, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "ph-charge",
+      "kind": "sfx",
+      "group": "physical",
+      "prompt": "A huge war machine charging into another: a fast rush then a massive collision of tons of metal with a shuddering crash and screeching scrape, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "ph-dfa",
+      "kind": "sfx",
+      "group": "physical",
+      "prompt": "A death from above leap: a short descending whistle then one sharp catastrophic crushing metal impact with a single shockwave boom and a fast decay, strong transient attack, no music, no voices",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "dm-armor",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A weapon hit on armor plating: a loud metallic clang with a ringing resonance and small sparks scattering, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "dm-internal",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "Internal structure damage on a giant machine: a deep crunching tearing of metal beams, snapping girders and a dull crack, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "dm-crit",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A critical hit alarm stab: one sharp metallic crunch impact, a brief silence, then a short single electronic buzzer blip, with dynamic contrast, no music, no voices",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "dm-limb",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A limb torn off a giant machine: a violent wrenching shriek of metal, a loud snap and the heavy limb crashing to the ground with clatter, no music, no voices",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "dm-ammo-explosion",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "An ammunition store detonating inside a machine: a sharp thunderous chain of explosions, popping rounds cooking off and a heavy boom with metal fragments, no music, no voices",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "dm-engine-breach",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A fusion engine breach: a deep rumble, a sharp crackle of shorting energy, a bursting hiss of escaping plasma and a descending power-fail drone, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "dm-destroyed",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A giant war machine destroyed: a huge fiery explosion with a booming blast, then cascading metal debris, wreckage crashing and fire crackling, no music, no voices",
+      "durationSeconds": 3,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "dm-cockpit",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "Cockpit damage: a burst of electrical sparks and crackling short circuits with a glass crack and a metallic rattle, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "ht-warning",
+      "kind": "sfx",
+      "group": "heat",
+      "prompt": "An original heat warning alarm: a repeating two-tone electronic beep-beep alert, pitched urgent and steady, clean synthesized tones, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "ht-shutdown",
+      "kind": "sfx",
+      "group": "heat",
+      "prompt": "A giant machine reactor shutting down: a descending power-down whine falling in pitch, fans spinning down, a final heavy clunk of dying systems, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "ht-startup",
+      "kind": "sfx",
+      "group": "heat",
+      "prompt": "A giant machine reactor starting up: a rising power-up whine, relays clicking, fans spinning up and a final low hum settling, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "ht-vent",
+      "kind": "sfx",
+      "group": "heat",
+      "prompt": "Coolant venting from a machine: a long steady hiss of pressurised coolant gas escaping with a soft metal rattle at the start, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "ui-click",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "A single crisp mechanical button click, a short dry tactile switch snap, no music, no voices",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "ui-dice",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "Two wooden dice rattling and rolling across a hard table and settling, short tumbling clatter, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "ui-turn-bell",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "A single clear brass bell strike with a ringing metallic decay, a soft ceremonial chime, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "nar-initiative",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Initiative"
+    },
+    {
+      "id": "nar-movement",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Movement phase"
+    },
+    {
+      "id": "nar-ranged",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Ranged attacks"
+    },
+    {
+      "id": "nar-physical",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Physical attacks"
+    },
+    {
+      "id": "nar-heat",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Heat phase"
+    },
+    {
+      "id": "nar-critical",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Critical hit!"
+    },
+    {
+      "id": "nar-ammo",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Ammunition explosion!"
+    },
+    {
+      "id": "nar-shutdown",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Shutdown!"
+    },
+    {
+      "id": "nar-destroyed",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "'Mech destroyed"
+    },
+    {
+      "id": "nar-victory",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Victory. The field is ours."
+    },
+    {
+      "id": "nar-defeat",
+      "kind": "voice",
+      "group": "narrator",
+      "voice": "narrator",
+      "text": "Defeat. The lance is lost."
+    },
+    {
+      "id": "cmp-heat-critical",
+      "kind": "voice",
+      "group": "computer",
+      "voice": "computer",
+      "text": "Heat level critical"
+    },
+    {
+      "id": "cmp-reactor",
+      "kind": "voice",
+      "group": "computer",
+      "voice": "computer",
+      "text": "Reactor shutdown imminent"
+    },
+    {
+      "id": "cmp-armor-breach",
+      "kind": "voice",
+      "group": "computer",
+      "voice": "computer",
+      "text": "Armor breach"
+    },
+    {
+      "id": "cmp-weapon-destroyed",
+      "kind": "voice",
+      "group": "computer",
+      "voice": "computer",
+      "text": "Weapon destroyed"
+    },
+    {
+      "id": "cmp-systems-online",
+      "kind": "voice",
+      "group": "computer",
+      "voice": "computer",
+      "text": "Systems online"
+    },
+    {
+      "id": "mus-title-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Title screen theme: slow ominous build with a brass motif and steady war-drum pulse, seamless loop",
+      "durationSeconds": 75,
+      "loop": true
+    },
+    {
+      "id": "mus-title-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Title screen theme: slow ominous build with a brass motif and steady war-drum pulse, seamless loop",
+      "durationSeconds": 75,
+      "loop": true
+    },
+    {
+      "id": "mus-battle1-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Battle loop, low-to-mid intensity: steady grinding machine pulse, brooding low brass, sparse anvil hits, seamless loop",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "mus-battle1-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Battle loop, low-to-mid intensity: steady grinding machine pulse, brooding low brass, sparse anvil hits, seamless loop",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "mus-battle2-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Battle loop, mid intensity: faster pulsing synth bass, driving taiko, rising string ostinato, seamless loop",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "mus-battle2-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Battle loop, mid intensity: faster pulsing synth bass, driving taiko, rising string ostinato, seamless loop",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "mus-victory-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Victory stinger: triumphant rising brass fanfare resolving to a strong final chord and drum hit",
+      "durationSeconds": 12
+    },
+    {
+      "id": "mus-victory-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Victory stinger: triumphant rising brass fanfare resolving to a strong final chord and drum hit",
+      "durationSeconds": 12
+    },
+    {
+      "id": "mus-defeat-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Defeat stinger: somber falling low brass, a slow tolling anvil and a fading dark synth drone",
+      "durationSeconds": 12
+    },
+    {
+      "id": "mus-defeat-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "gritty military-industrial orchestral, heavy synth bass, taiko and anvil percussion, low brass, a driving machine pulse, instrumental, no vocals, not imitating any existing film or game soundtrack. Defeat stinger: somber falling low brass, a slow tolling anvil and a fading dark synth drone",
+      "durationSeconds": 12
+    }
+  ]
+}

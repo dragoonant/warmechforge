@@ -35,21 +35,21 @@ The engine's rules contract. All prose is ours; no rulebook text is copied.
 |---|---|
 | HEX-001 | All dice are d6. "2d6 ≥ TN" succeeds when the sum is equal to or greater than the target number (TN). Every roll goes through `roll(state, spec)` |
 | HEX-002 | Rounding: damage values computed by division round **up** (tonnage ÷ 10, ÷ 5) unless a rule says otherwise. Halving punch/kick damage for actuator damage rounds **down**, minimum 1. Halving fall damage in water rounds down |
-| HEX-003 | Map: flat-topped hexes. Internal coordinates are axial `(q, r)`; the printed label is `XXYY` = (column + 1, row + 1) with 0-based odd-q offset (odd columns sit half a hex lower; `0101` top-left, `0201` is lower than `0101`). Cross-check parity with MegaMek `Coords` before freezing |
+| HEX-003 | Map: flat-topped hexes. Internal coordinates are axial `(q, r)`; the printed label is `XXYY` = (column + 1, row + 1) with 0-based odd-q offset (odd 0-based columns, labels `02xx`, `04xx` …, sit half a hex lower; `0101` top-left, `0201` is lower than `0101`). Checked 2026-10-08 against MegaMek `Coords` (`yInDir`, `toCube`): same parity and the same direction numbering. Worked examples: 00 §3.1 |
 | HEX-004 | Facing 0 = north (pointing at the north hexside), 0–5 clockwise. Axial neighbour of facing f: 0 `(0,-1)`, 1 `(+1,-1)`, 2 `(+1,0)`, 3 `(0,+1)`, 4 `(-1,+1)`, 5 `(-1,0)` |
 | HEX-005 | Range = hex distance (cube distance): the target's hex counts, the attacker's does not. Adjacent = range 1. Level differences never change range |
 | HEX-006 | Bearing from hex A to hex B: compute pixel centres (flat-top: `x = 1.5·q`, `y = √3·(r + q/2)`, y down) and take `atan2(dx, −dy)` in degrees, 0 = north, clockwise, normalised to [0, 360). Compare angles with a tolerance of 1e-6° |
 | HEX-007 | Relative bearing `rel(A→B, f) = (bearing(A→B) − 60·f) mod 360` |
 | HEX-008 | Each hex has an integer ground **level** and at most one terrain type from §3.3. A water hex's level is its surface; its **depth** d ≥ 1 puts its **floor** (bottom) at `level − d`. For every other hex, floor = level |
 | HEX-009 | A 'Mech occupies one hex. Height: standing 2 levels, prone 1 level. A 'Mech's **LOS level** = its hex's floor (ground, or water bottom) + height |
-| HEX-010 | Partial hexes at map edges do not exist on our boards; LOS always ignores partial hexes `[CL C6]`. A unit moved or displaced off the board or into a partial hex is destroyed (unless exiting by SCN-010) |
+| HEX-010 | Partial hexes at map edges do not exist on our boards; LOS always ignores partial hexes `[CL C6]`. A unit moved or displaced off the board or into a partial hex is destroyed with cause `displacedOff` (a voluntary exit is SCN-010, never this) |
 
 ## 2. Turn sequence and initiative
 
 | ID | Rule |
 |---|---|
 | INIT-001 | A turn is six phases in order: **Initiative, Movement, Ranged Attack, Physical Attack, Heat, End** `[CL C1]`. Every unit completes a phase before the next begins |
-| INIT-002 | Initiative: each side rolls 2d6. Ties re-roll (both sides). Higher total wins. The loser acts first in every alternating phase; the winner acts last |
+| INIT-002 | Initiative: each side rolls 2d6. Ties re-roll (both sides). Higher total wins. The loser acts first in every alternating phase; the winner acts last. Engine roll order: side `A` (setup side 0) first, then side `B`; each re-roll repeats A then B (13 §1.2 R1; every golden depends on it) |
 | INIT-003 | Alternating phases are Movement, Ranged Attack (declarations) and Physical Attack (declarations). In each, sides alternate **selections** (one unit's complete move, or one unit's complete attack declaration), loser first |
 | INIT-004 | **Eligible units** for a phase's alternation: Movement: every unit on the board or due to enter this turn, except immobile units (2026 `[CL M7]`; they are skipped and do not count). Ranged and Physical: every unit except those shut down or with an unconscious pilot (2026 `[CL C3]`). Destroyed units never count |
 | INIT-005 | **Unequal numbers, front-loaded** (2026 `[CL P5]`): selections happen in *pairs*, loser's turn then winner's. At the start of each pair let `a` = loser's eligible units not yet selected, `b` = winner's. Loser selects `n_L = a > b ? ceil(a/b) : 1` units; then the winner selects `n_W = b > a ? ceil(b/a) : 1` units, using the counts from the start of the pair. If one side has 0 left, the other selects all its remaining units one at a time. The extra units of the larger side therefore come early in the phase |
@@ -101,7 +101,7 @@ Cost to enter a hex = 1 (base) + terrain cost + level-change cost.
 | ID | Terrain / action | MP | PSR on entering (walk/run) |
 |---|---|---|---|
 | MOVE-020 | Clear | +0 | none |
-| MOVE-021 | Paved / bridge | +0 | none (no skidding, 2026 `[CL B7]`) |
+| MOVE-021 | Paved / bridge (`pavement`) | +0: costs exactly as clear; no LOS and no to-hit effect | none (no skidding, 2026 `[CL B7]`) |
 | MOVE-022 | Road, moving from a road hex along the road | +0, and level-change cost −1 (min 0) (2026 `[CL M11]`) | none |
 | MOVE-023 | Rough | +1 | none |
 | MOVE-024 | Light woods (jungle = woods `[CL B2]`) | +1 | none |
@@ -127,7 +127,7 @@ Notes:
 |---|---|
 | MOVE-040 | Drop prone: 1 MP, any time during walk/run movement, not if jumping. No damage, no heat beyond the mode's. Facing kept |
 | MOVE-041 | A unit starting the Movement Phase prone declares Walk or Run (not Jump). While prone it may only change facing (1 MP/hexside) or attempt to stand |
-| MOVE-042 | Stand attempt: 2 MP, then PSR at −1 (2026 `[CL O2]`), **no heat** (2026 `[CL H1]`). Success: choose any facing free, continue with remaining MP. Failure: the unit falls again in its hex (0-level fall, PSR-050) and may try again if it has MP. A unit that fell this turn may stand the same phase if it has MP and did not jump |
+| MOVE-042 | Stand attempt: 2 MP, then PSR at −1 (2026 `[CL O2]`), **no heat** (2026 `[CL H1]`). Every attempt is −1: the modifier never grows with repeated attempts in one phase (PSR-019). Success: the unit takes the facing given by `StandUpAction.facing` (default: current) at no MP cost, then continues with remaining MP. Failure: the unit falls again in its hex (0-level fall, PSR-050) and may try again if it has MP. A unit that fell this turn may stand the same phase if it has MP and did not jump |
 | MOVE-043 | Can't stand: both legs destroyed; one leg and both arms destroyed; gyro destroyed |
 | MOVE-044 | One-legged unit: one stand attempt per turn, always counts as Run. All PSRs the attempt requires are rolled separately (2026 `[CL M10]` removed the single-PSR exception) |
 | MOVE-045 | Prone units: height 1, can't torso twist or flip arms, fire per TOHIT-008, can't make physical attacks |
@@ -168,7 +168,7 @@ Notes:
 | LOS-002 | Implementation: build the hex sequence twice, nudging the endpoints by +ε and −ε (ε = 1e-6 along the perpendicular). If both sequences match, LOS is single. If they differ, LOS is **divided**: the defender picks one whole sequence (LOS-005) |
 | LOS-003 | LOS is mutual. Adjacent units always have LOS, unless LOS-040 forbids the attack |
 | LOS-004 | Units never block LOS or affect attacks against others |
-| LOS-005 | **Divided LOS choice:** the target's controller picks the +ε or −ε sequence. The AI (and the human, unless `settings.askDefender`) picks: a blocked sequence over an open one; else the higher total to-hit modifier from §4/§7; else the +ε sequence. The choice is stored per (attacker, target) pair for the rest of the turn |
+| LOS-005 | **Divided LOS choice:** the target's controller picks the +ε or −ε sequence. The AI (and the human, unless `setup.options.askDefender` is true; default false, RULING) picks: a blocked sequence over an open one; else the higher total to-hit modifier from §4/§7; else the +ε sequence. The choice is stored per (attacker, target) pair for the rest of the turn |
 | LOS-010 | **Obstacle level** of an intervening hex: its ground level (hills; water hexes use their surface level), or ground + 2 if it has woods. Woods are the only feature with height on Core Box maps |
 | LOS-011 | An intervening hex **intervenes** if its obstacle level is (a) ≥ both the attacker's and target's LOS levels; or (b) ≥ the attacker's LOS level and the hex is adjacent to the attacker; or (c) ≥ the target's LOS level and the hex is adjacent to the target |
 | LOS-012 | An intervening hex whose **ground** level alone satisfies LOS-011 is a hill: LOS is **blocked** |
@@ -199,7 +199,7 @@ Notes:
 
 | ID | Rule |
 |---|---|
-| ARC-001 | Firing arcs from the attacker, using `rel = rel(attacker→target, arcFacing)` (HEX-007): **Forward** rel ≤ 60 or rel ≥ 300; **Right side** 60 < rel ≤ 120; **Rear** 120 < rel < 240; **Left side** 240 ≤ rel < 300. Arcs run to the board edge |
+| ARC-001 | Firing arcs from the attacker, using `rel = rel(attacker→target, arcFacing)` (HEX-007): **Forward** rel ≤ 60 or rel ≥ 300; **Right side** 60 < rel ≤ 120; **Rear** 120 < rel < 240; **Left side** 240 ≤ rel < 300. Arcs run to the board edge. Boundaries checked 2026-10-08 against MegaMek `ComputeArc.isInArc` (same inclusive/exclusive edges) |
 | ARC-002 | Adjacent hexes: front, front-right, front-left are Forward; rear-right is Right side; rear is Rear; rear-left is Left side |
 | ARC-003 | Weapon arcs: torso and head weapons fire Forward. Right-arm weapons fire Forward + Right side; left-arm weapons Forward + Left side. Rear-mounted weapons `(R)` fire Rear only. Leg weapons fire Forward (or Rear if rear-mounted) by the feet |
 | ARC-004 | `arcFacing` = torso facing for head, torso and arm weapons (after twist); feet facing for leg weapons, kicks, pushes |
@@ -209,7 +209,7 @@ Notes:
 | ARC-013 | Prone units can't twist or flip; their arcs follow their facing |
 | ARC-014 | Twisting or flipping never changes how the unit is hit (ARC-020 uses feet facing) |
 | ARC-020 | **Attack direction** (picks the hit-location column): `rel = rel(target→attacker, targetFeetFacing)`. **Front** 330 < rel < 30; **Right** 30 < rel < 150; **Rear** 150 < rel < 210; **Left** 210 < rel < 330 |
-| ARC-021 | rel exactly 30, 150, 210 or 330 (the line crosses a hex corner): the target's controller picks either neighbouring zone. AI/default rule: the zone whose column's roll-7 location has the most armor left (torso rear armor for Rear); ties Front > Left > Right > Rear. Stored per (attacker, target) per turn |
+| ARC-021 | rel exactly 30, 150, 210 or 330 (the line crosses a hex corner): the target's controller picks either neighbouring zone. AI/default rule: the zone whose column's roll-7 location has the most armor left (torso rear armor for Rear); ties Front > Left > Right > Rear. This default rule applies to both players unless `setup.options.askDefender` is true (default false, RULING: defender-favouring automatic choice keeps decisions few). Stored per (attacker, target) per turn |
 | ARC-022 | For divided LOS, ARC-020 uses the straight centre line regardless of the LOS-005 choice |
 | ARC-023 | A prone target uses the facing its head points to. Physical attacks set their own direction source (PHYS-044, PHYS-063) |
 
@@ -329,12 +329,12 @@ HITLOC-003.)
 | Size | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | 2 | 2 | 2 | 2 |
-| 3 | 1 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 3 | 3 | 3 |
+| 3 | 1 | 1 | 1 | 2 | 2 | 2 | 2 | 2 | 3 | 3 | 3 |
 | 4 | 1 | 2 | 2 | 2 | 2 | 3 | 3 | 3 | 3 | 4 | 4 |
 | 5 | 1 | 2 | 2 | 3 | 3 | 3 | 3 | 4 | 4 | 5 | 5 |
 | 6 | 2 | 2 | 3 | 3 | 4 | 4 | 4 | 5 | 5 | 6 | 6 |
 | 7 | 2 | 2 | 3 | 4 | 4 | 4 | 4 | 6 | 6 | 7 | 7 |
-| 8 | 3 | 3 | 4 | 4 | 5 | 5 | 5 | 6 | 6 | 8 | 8 |
+| 8 | 2 | 3 | 3 | 4 | 4 | 5 | 5 | 6 | 7 | 8 | 8 |
 | 9 | 3 | 3 | 4 | 5 | 5 | 5 | 5 | 7 | 7 | 9 | 9 |
 | 10 | 3 | 3 | 4 | 6 | 6 | 6 | 6 | 8 | 8 | 10 | 10 |
 | 11 | 4 | 4 | 5 | 7 | 7 | 7 | 7 | 9 | 9 | 11 | 11 |
@@ -348,8 +348,9 @@ HITLOC-003.)
 | 19 | 6 | 6 | 8 | 11 | 11 | 11 | 11 | 15 | 15 | 19 | 19 |
 | 20 | 6 | 6 | 9 | 12 | 12 | 12 | 12 | 16 | 16 | 20 | 20 |
 
-Sizes 2, 4, 5, 6, 10, 15, 20 match the AGoAC card; the other rows are the TW table (cross-check MegaMek
-`Compute.clusterHitsTable` before freeze).
+Sizes 2, 4, 5, 6, 10, 15, 20 match the AGoAC card. Every row 2–20 was checked on 2026-10-08 against MegaMek
+`Compute.clusterHitsTable`: row 3 (roll 4 → 1) and row 8 (rolls 2, 4, 8, 10 → 2, 3, 5, 7) were corrected to match it;
+the other rows already matched.
 
 | ID | Rule |
 |---|---|
@@ -373,7 +374,7 @@ Sizes 2, 4, 5, 6, 10, 15, 20 match the AGoAC card; the other rows are the TW tab
 | DMG-011 | Destroyed side torso: the arm on that side is destroyed at once (its armor and structure do **not** count toward the tally). Damage that later rolls that arm or torso transfers to CT. Engine slots in the torso are destroyed: each counts as an engine crit (IS XL: 3 → 'Mech destroyed; Clan XL / light: 2 → +10 heat; standard engine: none) |
 | DMG-012 | Destroyed leg: CRIT-100/101; destroyed head: pilot killed, 'Mech destroyed; destroyed CT: 'Mech destroyed (pilot also killed if the CT was destroyed by an internal explosion) |
 | DMG-013 | Limbs blown off by a crit (CRIT-004) don't add their armor or structure to the tally, and their ammo does not explode |
-| DMG-020 | **'Mech destroyed** when any of: head destroyed; CT destroyed; cockpit crit; pilot dead (6 hits); 3 engine crits; displaced off board, into a partial hex, or with no legal hex (PHYS-093/095). Destroyed units are removed at the end of the phase (INIT-013), after making their declared attacks |
+| DMG-020 | **'Mech destroyed** when any of: head destroyed; CT destroyed; cockpit crit; pilot dead (6 hits); 3 engine crits; displaced off board or into a partial hex (cause `displacedOff`, HEX-010), or left with no legal hex (cause `noLegalHex`, PHYS-067/094). Destroyed units are removed at the end of the phase (INIT-013), after making their declared attacks |
 | DMG-021 | Not destroyed by these alone: gyro destroyed (even with forced withdrawal), both legs destroyed, all weapons lost. Victory treats them per SCN-020 |
 | DMG-022 | Every damage event emits `{source, location, side, armorBefore, armorAfter, structureBefore, structureAfter, transferredTo, critChecks[]}` |
 
@@ -385,10 +386,10 @@ Sizes 2, 4, 5, 6, 10, 15, 20 match the AGoAC card; the other rows are the TW tab
 |---|---|
 | CRIT-001 | **Crit check** (2d6): 2–7 none; 8–9 one crit; 10–11 two crits; 12 three crits on a torso, or the limb/head **blown off** on an arm, leg or head (CRIT-004). CASE II location: −1 to the roll (2026 `[CL W51]`) |
 | CRIT-002 | 12-slot locations (torsos, arms): roll 1d6 for the block (1–3 upper six, 4–6 lower six), then 1d6 for the slot. 6-slot locations (head, legs): 1d6 for the slot. If one block is entirely inapplicable, roll only 1d6 in the other |
-| CRIT-003 | **Inapplicable slot** (re-roll both dice in 12-slot locations): empty ("roll again"), not crit-able per data, or already critted. Each crit is fully resolved before the next |
+| CRIT-003 | **Inapplicable slot** (re-roll both dice in 12-slot locations): a slot holding the `empty`, `structure` or `armor` token (20 §6.4), or a slot already hit. Each re-roll is a new `critSlot` roll. Each crit is fully resolved before the next |
 | CRIT-004 | Blown off (12 on arm/leg/head): the location is destroyed; nothing transfers; ammo inside does not explode; head blown off destroys the 'Mech and kills the pilot |
-| CRIT-005 | Location destroyed this hit: crit check only if it holds an explosive item with something to explode (ammo bin with shots, or an explosive component); only crits landing on explosive slots resolve, others are discarded; none transfer |
-| CRIT-010 | **Transferring crits:** if every slot of the location was inapplicable before this phase, the crits move to the next location inward (DMG-005). If some slots were hit earlier this phase, excess crits are lost. HD and CT crits never transfer |
+| CRIT-005 | Location destroyed this hit: crit check only if it holds an explosive item with something to explode (ammo bin with shots, or an explosive component); only crits landing on explosive slots resolve, others are discarded; none transfer. The discarded crits emit one `CritLost {count, why: 'notExplosive'}` for that check |
+| CRIT-010 | **Transferring crits:** if every slot of the location was inapplicable before this phase, the crits move to the next location inward (DMG-005). If some slots were hit earlier this phase, excess crits are lost: one `CritLost {count, why: 'noSlotThisPhase'}` per crit check, `count` = crits lost. HD and CT crits that find no slot are lost the same way; they never transfer |
 | CRIT-011 | A multi-slot item is knocked out by its first crit; further crits on its other slots soak with no extra effect. Exceptions that count per slot: engine, gyro, sensors; autocannons (EQUIP-010) |
 | CRIT-012 | Crit effects are permanent and cumulative unless stated |
 
@@ -407,7 +408,7 @@ Sizes 2, 4, 5, 6, 10, 15, 20 match the AGoAC card; the other rows are the TW tab
 | CRIT-070 | Heat sink | Destroyed: dissipation −1 (single) or −2 (double) |
 | CRIT-071 | Jump jet | −1 Jump MP |
 | CRIT-072 | Weapon / equipment | Destroyed (autocannons: EQUIP-010; explosive items: AMMO-020) |
-| CRIT-073 | Endo-steel, ferro-fibrous and other structure/armor slots | Per data `critable`; if crit-able, the hit is absorbed with no effect |
+| CRIT-073 | Endo-steel, ferro-fibrous and other structure/armor slots | Inapplicable (tokens `structure`, `armor`): the crit re-rolls per CRIT-003, exactly like an `empty` slot. Nothing is absorbed |
 | CRIT-080 | Shoulder | Ranged: +4 for that arm's weapons (overrides other actuator mods in the arm). No punch or physical-weapon or club with that arm; +2 to pushes per damaged shoulder |
 | CRIT-081 | Upper arm actuator | Ranged +1 for that arm; punch +2 and punch damage halved |
 | CRIT-082 | Lower arm actuator | No ranged modifier (2026 `[CL D12]`); punch +2 and punch damage halved; no club |
@@ -486,7 +487,7 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 | PSR-001 | TN = Piloting + persistent damage modifiers (PSR-010..014) + event modifiers (PSR-015..029). **Queued PSRs** (the end-of-phase batch of the Ranged, Physical and Heat Phases, PSR-020): each roll adds the event modifiers of **every** trigger the unit has had so far this phase, 20-damage trigger included (AGoAC: all modifiers from damage inflicted that phase). **Movement-phase PSRs** (`when` = `now` or `endOfMove`: stand attempts, water hexes, rubble, backward level change, landing, displacement and domino, end-of-move damaged-gear checks): Piloting + persistent mods + **that PSR's own event modifier only**; earlier Movement-phase triggers never carry over. So three depth 1 water hexes run through = three separate PSRs, each at TN Piloting − 1 (not −1, −2, −3), and every stand attempt is Piloting − 1 (stand only). Roll 2d6 ≥ TN. A player can't fail on purpose |
 | PSR-002 | Several PSRs for one unit at once: roll one at a time with the same TN; the first failure makes the unit fall and the rest are discarded |
 | PSR-003 | TN > 12: automatic failure (no roll) |
-| PSR-004 | A prone unit ignores every PSR except stand attempts and the seatbelt check |
+| PSR-004 | A prone unit ignores every PSR except stand attempts and the seatbelt check. Automatic falls (leg destroyed, both legs destroyed, gyro destroyed) do not apply to a unit that is already prone either: no second fall, no fall damage, no seatbelt check |
 | PSR-005 | A standing unit that is immobile (shut down) or has an unconscious pilot fails every PSR automatically |
 | PSR-006 | "Physical attack rolls" use Piloting but are not PSRs: PSR modifiers never apply to them and vice versa (2026 `[CL C20]`) |
 
@@ -503,7 +504,7 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 | PSR-016 | Event: crit to gyro, hip, upper or lower leg actuator (the crit's persistent mod already counts) | 0 |
 | PSR-017 | Event: kicked / pushed | 0 / 0 |
 | PSR-018 | Event: hit by a charge or DFA | +2 |
-| PSR-019 | Event: stand attempt | −1 (2026 `[CL O2]`) |
+| PSR-019 | Event: stand attempt | −1 (2026 `[CL O2]`), the same for every attempt: a second or third attempt in one phase is still −1, never −2 or −3 |
 | PSR-023 | Event: missed a kick | 0 |
 | PSR-024 | Event: made a successful charge | +2 |
 | PSR-025 | Event: made a successful DFA | +2 (2026 `[CL O3]`, was +4) |
@@ -518,7 +519,7 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 | ID | Rule |
 |---|---|
 | PSR-020 | **Queue:** PSRs triggered in the Ranged, Physical or Heat Phase join that unit's queue and are rolled at the end of the phase (INIT-013), after the phase's damage effects are applied. Automatic falls in the queue resolve first. Units resolve in initiative order (loser first) |
-| PSR-021 | Damage triggers: 20+ damage in a phase (all sources, armor and structure); gyro crit (first only; second is an automatic fall); hip, upper leg, lower leg crit (one per leg per damage instance, CRIT-095); leg destroyed → automatic fall; both legs → automatic fall |
+| PSR-021 | Damage triggers: 20+ damage in a phase (all sources, armor and structure); gyro crit (first only; second is an automatic fall); hip, upper leg, lower leg crit (one per leg per damage instance, CRIT-095); leg destroyed → automatic fall; both legs → automatic fall. A unit that is prone when the queue resolves discards all of these, automatic falls included (PSR-004) |
 | PSR-022 | Physical triggers: kicked (hit); pushed (hit); charged or DFA'd (hit) — target; missed kick, successful charge, successful DFA — attacker. A failed DFA is an automatic fall for the attacker |
 | PSR-030 | Movement triggers resolve **immediately** after the action: stand attempt; running into water (on entering each such hex); entering rubble (each hex); backward level change; landing in water. A failed hex-entry PSR makes the unit fall in the hex it entered (its MP for that hex is spent) |
 | PSR-031 | End-of-movement triggers (rolled when the unit's move ends, 2026 `[CL D6]` needs ≥1 hex moved for running): ran ≥1 hex with a damaged gyro, a hip crit or a destroyed leg; jumped with a damaged gyro, a hip, upper or lower leg actuator crit, or a destroyed leg. One roll per trigger type |
@@ -635,7 +636,7 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 | PHYS-070 | Target standing, same floor level, in the hex directly ahead of the attacker's **feet**, and not making a charge or DFA. Attacker fired no arm-mounted weapon this turn. +2 per damaged shoulder |
 | PHYS-071 | Hit: no damage; target displaced one hex directly away; attacker moves into the vacated hex (no MP); target PSR 0 |
 | PHYS-072 | Two units pushing each other: both hit → neither moves, both PSR; one hits → normal |
-| PHYS-073 | Prohibited destination (except off board, which is allowed and destroys): no one moves; the PSR still happens |
+| PHYS-073 | Prohibited destination (except off board, which is allowed and destroys the target, cause `displacedOff`): no one moves; the PSR still happens |
 
 ### 16.9 Displacement Step and dominoes
 
@@ -644,7 +645,7 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 | PHYS-090 | **Displacement Step** at the end of the Physical Attack Phase, after all physical attacks resolve and before the PSR queue (2026? `[CL C19]`): apply each successful displacement in initiative order (loser's attacks first; same side: controller's order). A unit destroyed by the attack is not displaced. Displacement PSRs and their falls resolve immediately |
 | PHYS-091 | Into a hex at the same level or 1–2 levels higher: if occupied → domino (PHYS-094); else move |
 | PHYS-092 | Into a hex 3+ levels higher: prohibited; neither unit moves; other effects stand |
-| PHYS-093 | Into a hex 1 level lower: as PHYS-091. 2+ levels lower: automatic fall of that many levels in the new hex (no PSR); if occupied → accidental fall from above (PHYS-097). Off board or into a partial hex: destroyed |
+| PHYS-093 | Into a hex 1 level lower: as PHYS-091. 2+ levels lower: automatic fall of that many levels in the new hex (no PSR); if occupied → accidental fall from above (PHYS-097). Off board or into a partial hex: destroyed (cause `displacedOff`) |
 | PHYS-094 | **Domino:** the occupant makes a PSR (0). Fail: displaced one hex directly away from the intruder's entry hexside and falls there. Pass: it may **dodge** by moving one hex directly forward or backward into an empty legal hex if it is standing, mobile and did not jump this turn (2026 `[CL O5]` "simplified"; MP and side-hex requirements dropped, 2026?); if it can't or won't dodge, it is displaced but does not fall. Chains continue; the last unit with no legal hex is destroyed |
 | PHYS-097 | **Accidental fall from above** (2+ levels onto a unit): roll 2d6 ≥ 7 + target TMM + target-hex terrain. Hit: target takes ceil(tonnage / 10) × max(1, levels fallen − target height) in groups of 5 (2026 `[CL O11]`) on the Punch table, or the Hit Location Table if the target is prone (2026 `[CL O9]`); half (round down) if the target is submerged; target is displaced to a random legal adjacent hex and makes a PSR +2. Faller takes normal fall damage on the Rear column. Miss: faller lands in an adjacent hex, empty hexes first (2026 `[CL O10]`), then random among equals; normal fall |
 
@@ -652,11 +653,11 @@ Effects last while heat stays at that level and end as soon as heat drops below 
 
 | ID | Rule |
 |---|---|
-| SCN-010 | A unit may leave the board only by its home edge, and only when the scenario or forced withdrawal allows; it is then "withdrawn" (not destroyed) |
+| SCN-010 | A unit may leave the board only by its home edge, and only when the scenario or forced withdrawal allows; it is then `withdrawn` (not destroyed). An `exit` step on any other edge is rejected (`E_EXIT_EDGE`). Being displaced off the board is not an exit (HEX-010) |
 | SCN-020 | Default victory (End Phase): a side wins when every enemy unit is destroyed, withdrawn, surrendered, or crippled where the scenario counts crippled. All last units destroyed in the same turn, or the last units on each side unable to move and unable to damage each other: draw. Scenario objectives (`11-missions.md`) override |
-| SCN-021 | Scenario "crippled" default (AGoAC-style, used only if the scenario asks): a leg destroyed; all weapons destroyed or out of ammo; gyro destroyed; 2+ engine crits |
-| SCN-030 | **Forced withdrawal** (optional, default off; 2026 rewrite `[CL MS3]`, conditions 2026?): a unit is crippled when: pilot has 4+ hits; a leg or side torso is destroyed; gyro destroyed; 2+ engine crits; 2 sensor crits; or no weapon able to fire (destroyed, or no ammo). A crippled unit must end every Movement Phase closer to its home edge (any move toward it counts) and leaves by SCN-010. It may still attack |
-| SCN-031 | Forced surrender (End Phase): a crippled unit that is immobile, or has 0 MP in all modes, or is prone and can't stand, surrenders: removed, counts as destroyed for victory |
+| SCN-021 | Crippled: the condition list is `11-missions.md` §2.2 (the unit's `crippled` flag); it counts for victory only where the mission asks (SCN-020). No list here |
+| SCN-030 | **Forced withdrawal** (optional, default off; 2026 rewrite `[CL MS3]`, conditions 2026?): the trigger list is `11-missions.md` §3.2; a triggered unit gets status `withdrawing` for the rest of the game, moves per 11 §3.3 and leaves by SCN-010. It may still attack. No list here |
+| SCN-031 | Forced surrender (End Phase): per `11-missions.md` §3.4, for `withdrawing` units only; status `surrendered`, counts as destroyed for victory. No list here |
 
 ## 18. Equipment rules that touch the core
 

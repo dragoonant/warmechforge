@@ -24,21 +24,21 @@ Conventions used below:
 |---|---|---|
 | HEX-001 | 2d6 vs TN 8: forced `[3,5]` succeeds, `[3,4]` fails. Every engine roll goes through `roll(state, spec)` and emits `DiceRolled` with `rollSeq` +1 | P1 |
 | HEX-002 | Rounding: 55 t punch `ceil(5.5)` = 6; 65 t kick `ceil(13)` = 13; punch 7 halved once = 3, 6 halved twice = 1 (minimum 1); 9 fall damage halved in water = 4 | P1 |
-| HEX-003 | Label round trip for every hex of a 16 × 17 sheet. Axial `(0,0)` prints `0101`; `(1,0)` prints `0201` and its centre is lower than `0101`'s; `(6,4)` prints `0708`; `(7,3)` prints `0807`; `(8,3)` prints `0908` | P1 |
-| HEX-004 | Neighbours of `(6,4)`: facing 0 → `(6,3)`, 1 → `(7,3)`, 2 → `(7,4)`, 3 → `(6,5)`, 4 → `(5,5)`, 5 → `(5,4)` | P1 |
+| HEX-003 | Label round trip for every hex of a 16 × 17 sheet. Axial `(0,0)` prints `0101`; `(1,0)` prints `0201` and its centre is lower than `0101`'s; `(6,4)` prints `0708`; `(7,3)` prints `0807`; `(8,3)` prints `0908`; `0505` ↔ `(4,2)`, `0605` ↔ `(5,2)`, `0201` ↔ `(1,0)` (00 §3.1 table) | P1 |
+| HEX-004 | Neighbours of `(6,4)`: facing 0 → `(6,3)`, 1 → `(7,3)`, 2 → `(7,4)`, 3 → `(6,5)`, 4 → `(5,5)`, 5 → `(5,4)`. By label (00 §3.1, matches MegaMek `Coords`): `0505` → `0504 0604 0605 0506 0405 0404`; `0605` → `0604 0705 0706 0606 0506 0505`; `0201` → off, `0301 0302 0202 0102 0101` | P1 |
 | HEX-005 | Distance `(6,6)`–`(6,2)` = 4; `(6,4)`–`(8,3)` = 2; adjacent = 1; a target 1 hex away and 3 levels higher is at range 1 | P1 |
 | HEX-006 | Bearings: `(6,6)`→`(6,2)` = 0°; `(6,4)`→`(8,3)` = 90°; `(6,5)`→`(7,5)` = 120°; `(6,2)`→`(6,6)` = 180° | P1 |
 | HEX-007 | `rel` for bearing 180° and facing 5 = 240°; bearing 0° and facing 0 = 0°; bearing 300° and facing 5 = 0° | P1 |
 | HEX-008 | Water hex level 0, depth 2 → floor −2; clear hex level 1 → floor 1 | P1 |
 | HEX-009 | LOS level: standing on level 1 → 3; prone on level 1 → 2; standing in depth 1 water with surface 0 → 1 | P1 |
-| HEX-010 | A unit displaced off the board is destroyed (cause `offBoard`); LOS never includes a hex outside the 16 × 17 grid | P1 |
+| HEX-010 | A unit displaced off the board is destroyed (cause `displacedOff`); LOS never includes a hex outside the 16 × 17 grid | P1 |
 
 ## 2. INIT: turn sequence and initiative
 
 | ID | Assertion | P |
 |---|---|---|
 | INIT-001 | Phase events per turn are exactly Initiative, Movement, Ranged Attack, Physical Attack, Heat, End, in that order. No event, label or type uses "Weapon Attack" | P1 |
-| INIT-002 | Initiative a `[3,3]` vs b `[4,4]`: b wins, a makes the first Movement selection. Tie a `[3,4]` vs b `[2,5]`: both sides re-roll (4 initiative rolls in total) | P1 |
+| INIT-002 | Initiative a `[3,3]` vs b `[4,4]`: b wins, a makes the first Movement selection. Tie a `[3,4]` vs b `[2,5]`: both sides re-roll (4 initiative rolls in total). Roll order is always side A then side B, re-rolls included (`DiceRolled.reason` = `A`, `B`, `A`, `B`) | P1 |
 | INIT-003 | 2 v 2, a lost: Movement, Ranged and Physical selection order is a, b, a, b | P1 |
 | INIT-004 | A shut-down unit is not counted in the Movement alternation; a unit with an unconscious pilot is not counted in Ranged or Physical; a destroyed unit is never counted | P1 |
 | INIT-005 | Loser 1 vs winner 2 → `L WW`; loser 2 vs winner 1 → `LL W`; loser 2 vs winner 0 left → `L L` one at a time | P1 |
@@ -76,7 +76,7 @@ Conventions used below:
 | MOVE-016 | Walking backward into a hex 1 level up is legal and triggers a PSR at +0 after entering | P1 |
 | MOVE-017 | With a hip crit, a ground step that changes 2 levels is rejected; a 1-level change is legal | P1 |
 | MOVE-020 | Clear hex costs 1 MP, no PSR | P1 |
-| MOVE-021 | Paved/bridge costs 1, no PSR, no skid roll ever (map key reserved until M8) | P3 |
+| MOVE-021 | Paved/bridge costs 1 (exactly as clear), no PSR, no skid roll ever, no LOS or to-hit effect (map key reserved until M8) | P3 |
 | MOVE-022 | Road-to-road along the road: level-change cost −1, minimum 0 (map key reserved until M8) | P3 |
 | MOVE-023 | Rough costs 2 MP | P1 |
 | MOVE-024 | Light woods costs 2 MP | P1 |
@@ -93,7 +93,7 @@ Conventions used below:
 | MOVE-035 | Map data containing ice, mud, sand, snow, swamp, fog, foliage, fire, smoke or buildings fails validation with `UNSUPPORTED_TERRAIN <key> at <hex>` | P1 |
 | MOVE-040 | Drop prone mid-walk: 1 MP, facing kept, no damage, no extra heat; not legal while jumping | P1 |
 | MOVE-041 | A unit prone at Movement start may pick Walk or Run but not Jump; while prone only facing changes and stand attempts are legal | P1 |
-| MOVE-042 | Stand attempt (Piloting 5): 2 MP, TN 4, 0 heat. Pass → any facing chosen free. Fail → 0-level fall in place; a second attempt is legal if ≥ 2 MP remain | P1 |
+| MOVE-042 | Stand attempt (Piloting 5): 2 MP, TN 4, 0 heat. Pass → the unit takes `StandUpAction.facing` (or keeps its facing when omitted) at no MP cost. Fail → 0-level fall in place; a second attempt is legal if ≥ 2 MP remain and is again TN 4 (not 3) | P1 |
 | MOVE-043 | No stand attempt is legal with both legs destroyed, one leg and both arms destroyed, or the gyro destroyed | P1 |
 | MOVE-044 | One leg destroyed, Piloting 4: one stand attempt per turn, counts as Run, TN 4 + 5 − 1 = 8; every PSR the attempt needs is rolled separately | P1 |
 | MOVE-045 | A prone unit cannot twist, flip or declare a physical attack | P1 |
@@ -117,9 +117,9 @@ Conventions used below:
 | SCN-004 | Half loads: a 15-shot bin starts with 7 shots, a 1-shot bin with 0 (2026?) | P2 |
 | SCN-010 | Leaving by the home edge while allowed marks the unit `withdrawn`, not destroyed; leaving by another edge is rejected | P2 |
 | SCN-020 | Victory: last enemy destroyed → win; both last units destroyed in one turn → draw; a crippled enemy counts as out only when the mission sets `cripple: true` | P1 |
-| SCN-021 | Crippled (when asked): a leg destroyed, or all weapons destroyed or dry, or gyro destroyed, or 2 engine crits | P1 |
-| SCN-030 | Forced withdrawal on: a unit with pilot hits 4 becomes crippled and must end each Movement Phase closer to its home edge | P2 |
-| SCN-031 | A crippled unit that is immobile, or has 0 MP in all modes, or is prone and cannot stand surrenders in the End Phase and counts as destroyed | P2 |
+| SCN-021 | The `crippled` flag follows 11 §2.2 exactly: set by a leg destroyed, or no weapon able to fire (destroyed, jammed or dry), or gyro destroyed, or 2 engine crits; not set by 4 pilot hits or 2 sensor crits alone | P1 |
+| SCN-030 | Forced withdrawal on (11 §3.2): a unit with 2 sensor crits and no other damage becomes `withdrawing` (its `crippled` flag stays false) and `legalActions` offers only moves ending closer to its home edge; a unit with pilot hits 4 does the same | P2 |
+| SCN-031 | A `withdrawing` unit (11 §3.4) that is immobile, or has 0 MP in all modes, or is prone and cannot stand surrenders in the End Phase (status `surrendered`) and counts as destroyed; a crippled unit that is not withdrawing never surrenders | P2 |
 
 ## 5. LOS: line of sight and cover
 
@@ -129,7 +129,7 @@ Conventions used below:
 | LOS-002 | `(6,4)`→`(8,3)` gives two different ±ε sequences, one through `(7,3)`, one through `(7,4)`: `divided = true`. `(6,6)`→`(6,2)` gives one sequence `(6,5),(6,4),(6,3)` | P1 |
 | LOS-003 | LOS A→B equals LOS B→A for 200 random hex pairs on a real map; adjacent units always see each other | P1 |
 | LOS-004 | A unit standing between attacker and target changes neither LOS nor any modifier | P1 |
-| LOS-005 | Divided LOS with one blocked branch → the default choice is blocked (no attack legal); with woods +1 on one branch and clear on the other → the woods branch; equal → the +ε branch; the choice is reused for the same pair all turn | P1 |
+| LOS-005 | With `askDefender` false (default) no decision is raised. Divided LOS with one blocked branch → the default choice is blocked (no attack legal); with woods +1 on one branch and clear on the other → the woods branch; equal → the +ε branch; the choice is reused for the same pair all turn | P1 |
 | LOS-010 | Obstacle level: clear level 2 hex → 2; light woods on level 0 → 2; water hex → its surface level | P1 |
 | LOS-011 | Attacker and target both LOS level 2: a level 2 clear hex mid-line intervenes; a level 1 hex adjacent to the attacker does not; a level 2 hex adjacent to a prone target (LOS level 1) does | P1 |
 | LOS-012 | An intervening hex whose ground alone qualifies blocks LOS | P1 |
@@ -150,7 +150,7 @@ Conventions used below:
 
 | ID | Assertion | P |
 |---|---|---|
-| ARC-001 | Firing arcs by `rel`: 0, 60, 300 → Forward; 61, 120 → Right; 121, 180, 239 → Rear; 240, 299 → Left | P1 |
+| ARC-001 | Firing arcs by `rel`: 0, 60, 300 → Forward; 61, 120 → Right; 121, 180, 239 → Rear; 240, 299 → Left. Attacker `0505` facing 0, target `0605`: rel 120 → Right side (00 §3.4) | P1 |
 | ARC-002 | Adjacent hexes for facing 0: directions 0, 1, 5 → Forward; 2 → Right; 3 → Rear; 4 → Left | P1 |
 | ARC-003 | Torso weapon cannot fire at a target at `rel` 90; right-arm weapon can; left-arm weapon cannot; a rear-mounted torso weapon fires only at `rel` 121–239 | P1 |
 | ARC-004 | After a right twist, arm and torso arcs use torso facing + 1; leg weapons, kicks and pushes keep feet facing | P1 |
@@ -160,7 +160,7 @@ Conventions used below:
 | ARC-013 | A prone unit has no twist or flip actions | P1 |
 | ARC-014 | A twisted target is hit on the column given by its feet facing | P1 |
 | ARC-020 | Attack direction by `rel(target→attacker, feet)`: 0 → Front; 90 → Right; 180 → Rear; 240 → Left | P1 |
-| ARC-021 | `rel` exactly 30 / 150 / 210 / 330: the target's controller chooses; AI default picks the zone whose roll-7 location has the most armor left, ties Front > Left > Right > Rear; stored for the pair this turn | P1 |
+| ARC-021 | `rel` exactly 30 / 150 / 210 / 330: with `askDefender` true the target's controller gets a `choice`; otherwise (default) no decision and the default rule picks the zone whose roll-7 location has the most armor left, ties Front > Left > Right > Rear; stored for the pair this turn | P1 |
 | ARC-022 | Divided LOS uses the straight centre line for direction, whatever branch was chosen | P1 |
 | ARC-023 | A prone target's direction uses the facing it lies in | P1 |
 
@@ -225,7 +225,7 @@ Conventions used below:
 | ID | Assertion | P |
 |---|---|---|
 | CLUS-001 | A hitting cluster weapon rolls 2d6 once; the table value is the number of missiles that hit | P1 |
-| CLUS-002 | Table spot checks: size 20 roll 8 → 12; size 10 roll 11 → 10; size 6 roll 7 → 4; size 4 roll 6 → 2; size 2 roll 7 → 1; size 15 roll 2 → 5; size 5 roll 9 → 4 | P1 |
+| CLUS-002 | Table spot checks: size 20 roll 8 → 12; size 10 roll 11 → 10; size 6 roll 7 → 4; size 4 roll 6 → 2; size 2 roll 7 → 1; size 15 roll 2 → 5; size 5 roll 9 → 4; size 3 roll 4 → 1; size 8 roll 2 → 2, roll 8 → 5, roll 10 → 7 (MegaMek-checked rows) | P1 |
 | CLUS-003 | LRM 20 → 12 hits → groups 5, 5, 2. SRM 6 → 4 hits → 4 locations of 2 damage. LB-X cluster and MG arrays: 1 location per pellet / MG | P1 |
 | CLUS-004 | Cluster roll modifiers: MG array +2, Artemis +2, MRM −1; a modified 13 reads as 12, a modified 1 as 2 | P2 |
 | CLUS-005 | Streak SRM 4 hit: 4 missiles, no cluster roll. Miss: shots and heat unchanged | P1 |
@@ -246,7 +246,7 @@ Conventions used below:
 | DMG-011 | Destroyed RT: RA destroyed at once (its armor and structure not added to the tally); IS XL engine → 3 engine crits → 'Mech destroyed; standard engine → no engine crits | P1 |
 | DMG-012 | Destroyed leg → CRIT-100; destroyed head → pilot dead, 'Mech destroyed; CT destroyed by an ammo explosion → pilot dead too | P1 |
 | DMG-013 | An arm blown off by a crit 12 adds nothing to the tally and its ammo does not explode | P1 |
-| DMG-020 | Each listed cause marks the unit destroyed; removal happens at the end of the phase, after its declared attacks | P1 |
+| DMG-020 | Each listed cause marks the unit destroyed; removal happens at the end of the phase, after its declared attacks. Displaced off board → cause `displacedOff`; no legal hex → `noLegalHex` | P1 |
 | DMG-021 | Gyro destroyed, both legs destroyed or all weapons lost: unit not destroyed | P1 |
 | DMG-022 | Every damage event carries `source, location, side, armorBefore, armorAfter, structureBefore, structureAfter, transferredTo, critChecks` | P1 |
 
@@ -256,10 +256,10 @@ Conventions used below:
 |---|---|---|
 | CRIT-001 | Crit roll 7 → 0; 8 and 9 → 1; 10 and 11 → 2; 12 on a torso → 3; 12 on an arm, leg or head → blown off. In a CASE II location a 9 counts as 8 | P1 |
 | CRIT-002 | 12-slot location: block `[2]` + slot `[4]` → slot 4; block `[5]` + slot `[2]` → slot 8. Leg: slot `[3]` → slot 3. Lower block all inapplicable → only the slot die is rolled, in the upper block | P1 |
-| CRIT-003 | A crit landing on an empty, non-crit-able or already-hit slot re-rolls both dice (12-slot) or the die (6-slot) | P1 |
+| CRIT-003 | A crit landing on an `empty`, `structure`, `armor` or already-hit slot re-rolls both dice (12-slot) or the die (6-slot); each re-roll is its own `critSlot` `DiceRolled` | P1 |
 | CRIT-004 | Crit 12 on an arm: arm destroyed, nothing transfers, its ammo does not explode; 12 on the head: 'Mech destroyed, pilot dead | P1 |
-| CRIT-005 | A location destroyed by the hit: crit check only if it holds ammo with shots or an explosive item; only crits on explosive slots resolve; none transfer | P1 |
-| CRIT-010 | RT whose crit-able slots were all hit in an earlier phase: crits move to CT. RT whose last crit-able slot is hit by the first of 3 crits this phase: the other 2 are lost. HD and CT crits never move | P1 |
+| CRIT-005 | A location destroyed by the hit: crit check only if it holds ammo with shots or an explosive item; only crits on explosive slots resolve; none transfer; the discarded ones emit `CritLost {count, why: 'notExplosive'}` | P1 |
+| CRIT-010 | RT whose crit-able slots were all hit in an earlier phase: crits move to CT. RT whose last crit-able slot is hit by the first of 3 crits this phase: the other 2 are lost, one `CritLost {location: 'RT', count: 2, why: 'noSlotThisPhase'}`, no dice. HD and CT crits never move | P1 |
 | CRIT-011 | A 3-slot PPC hit twice: destroyed once, second crit absorbed. Engine, gyro, sensors count each slot | P1 |
 | CRIT-012 | Crit effects persist into later turns and stack | P1 |
 | CRIT-020 | Crit on an ammo bin with shots → explosion + 1 pilot hit; on an empty bin → slot marked, nothing else | P1 |
@@ -273,7 +273,7 @@ Conventions used below:
 | CRIT-070 | Destroyed single sink: dissipation −1; destroyed double: −2 | P1 |
 | CRIT-071 | Jump jet crit: Jump MP −1 | P1 |
 | CRIT-072 | Weapon crit: weapon destroyed and no longer legal | P1 |
-| CRIT-073 | Crit on an endo-steel or ferro slot marked crit-able: absorbed, no effect | P2 |
+| CRIT-073 | Crit on a `structure` or `armor` slot (endo-steel, ferro-fibrous) re-rolls like an empty slot; nothing is absorbed | P2 |
 | CRIT-080 | Shoulder crit: that arm's weapons +4; no punch with it; push +2 per damaged shoulder | P1 |
 | CRIT-081 | Upper arm crit: that arm's weapons +1; punch +2, punch damage halved (55 t: 6 → 3) | P1 |
 | CRIT-082 | Lower arm crit: weapons +0; punch +2 and damage halved | P1 |
@@ -331,7 +331,7 @@ Conventions used below:
 | PSR-001 | Piloting 5, 1 gyro crit, took 20+ this phase: TN 5 + 2 + 1 = 8 for every queued PSR of that unit this phase. Movement: running through three depth 1 water hexes rolls three PSRs, each at TN Piloting − 1 (own modifier only; −1, −2, −3 never accumulates); a stand attempt after a water fall is TN Piloting − 1 | P1 |
 | PSR-002 | Two queued PSRs at TN 8: `[2,3]` fails → falls; the second is not rolled | P1 |
 | PSR-003 | TN 13 → automatic fail, no `DiceRolled` | P1 |
-| PSR-004 | A prone unit that takes 25 damage makes no PSR | P1 |
+| PSR-004 | A prone unit that takes 25 damage makes no PSR. A prone unit that loses a leg or its gyro in the Ranged Attack Phase: its automatic fall is `PsrDiscarded {prone}`; no `UnitFell`, no fall damage, no seatbelt roll | P1 |
 | PSR-005 | A standing shut-down unit kicked: PSR fails without a roll | P1 |
 | PSR-006 | A kick TN ignores a gyro crit's +2; a PSR ignores the kick's −1 | P1 |
 | PSR-010 | Each gyro crit +2 | P1 |
@@ -343,7 +343,7 @@ Conventions used below:
 | PSR-016 | The PSR caused by a hip crit adds +0 on top of the hip's persistent +1 | P1 |
 | PSR-017 | Kicked or pushed target: PSR +0 | P1 |
 | PSR-018 | Target hit by a charge or DFA: +2 | P1 |
-| PSR-019 | Stand attempt: −1 | P1 |
+| PSR-019 | Stand attempt: −1, not cumulative: Piloting 5, three attempts in one Movement Phase all roll at TN 4 | P1 |
 | PSR-023 | Missed kick: attacker PSR +0 | P1 |
 | PSR-024 | Successful charge: attacker PSR +2 | P1 |
 | PSR-025 | Successful DFA: attacker PSR +2 (not +4) | P1 |
@@ -428,11 +428,11 @@ Conventions used below:
 | PHYS-070 | Push legal only vs a standing target directly ahead of the feet at the same floor level, when no arm weapon fired; +2 per damaged shoulder | P1 |
 | PHYS-071 | Push hit: no damage; target moved 1 hex away; attacker enters the vacated hex using no MP; target PSR +0 | P1 |
 | PHYS-072 | Mutual pushes both hit: neither moves, both PSR | P1 |
-| PHYS-073 | Push into a prohibited hex: nobody moves, PSR still made; push off the board: target destroyed | P1 |
+| PHYS-073 | Push into a prohibited hex: nobody moves, PSR still made; push off the board: target destroyed (cause `displacedOff`) | P1 |
 | PHYS-090 | Two displacements resolve loser's attack first; a target destroyed by the attack is not displaced; domino PSRs resolve at once, before the PSR queue | P1 |
 | PHYS-091 | Displacement into an empty hex 2 levels higher: moves; occupied: domino | P1 |
 | PHYS-092 | Displacement into a hex 3 levels higher: nobody moves | P1 |
-| PHYS-093 | Displacement 2 levels down: automatic 2-level fall, no PSR; off board: destroyed | P1 |
+| PHYS-093 | Displacement 2 levels down: automatic 2-level fall, no PSR; off board: destroyed (cause `displacedOff`) | P1 |
 | PHYS-094 | Domino: occupant PSR +0; fail → pushed on and falls; pass → may step forward/back into an empty legal hex if standing, mobile and did not jump; otherwise pushed on without falling; last unit with no legal hex destroyed | P1 |
 | PHYS-097 | 80 t falls 3 levels onto a standing unit: hit roll TN 7 + TMM + terrain; hit → target takes `8 × max(1, 3 − 2)` = 8 on the Punch table and PSR +2; miss → faller lands in an empty adjacent hex first | P2 |
 

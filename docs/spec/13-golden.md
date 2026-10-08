@@ -5,6 +5,9 @@ come from `10-rules-core.md`; the arithmetic here is the expected engine output,
 worked example from the AGoAC rulebook in our own words, with numbers changed where 2026 changed the rule (each
 change is noted). Dice faces are ours unless noted. No rulebook text is copied.
 
+Action and event names in the scripts are descriptive ("stand attempt", "discarded crits"); the tests map them to the
+`actions.ts` / `events.ts` names (for example "stand attempt" → `StandUpAction {attempt: true}` → `StandAttempted`).
+
 ## 0. Index
 
 | ID | Topic | Source | Main IDs exercised |
@@ -36,7 +39,7 @@ change is noted). Dice faces are ours unless noted. No rulebook text is copied.
 
 | # | Situation | Order |
 |---|---|---|
-| R1 | Initiative | side `a` 2d6, then side `b` 2d6 |
+| R1 | Initiative | side `a` 2d6, then side `b` 2d6; a tie re-rolls in the same order (10 INIT-002) |
 | R2 | One ranged weapon | to-hit 2d6 → (hit, cluster weapon) cluster 2d6 → for each hit or group in order: location roll → crit check 2d6 if structure was damaged and not destroyed, or TAC → per crit: **one `critSlot` roll** with dice `[block, slot]` (block 1d6 then slot 1d6, 12-slot location) or a single die `[slot]` when one block is entirely inapplicable; each re-roll of an inapplicable slot is a new `critSlot` roll (00 §6, §10.2) |
 | R3 | Units in a phase | declaration order; within a unit, the declared weapon order |
 | R4 | Charge / DFA | to-hit → target's damage groups (R2 per group) → attacker's damage groups |
@@ -304,6 +307,10 @@ damage in groups of 5 and 4; its seatbelt check needs 5+. 2026 changes:
 
 **Variant 6b**: `#5 fall side [1]` → **Rear** column: `#6 [3,4] = 7` → CT rear 10 → 5; `#7 [4,4] = 8` → LT rear 8 → 4.
 
+**Variant 6c** (repeated attempt, PSR-019): after step 4 F-BLR makes a second stand attempt with its last 2 MP, facing 0.
+TN is again 5 − 1 = **4** (the −1 never accumulates). `#8 stand PSR [2,2] = 4` → pass: F-BLR stands facing **0** with
+0 MP left (`StandAttempted {success: true, facing: 0, mpLeft: 0}`); the move ends. Heat as step 6. Total rolls: 8.
+
 ---
 
 ## GOLD-007 Punch with missing actuators into light woods
@@ -401,7 +408,8 @@ front armor 0, RT slots 1 and 2 (medium lasers) destroyed. RT structure 18 intac
    `#5 crit check RT [6,6] = 12` → 3 crits (torso).
    - Crit 1: slots 7–12 are all empty, so no block die; `#6 critSlot [3]` (single die) → slot 3, medium laser destroyed.
    - Crits 2 and 3: no applicable RT slot left, and RT had one at the start of this phase → both **lost**, no dice.
-     Expect two discarded-crit events.
+     Expect one `CritLost {location: 'RT', count: 2, why: 'noSlotThisPhase'}` for F-BLR (CRIT-010), right after
+     the `CritSlotHit` of crit 1.
 4. End of Ranged phase: 5 damage, no PSR.
 5. Physical: F-WVR punches with its left arm (it fired only the right-arm laser). TN = Piloting 5 − 1 = **4**.
    `#7 punch [2,2] = 4` → hit. Damage `ceil(55 / 10)` = 6.
@@ -517,7 +525,7 @@ old TN would be 8); rear on a 1 (`[CL O8]`); seatbelt adds only persistent modif
 | Rule | What we did | Why |
 |---|---|---|
 | Charge/DFA damage order | target's groups are rolled before the attacker's (R4) | no source fixes the order; forced-dice tests need one |
-| Repeated stand attempts in one phase | each stand attempt is Piloting + persistent mods − 1 (own modifier only); GOLD-006 still stops after one attempt | PSR-001: Movement-phase PSRs never carry earlier triggers; only the end-of-phase batch accumulates |
+| Repeated stand attempts in one phase | each stand attempt is Piloting + persistent mods − 1 (own modifier only, PSR-019); the main GOLD-006 script stops after one attempt and variant 6c makes a second at the same TN | PSR-001: Movement-phase PSRs never carry earlier triggers; only the end-of-phase batch accumulates |
 | Charge damage (`[CL C24]`) | ceil(tonnage / 10 × L), L = lowest hex count of the TOHIT-014 bracket for hexes moved + 1 (PHYS-043) | changelog gives no numbers; AGoAC-like below 10 hexes, lower above |
 | Heat-explosion bin (`[CL H2]`) | AGoAC rule: most damage per shot, then most shots (AMMO-030) | 2026 text unknown |
 | Consciousness vs PSR order | consciousness first, then the PSR queue, then one more check for fall hits | AGoAC; `[CL O14]` does not reorder |

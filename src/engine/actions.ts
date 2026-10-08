@@ -32,7 +32,11 @@ export interface MoveAction extends Base<'move'> {
   facing: Facing
   /** Off-board unit only: the virtual off-board start hex and facing (forward must enter a home-edge hex). */
   entry?: { hex: Hex; facing: Facing }
-  /** Charge (walk/run) or DFA (jump) declared with this move (PHYS-040, PHYS-060). */
+  /**
+   * Charge (walk/run) or DFA (jump) declared with this move (PHYS-040, PHYS-060; 00 §9.6). Charge: steps end adjacent to the
+   * target, facing it, never entering its hex; dfaFrom absent. DFA: jumpTo = the target's hex; dfaFrom = last path hex before
+   * the target (needed only when two tie); facing = from dfaFrom toward the target.
+   */
   attack?: { kind: 'charge' | 'dfa'; targetId: UnitId; dfaFrom?: Hex }
 }
 /** Prone unit: attempt to stand (2 MP, PSR) or stay prone. `mode` is required on the turn's first stand decision. `facing` (MOVE-042): free facing taken on success, default current. */
@@ -49,7 +53,11 @@ export interface FireShot {
   aimedAt?: Loc
   rapidShots?: number // rapid-fire weapons: one of the weapon's modes
 }
-/** The unit's whole ranged declaration. shots [] = hold fire. The first shot's target is the primary target. */
+/**
+ * The unit's whole ranged declaration, validated as one composite action (00 §9.7): any bad shot rejects all of it.
+ * shots [] = hold fire, always legal and always first in legalActions. The first shot's target is the primary target;
+ * if any declared target is in the Forward arc and the first shot's is not → E_PRIMARY_TARGET (TOHIT-005). Never reordered.
+ */
 export interface DeclareFireAction extends Base<'declareFire'> { unitId: UnitId; shots: FireShot[]; propArm?: ArmLoc }
 export interface ChooseAmmoAction extends Base<'chooseAmmo'> { mountId: LocalId; binId: LocalId }
 export type PhysicalChoice =

@@ -96,13 +96,28 @@ Reducer rules:
 - Printed label `XXYY` = `(col + 1, row + 1)` zero padded; `0101` is the top-left (north-west) hex. Columns run west→east,
   rows north→south. A label exists only for on-board hexes; `hexToLabel` of an off-board hex returns `null`.
 - Offset layout is **odd-q** on 0-based columns: odd 0-based columns (labels `02xx`, `04xx` … `16xx`) sit half a hex
-  lower (south). This matches MegaMek `Coords` (its `x, y` = our `col, row`; its NE neighbour of an even x is `(x+1, y−1)`,
-  of an odd x is `(x+1, y)`).
+  lower (south) than their even neighbours. Even 0-based columns (labels `01xx`, `03xx` …) are the "high" columns.
+- Checked 2026-10-08 against MegaMek `Coords.java` (its `x, y` = our `col, row`; MegaMek prints `x+1, y+1`):
+  `yInDir` moves NE/NW to `y − 1` from an even x and to `y` from an odd x, and SE/SW to `y` from an even x and to `y + 1`
+  from an odd x; its direction numbers are ours (0 N, 1 NE, 2 SE, 3 S, 4 SW, 5 NW); its `toCube` is our conversion below.
+  Same parity, no adjustment needed.
 - Conversions: `q = col`, `r = row − (col − (col & 1)) / 2`; back: `col = q`, `row = r + (q − (q & 1)) / 2`.
+- Worked examples (label → axial → neighbours in facing order 0–5; `—` = off board). Tests use these verbatim (HEX-003/004):
+
+| Label | col, row | Axial | N (0) | NE (1) | SE (2) | S (3) | SW (4) | NW (5) |
+|---|---|---|---|---|---|---|---|---|
+| `0505` (even col, high) | 4, 4 | `(4,2)` | `0504` | `0604` | `0605` | `0506` | `0405` | `0404` |
+| `0605` (odd col, low) | 5, 4 | `(5,2)` | `0604` | `0705` | `0706` | `0606` | `0506` | `0505` |
+| `0201` (odd col, top edge) | 1, 0 | `(1,0)` | — | `0301` | `0302` | `0202` | `0102` | `0101` |
+
+  Rule of thumb: from a high (odd label) column the NE/NW neighbours are one row up and SE/SW are on the same row; from a
+  low (even label) column NE/NW are on the same row and SE/SW are one row down.
 - Map keys inside the engine are labels (`board.hexes[label]`); a generic key for any hex is `hexKey(h) = "q,r"`.
 
 ### 3.2 Facing and neighbours
-Facing 0 = north (the 'Mech faces the north hexside), clockwise. `HEX_DIRS` in `types.ts`:
+Facing 0 = north (the 'Mech faces the north hexside), clockwise. Facing `f` means the unit's front points through the
+hexside it shares with `neighbor(h, f)`; that neighbour is "directly ahead" and `neighbor(h, (f + 3) % 6)` is "directly
+behind". `HEX_DIRS` in `types.ts`:
 
 | Facing | Name | `(dq, dr)` | Bearing |
 |---|---|---|---|
@@ -134,6 +149,23 @@ Facing 0 = north (the 'Mech faces the north hexside), clockwise. `HEX_DIRS` in `
   30, 150, 210 or 330 (ARC-021; the defender's choice, §9.3 `attackDirection`).
 - Worked checks (attacker `(0,0)` facing 0): `(1,−1)` 60° Forward; `(1,0)` 120° Right; `(0,1)` 180° Rear; `(−1,1)` 240°
   Left; `(−1,0)` 300° Forward. Target `(0,0)` facing 0 attacked from `(1,−1)`: rel 60 → right side; from `(0,−2)`: rel 0 → front.
+- Conventions, stated once:
+  - Both `firingArc` and `attackDirection` measure `rel` clockwise from the unit's facing direction, 0 = straight ahead.
+  - **Firing arcs** (ARC-001) are four sectors from the attacker: Forward 120° wide (300 ≤ rel ≤ 60, both edges
+    inclusive, so the front-left and front-right adjacent hexes are Forward), Right side 60° (60 < rel ≤ 120), Rear 120°
+    (120 < rel < 240, edges exclusive), Left side 60° (240 ≤ rel < 300). These are MegaMek `ComputeArc.isInArc`
+    `ARC_FORWARD`, `ARC_RIGHT_SIDE`, `ARC_REAR`, `ARC_LEFT_SIDE` exactly (checked 2026-10-08); an arm's arc is Forward ∪
+    its side.
+  - **Attack direction** (ARC-020) divides the target's surroundings by the three lines through opposite corners of its
+    hex: six 60° wedges, each centred on one hexside. Front = the wedge through the front hexside (330–30), Right = the two
+    wedges through the front-right and rear-right hexsides (30–150), Rear = the rear hexside's wedge (150–210), Left =
+    210–330. A line from the attacker that runs exactly along a corner line (rel 30, 150, 210, 330) is a tie (ARC-021).
+    This is the AGoAC attack direction diagram; MegaMek's side table was not re-fetched (fetch budget), so tests pin our
+    numbers (12 ARC-020/021).
+  - Arc and direction worked examples with labels: attacker `0505` facing 0, target `0605` (`(5,2)`, bearing 120° from
+    `(4,2)`): rel 120 → Right side, so a left-arm weapon cannot fire at it. Target `0605` facing 5 attacked from `0505`:
+    `rel(target→attacker) = (bearing((5,2)→(4,2)) − 300) mod 360 = (300 − 300) = 0` → Front. The same target facing 2:
+    `(300 − 120) = 180` → Rear.
 
 ### 3.5 Hex line (LOS-001/002)
 `hexLine(a, b) → {plus: Hex[], minus: Hex[], divided: boolean}`; both sequences include `a` and `b`.
@@ -252,7 +284,7 @@ Every such value has exactly one function; previews and rules call the same func
 | `movement` | `movement.select`, `movement.move`, `movement.end` | §5.2 selections; per unit `move`/`standUp`; `movement.end`: owed consciousness checks, victory check |
 | `rangedAttack` | `ranged.select`, `ranged.twist`, `ranged.declare`, `ranged.resolve`, `ranged.endOfPhase` | declarations alternate (§5.2); then resolve all in declaration order in a simultaneous window; then §5.4 |
 | `physicalAttack` | `physical.select`, `physical.twist`, `physical.declare`, `physical.resolve`, `physical.displace`, `physical.endOfPhase` | as ranged; then the Displacement Step (PHYS-090) in an immediate window; then §5.4 |
-| `heat` | `heat.apply`, `heat.endOfPhase` | per unit in initiative order (loser's units first, each side in `unitOrder`): HEAT-030 steps 1–5; then §5.4 (b, c) |
+| `heat` | `heat.apply`, `heat.endOfPhase` | per unit in initiative order (loser's units first, each side in `unitOrder`): HEAT-030 steps 1–5; then §5.4 (b)–(e) (step (a) has nothing to do: Heat Phase damage is immediate) |
 | `end` | `end.recovery`, `end.lifeSupport`, `end.consciousness`, `end.reset`, `end.power`, `end.surrender`, `end.cleanup`, `end.victory` | INIT-015 in order; `end.consciousness` checks pilots hit in `end.lifeSupport`; `end.power` raises `powerChoice` (§9.2); `end.victory` also applies `turnLimit` |
 | `ended` | `game.over` | `GameEnded`; pending `gameOver` |
 
@@ -280,13 +312,24 @@ For `movement`, `rangedAttack`, `physicalAttack`; `L` = initiative loser, `W` = 
   when it next computes a value.
 - Immediate (Movement falls, Displacement Step, Heat Phase, End Phase): destruction applies at once: `status 'destroyed'`,
   `UnitDestroyed {effective: true}`, `StatusChanged`, victory check.
-- PSRs: Movement-phase triggers resolve at once (`when 'now'` / `'endOfMove'`); every other trigger waits for §5.4 (b).
-- Pilot hits in any phase add the unit to `ledger.pilotHit`; checks happen at §5.4 (c) or `movement.end`.
+- PSRs: Movement-phase triggers resolve at once (`when 'now'` / `'endOfMove'`); every other trigger waits for §5.4 (c).
+- Pilot hits in any phase add the unit to `ledger.pilotHit`; checks happen at §5.4 (b) and (d), or at `movement.end`.
 
 ### 5.4 End-of-phase steps (INIT-013), Ranged, Physical and Heat
-(a) every `doomed` unit → `destroyed` (`UnitDestroyed {effective: true}`, `StatusChanged`); (b) resolve the PSR queue
-(§7), falls included; (c) one `ConsciousnessChecked` per unit in `ledger.pilotHit` whose pilot is still conscious and alive;
-(d) crippled/withdrawal re-check (11 §2–3), victory check (11 §5); `PhaseEnded`.
+Steps in order (10 INIT-013; consciousness before the PSR queue, as AGoAC orders it):
+- (a) Apply the phase's gameplay effects and remove destroyed units: every `doomed` unit → `destroyed`
+  (`UnitDestroyed {effective: true}`, `StatusChanged`). Removed units get no consciousness check or PSR below (their
+  queued PSRs are `PsrDiscarded {destroyed}`).
+- (b) One `ConsciousnessChecked` per unit in `ledger.pilotHit` whose pilot is still conscious and alive, in initiative
+  order, at the pilot's current total hits. Then `ledger.pilotHit` is cleared.
+- (c) Resolve the PSR queue (§7), automatic falls included. A pilot knocked out in (b) fails every PSR here (PSR-005).
+  Seatbelt pilot hits from falls add the unit to `ledger.pilotHit` again.
+- (d) One more `ConsciousnessChecked` per unit in `ledger.pilotHit` (pilots hit by a fall during (c)), same rules as (b);
+  then `ledger.pilotHit` is cleared.
+- (e) Crippled/withdrawal re-check (11 §2–3), victory check (11 §5); `PhaseEnded`.
+
+`PHASE_STEPS` keeps one step per phase for all of this (`ranged.endOfPhase`, `physical.endOfPhase`, `heat.endOfPhase`); the
+step runs (a)–(e) inside one reducer call and raises no decision of its own.
 Victory is checked whenever a unit enters an eliminated status outside a simultaneous window and at `end.victory`.
 
 ## 6. The ONE damage pipeline (`damage.ts`)
@@ -304,7 +347,10 @@ Ranged or physical attack, as events in order:
 3. Aimed shot hit: `DiceRolled {aimedShot, target: 4}` → `AimedShotResolved`.
 4. Cluster weapon: `DiceRolled {cluster, flat: clusterMod}` → `ClusterResolved {hits, groups}`. Groups (HITLOC-010):
    full groups first, leftover last. Non-cluster: one group of the weapon's damage. Physical: groups of 5 where the rule
-   says so, else one group.
+   says so, else one group. Charge damage to the target is PHYS-043: `ceil(tonnage / 10 × L)` with `N` = the charger's
+   MOVE-013 hex count + 1 and `L = N` for `N ≤ 2`, else the lowest hex count of the TOHIT-014 bracket holding `N`
+   (3, 5, 7, 10, 18, 25); damage to the charger is `ceil(target tonnage / 10)`. Both in groups of 5, the target's groups
+   first (13 R4).
 5. Per group, in order: location roll `DiceRolled {hitLocation | punchLocation | kickLocation}` (skipped for an on-target
    aimed shot) → hook `hitLocation` → `HitLocated {location, side, tac}`.
    - Partial cover and a leg location → `HitAbsorbedByCover`; next group.
@@ -329,14 +375,16 @@ Ranged or physical attack, as events in order:
 8. Leftover: `noTransfer` (CASE) → `lost`; HD/CT → `lost`; else continue at step 1 on the inward location (rear armor
    for a rear attack, DMG-006; structure only when `internal`).
 
-Crit check: `DiceRolled {critCheck}` → `CritCheckRolled {crits, blownOff, appliesTo}` → per crit: `DiceRolled {critSlot}`
-(2 dice `[block, slot]` in a 12-slot location with both blocks applicable, else 1 die; inapplicable slots re-roll per
-CRIT-003, each re-roll a new `critSlot` roll) → `CritSlotHit {token, effect}` → effect events: `ComponentDestroyed`,
+Crit check: `DiceRolled {critCheck}` → `CritCheckRolled {crits, blownOff, appliesTo}` → per crit: **one** `DiceRolled
+{critSlot}` whose `dice` are `[block, slot]` (12-slot location, both blocks applicable) or `[slot]` alone (6-slot location,
+or one block entirely inapplicable); inapplicable slots (`empty`, `structure`, `armor`, already hit) re-roll per CRIT-003,
+each re-roll a new `critSlot` roll → `CritSlotHit {token, effect}` → effect events: `ComponentDestroyed`,
 `AmmoExploded` / `ComponentExploded` (then `applyDamage {internal: true, source: ammoExplosion | componentExplosion}` and
 `PilotHit {explosion}`), `PsrQueued` (gyro, hip, upper/lower leg; one per leg per damage instance, CRIT-095),
-`UnitDestroyed` (cockpit, 3rd engine). Every crit that finds no slot to hit emits `CritLost {why}` (CRIT-010 location
-already emptied this phase: `noSlotThisPhase`; CRIT-005 non-explosive contents discarded: `notExplosive`), so the feed
-accounts for every crit counted by `CritCheckRolled`. Blown off → `LocationDestroyed {cause: 'blownOff'}`, nothing transfers.
+`UnitDestroyed` (cockpit, 3rd engine). Crits that find no slot to hit emit one `CritLost {count, why}` per crit check and
+reason, after the crits of that check that did land (CRIT-010 location already emptied this phase, or HD/CT with no slot
+left: `noSlotThisPhase`, no dice; CRIT-005 non-explosive slot in a location destroyed by this hit: `notExplosive`, after its
+`critSlot` roll), so the feed accounts for every crit counted by `CritCheckRolled`. Blown off → `LocationDestroyed {cause: 'blownOff'}`, nothing transfers.
 
 Pilot hits: every `PilotHit` updates `pilot.hits`; at 6 → `PilotKilled`, unit destroyed (`pilotKilled`, per §5.3 window).
 
@@ -345,7 +393,7 @@ Pilot hits: every `PilotHit` updates `pilot.hits`; at 6 → `PilotKilled`, unit 
 - Only `queuePsr(state, {unitId, reason, mod, auto, when, levels?})` adds a PSR: it appends to `psr.queue` and to
   `psr.history[unitId]` and emits `PsrQueued`. Only `resolvePsrs(state, scope)` rolls them. No other module rolls a PSR.
 - `when`: `'now'` (movement hex entry, stand, landing, displacement and domino) resolves inside the same procedure;
-  `'endOfMove'` (PSR-031) when the unit's move ends; `'endOfPhase'` at §5.4 (b).
+  `'endOfMove'` (PSR-031) when the unit's move ends; `'endOfPhase'` at §5.4 (c).
 - Unit order for a batch: initiative order (loser's units first, each side in `unitOrder`).
 - Per unit, in queue order:
   1. Destroyed or doomed unit → `PsrDiscarded {why: 'destroyed'}` for all.
@@ -355,8 +403,14 @@ Pilot hits: every `PilotHit` updates `pilot.hits`; at 6 → `PilotKilled`, unit 
   3. Any remaining `auto` entry (unit standing) → the unit falls once (`PsrResolved {auto: true, success: false}`); all
      others `PsrDiscarded {alreadyFell}`.
   4. Standing and shut down or unconscious → each fails automatically (PSR-005).
-  5. TN = piloting + persistent mods (§4.4) + Σ `mod` of every entry in `psr.history[unitId]` this phase + hook `psr`
-     lines. TN > 12 → automatic failure, no roll. Else `DiceRolled {psr, target: tn, reason, mods}` → `PsrResolved`.
+  5. TN = piloting + persistent mods (§4.4) + event mods + hook `psr` lines, where the event mods depend on `when`
+     (PSR-001):
+     - `'endOfPhase'` entries (the end-of-phase batch, the `damage20` trigger included): Σ `mod` of every entry in
+       `psr.history[unitId]` this phase **that was queued with `when 'endOfPhase'`**. Every roll of the batch uses the
+       same TN.
+     - `'now'` and `'endOfMove'` entries: that entry's own `mod` only. Earlier Movement-phase triggers never carry over,
+       so every stand attempt is piloting + persistent − 1 (PSR-019), however many attempts came before.
+     TN > 12 → automatic failure, no roll. Else `DiceRolled {psr, target: tn, reason, mods}` → `PsrResolved`.
   6. First failure → fall; the unit's remaining entries in this batch → `PsrDiscarded {alreadyFell}` (PSR-002).
 - Fall procedure (PSR-050..058), events in order: `UnitFell {levels, facing kept}` (prone = true) → seatbelt:
   `DiceRolled {seatbelt, target}` (or the automatic pilot hit of PSR-057, no roll) → `PilotHit {seatbelt}` on a failure →
@@ -410,7 +464,7 @@ The answer must carry `decisionId === pending.id` and `player === pending.player
 | `move` | owner | `movement.move` | `mpLeft?`, `lockedMode?`, `entry?` (off-board unit: home edge, entry hexes, start facings) | `MoveAction` (§9.3) | never (stand still is always an option unless §9.3 says otherwise) |
 | `standUp` | owner | prone unit selected, or after a fall with MP left (PSR-058) | `psr {tn, mods, p}`, `mpLeft` | `StandUpAction {attempt, mode?, facing?}`; on success the unit takes `facing` (default: current) free (MOVE-042); `legalActions` offers the attempt once per facing | only option is "stay prone" |
 | `torsoTwist` | owner | `ranged.twist`, or `physical.twist` when no twist/flip this turn | `twistOptions`, `canFlip` | `TorsoTwistAction` | prone, or no twist/flip possible |
-| `declareFire` | owner | `ranged.declare` | `targets` | `DeclareFireAction` (empty `shots` = hold fire) | the unit has no legal shot (hold fire) |
+| `declareFire` | owner | `ranged.declare` | `targets` | `DeclareFireAction`: the unit's **whole** declaration in one composite action (§9.7); empty `shots` = hold fire, always legal | the unit has no legal shot (hold fire) |
 | `chooseAmmo` | owner | during `declareFire` processing (§9.4) | `mountId`, `bins` | `ChooseAmmoAction {mountId, binId}` | never (raised only with ≥ 2 ammo types) |
 | `declarePhysical` | owner | `physical.declare` | `targets`, `data.code 'chargeVoided'` when PHYS-042 lets a charger choose again | `DeclarePhysicalAction` | no legal attack (`none`); a still-valid charge/DFA resolves without a decision |
 | `powerChoice` | each side, loser first | `end.power` | `power[] {unitId, options, avoidTn?}` | `PowerChoiceAction {changes}` | not raised unless a unit of that side is voluntarily shut down (restart offered) or `options.manualPower` is true |
@@ -431,7 +485,8 @@ hex adjacent to a home-edge hex and a facing whose forward step enters it; 11 §
   dropped; then `standUp` if PSR-058 allows and MP ≥ 2 (or MOVE-014), else the move ends.
 - Jump: `jumpTo` and free `facing` → `UnitJumped` → landing PSRs.
 - `exit` step on a home-edge hex leaves the board (withdrawing units only, 1 MP) → `UnitExited`.
-- End: `endOfMove` PSRs (PSR-031) → `MoveEnded` → movement heat (§8) → `PhysicalDeclaredInMove` for `attack`.
+- End: `endOfMove` PSRs (PSR-031) → `MoveEnded` → movement heat (§8) → `PhysicalDeclaredInMove {kind, targetId,
+  fromHex}` for `attack` (§9.6). A move truncated by a fall drops its `attack` (no event).
 - Stand-up facing: `StandAttempted.facing` is the `StandUpAction.facing` chosen (free on success; ignored on failure).
   The following `MoveAction.facing` turns still cost 1 MP per hexside from that facing.
 - A prone unit that stays prone answers `standUp {attempt: false}` and then gets a `move` whose steps may only be turns.
@@ -458,12 +513,44 @@ shots, ties by the record's bin order. Two or more ammo ids → `chooseAmmo` for
 | `selectUnit` / `torsoTwist` / `chooseAmmo` / `choice` | one per option |
 | `standUp` | stay prone; then, if standing is allowed, one attempt per facing (6) with the allowed `mode` |
 | `move` | one per `query.reachable` entry (`action`), stand still first |
-| `declareFire` | hold fire; each legal single shot (mount order × target order); per target, all weapons legal at it as one action; capped at 64 |
+| `declareFire` | hold fire **first, always present** (never removed by the cap); then each legal single shot (mount order × target order); then per target, all weapons legal at it as one action; capped at 64 members including hold fire. `binId` omitted (§9.4); multi-target combinations are legal answers but not enumerated (the AI builds them with `query.firePreview`) |
 | `declarePhysical` | `none`, then each legal option of `query.physicalOptions` per target |
 | `powerChoice` | no change; each single-unit change |
 | `initiativeAck` / `gameOver` | `ack` |
 
 `pass` is legal iff `canPass` (no release-1 kind sets it).
+
+### 9.6 Charge and DFA in a move: `MoveAction.attack` and `ReachEntry.physical`
+- `MoveAction.attack = {kind: 'charge' | 'dfa', targetId, dfaFrom?}` declares the attack with the move (PHYS-040, PHYS-060).
+  - **Charge:** `mode` walk or run. `steps` end in the hex adjacent to the target where the charger waits (they never
+    enter the target's hex); the final `facing` must point at the target (`directionTo(end, targetHex)`), and the MP left
+    after the move must cover entering the target's hex legally (PHYS-040). `dfaFrom` must be absent.
+  - **DFA:** `mode` jump, `jumpTo` = the target's hex. `dfaFrom` = the last hex before the target on the chosen shortest
+    jump path (PHYS-061); required only when two path hexes tie, else the engine fills the unique one. `facing` must be
+    `directionTo(dfaFrom, targetHex)`.
+  - Checks, in §13.1 order: target is an enemy on the board (`E_BAD_TARGET`), PHYS-005 limits (`E_ATTACK_LIMIT`),
+    the PHYS-040/060 conditions (`E_BAD_TARGET`), facing (`E_BAD_FACING`), MP (`E_NOT_ENOUGH_MP`).
+  - Executing the move emits `PhysicalDeclaredInMove {kind, targetId, fromHex}` with `fromHex` = the waiting hex (charge:
+    the move's end hex; DFA: `dfaFrom`). Until resolution the unit counts as standing in `fromHex` facing the target.
+- `ReachEntry.physical = {kind, targetId, fromHex} | null`: non-null exactly for entries whose `action.attack` is set;
+  the engine lists such entries in addition to the plain entries for the same `(hex, facing, mode)`. For a charge
+  `entry.hex` = `fromHex`; for a DFA `entry.hex` = the target's hex and `fromHex` = `dfaFrom`. An entry is
+  physicalPreview-able: `query.physicalPreview(state, {attackerId, kind, targetId, attackerAt: {hex: fromHex, facing:
+  directionTo(fromHex, targetHex), mode: entry.mode, hexesMoved: entry.hexesMoved, jumped: mode === 'jump'}})` returns the
+  numbers the client chip and the AI use (50 §6.8, 40 §9).
+
+### 9.7 Fire declaration: one composite action
+- `DeclareFireAction {unitId, shots, propArm?}` is the unit's complete Ranged Attack declaration (the twist or flip was
+  answered just before in `torsoTwist`). `validate` checks the whole action at once against the state after the twist;
+  any failing shot rejects the whole action (no partial declarations). Checks: protocol, unit, payload shape, then per
+  shot in order: weapon known/operable/unused/not duplicated, target, arc, range, LOS and water line, TN ≤ 12, ammo,
+  aimed shot, prop arm, rapid mode; then TOHIT-005 across the shots.
+- `shots: []` (hold fire) is always legal for a unit that has a `declareFire` decision, and `legalActions` always lists it
+  first.
+- TOHIT-005: the first shot's target is the primary target. If any declared target is in the attacker's Forward arc and
+  the first shot's target is not, the action is rejected with `E_PRIMARY_TARGET`; the engine never reorders shots.
+- Ammo: a shot without `binId` takes the §9.4 default; only a mount with ≥ 2 eligible ammo ids raises `chooseAmmo` after
+  validation, and the declaration is booked only when every such choice is answered (`state.resume`).
 
 ## 10. Events and dice
 
@@ -518,7 +605,7 @@ No event exists for skidding, fall facing, ammo dumping or a shutdown PSR (INV-1
 |---|---|
 | `distance(a, b)` | hexes |
 | `reachable(state, unitId)` | `ReachEntry[]`: per `(hex, facing, mode)` the cheapest path with `PathStep {op, hex, facing, cost {base, terrain, level, turn, total}, psr}`, `mpUsed`, `hexesMoved`, `tmm`, `attackerMod`, `heat`, `psrs [{reason, tn, p}]`, `endsProne`, `physical?`, ready `action` |
-| `los(state, from, to)` | `LosVerdict {visible, attackAllowed, divided, chosen, hexes, alt, blockers, woodsPoints, partialCover, reasons}` |
+| `los(state, from, to, opts?)` | `LosVerdict {visible, attackAllowed, divided, chosen, hexes, alt, blockers, woodsPoints, partialCover, reasons}`; `opts.fromAt` / `opts.toAt` (`UnitAt`) override a unit endpoint's hex and prone state, or give a hex endpoint a 'Mech (default for a hex: standing 'Mech, not submerged) |
 | `arcs(state, unitId, twist?)` | hex sets per arc and the arcs each mount fires into |
 | `attackPreview(state, req)` | `AttackPreview {legal, reason?, why?, distance, band, tn, mods[], pHit, direction, table, partialCover, los, heat, damage, cluster?, expectedDamage}` (`attackerAt`/`targetAt` override position, facing, twist, mode, TMM) |
 | `firePreview(state, unitId, plan)` | per-weapon `AttackPreview[]`, primary target, heat projection with move and weapon parts |
@@ -571,7 +658,38 @@ places in `HOOK_WIRING`:
 | `consciousness` | consciousness and recovery TN lines |
 | `endPhase` | once per unit per End Phase |
 
-Hooks are pure (`HookResult {state, events}`) and roll only through `roll`.
+Hooks are pure (`HookResult {state, events}`) and roll only through `roll`. `code-hooks.ts` (M2) registers `ultraRapid` as a
+no-op hook that never rolls (EQUIP-011: Ultra ACs never jam); only the rotary AC's data `jamHook` rolls `jam`.
+
+### 11.5 Hypothetical-position queries (40-ai §13)
+The AI and the client ask "what if" without building a state. Every query below is pure, never advances `rng` or any
+counter, and returns exactly the numbers `step` would produce if the state matched the hypothesis.
+
+| Query | Hypothetical inputs | Returns (fields the AI reads) |
+|---|---|---|
+| `reachable(state, unitId)` | – (from the unit's current position and MP) | `ReachEntry {hex, facing, mode, path, mpUsed, hexesMoved, tmm, attackerMod, heat, psrs [{reason, tn, p}], endsProne, physical, action}` (§9.6) |
+| `attackPreview(state, req)` | `attackerAt`, `targetAt` (`UnitAt`), `primaryTargetId`, `aimedAt`, `binId`, `propArm`, `rapidShots` | `{legal, reason?, tn, mods, pHit, band, direction, table, partialCover, los, heat, damage, cluster, expectedDamage}` |
+| `firePreview(state, unitId, plan)` | `FirePlan` (twist/flip, shots, prop arm) | per-shot previews with the plan's primary target, heat with move and weapon parts |
+| `hitTable(direction, table, opts)` | `prone`, `partialCover` | location → probability, TAC location and chance |
+| `clusterTable(rackSize, modifier)` | – | `P(hits = k)` for k = 0..rackSize |
+| `heatProjection(state, unitId, plan)` | `HeatPlan {mode, hexesJumped, mounts, rapidShots}` | `{now, entries, generated, dissipation, end, effects}` |
+| `heatEffects(heat)` | any heat value | MP loss, to-hit mod, shutdown TN, ammo TN, life-support hits |
+| `physicalPreview(state, req)` | `attackerAt`, `targetAt`, `kind`, `limb` | `{legal, tn, mods, pHit, damage, table, selfDamage, attackerPsr, targetPsr, displacement, choice}` |
+| `psrPreview(state, unitId, reason)` | – | `{tn, mods, p, auto}` |
+| `fallPreview(state, unitId, levels?)` | levels fallen | damage, groups, location distribution, seatbelt TN, `P(pilot hit)` |
+| `explosionPreview(state, unitId, slot)` | the slot assumed hit | damage, location, transfer chain, pilot hits, destroys unit |
+| `isKillLocation(state, unitId, loc)` | – | true when destroying `loc` destroys the unit (HD, CT, or a side torso whose engine slots bring the unit to 3 engine crits, DMG-011) |
+| `mustWithdraw(state, unitId)` | – | true when forced withdrawal is on and 11 §3.2 triggers |
+| `los(state, a, b, opts?)` | `opts.fromAt`, `opts.toAt` | `LosVerdict` |
+
+`UnitAt` semantics (every field optional; an omitted field keeps the unit's current value):
+- `hex`, `facing`, `twist`, `prone`: position used for range, arcs, LOS levels, partial cover and attack direction.
+- `mode`: attacker movement modifier (TOHIT-012) for an attacker; `hexesMoved` + `jumped`: TMM (TOHIT-014/015) for a
+  target. `tmm` overrides the computed TMM directly. `immobile`: forces TOHIT-017 on or off.
+- `attackPreview.primaryTargetId`: omitted or `null` → the request's target is treated as primary; another unit id →
+  this target is secondary (+1, TOHIT-024) and TOHIT-005 is checked against it.
+- A hypothetical position that is illegal for the unit (occupied, off board) still returns numbers; `legal` reflects only
+  the attack's own checks.
 
 ## 12. Determinism, RNG, replay, save, Decider
 
@@ -580,7 +698,9 @@ Hooks are pure (`HookResult {state, events}`) and roll only through `roll`.
 - `roll(state, {count, sides: 6, purpose, unitId?, targetId?, attackId?, target?, flat?, mods?, reason?})` is the only
   way the engine rolls; it advances `rng` and `rollSeq` and returns `{state, event: DiceRolled}`. Engine modules import
   `roll` from `./rng` (never a local copy) so the forced-dice mock of 60 §6 intercepts every roll (`diceEvent` builds the
-  same event for forced faces).
+  same event for forced faces). A same-file helper or a re-exported alias would bypass `vi.mock('./rng')`, so none may
+  exist. A forced roll advances `rollSeq` (so roll ids stay `r:<n>` in order) but does **not** advance `state.rng`: the
+  next unforced roll draws exactly what it would have drawn first.
 - Out-of-engine randomness: `deriveSeed(...parts) → RngState` (AI: `deriveSeed(gameSeed, 'ai', side, decisionSeq, tier)`)
   and `deriveSeedString(...parts) → string` (sim game seeds). Never touches `state.rng`.
 
@@ -643,6 +763,12 @@ order the table lists them.
 | 2026-10-08 | index.ts | `SheetView`: `bv`, `adjustedBv`, `mp.walkMods`, `pilot.consciousnessTns`, `sinks.type`, `status` | record sheet numbers had no query source |
 | 2026-10-08 | hooks.ts | hook `ultraJam` renamed `ultraRapid` (no-op, never rolls; 2026 W11: Ultra ACs do not jam) | avoid wiring a TW jam roll |
 | 2026-10-08 | 00 §7 | prone check precedes `auto` entries (PSR-004) | double fall on a prone unit |
+| 2026-10-08 | rng.ts, index.ts | helpers beyond the brief, now part of the contract: `rng.diceEvent` (forced-dice mock, 60 §6), `rng.deriveSeedString` (sim seeds are strings, 60 §4), `index.hashState` / `stableStringify` (INV-20), `p2d6AtLeast`, `registerBundle` / `bundleFor` (§2) | recorded at the pre-freeze review (M0 follow-up WP-CORE 19) |
+| 2026-10-08 | index.ts | `query.los(state, from, to, opts?: LosOptions)`, `LosOptions {fromAt?, toAt?}` (§11.5) | 40-ai §13 needs LOS from hypothetical positions |
+| 2026-10-08 | index.ts | `ReachEntry.physical` gains `fromHex?: Hex` (always set by the engine) | §9.6: the waiting hex a physicalPreview needs for a charge/DFA entry |
+| 2026-10-08 | index.ts, actions.ts | doc comments only: §9.6 meaning of `MoveAction.attack` / `ReachEntry.physical`; §9.7 composite `DeclareFireAction`, `E_PRIMARY_TARGET`, hold fire always legal; §11.5 `UnitAt` and `primaryTargetId` semantics | pre-freeze clarifications (WP-CORE 9, 11, 16, 17) |
+| 2026-10-08 | types.ts | comment on `PHASE_STEPS`: `*.endOfPhase` runs §5.4 (a)–(e) | §5.4 rewritten (consciousness before the PSR queue, extra check for fall hits) |
+| 2026-10-08 | 00 §5.4, §7 | §5.4 order (a) effects/removal, (b) consciousness, (c) PSR queue, (d) consciousness for fall hits, (e) crippled/victory; §7 step 5 sums history mods only for `endOfPhase` entries | matches 10 INIT-013 and PSR-001 (WP-CORE 13, 14) |
 
 ### Rulings made in this spec
 
@@ -655,3 +781,6 @@ order the table lists them.
 | Voluntary shutdown (HEAT-041) | `powerChoice` only when a unit is voluntarily shut down, or `options.manualPower` | avoids a prompt every End Phase |
 | Victory timing (10 SCN-020 vs 11 §5) | checked whenever a unit is eliminated outside a simultaneous window, and at `end.victory` | equivalent to "after every damage resolution" given INIT-012 simultaneity |
 | Initiative pacing | `initiativeAck` every turn for the first human side (A in AI vs AI) | gives the presentation a stop; not a rule |
+| Defender choices (LOS-005, ARC-021, PHYS-067 ties, PHYS-094 dodge) | made automatically by the defender-favouring default rule; `setup.options.askDefender` (default false) turns them into `choice` decisions | keeps decisions few; the default always picks the option best for the defender |
+| Initiative roll order (INIT-002) | side A rolls first, then B; a tie re-rolls A then B | forced-dice tests need one order (13 R1) |
+| Attack-direction zones (ARC-020) | six 60° wedges through the hex corners, Front/Rear one wedge, sides two | AGoAC diagram; MegaMek side table not re-fetched in the 2026-10-08 check |

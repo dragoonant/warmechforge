@@ -120,6 +120,7 @@ export interface BoardState {
 
 // ---------- phases and steps (00 §5) ----------
 export type PhaseId = 'deployment' | 'initiative' | 'movement' | 'rangedAttack' | 'physicalAttack' | 'heat' | 'end' | 'ended'
+/** Order of steps (00 §5.1). Each '*.endOfPhase' step runs 00 §5.4 (a)-(e): effects and removal, consciousness, PSR queue, consciousness for fall hits, crippled/victory. */
 export const PHASE_STEPS = [
   'deployment.place',
   'initiative.roll', 'initiative.ack',

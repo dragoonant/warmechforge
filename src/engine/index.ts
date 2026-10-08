@@ -110,7 +110,11 @@ export interface ReachEntry {
   heat: number
   psrs: { reason: PsrReason; tn: number; p: number }[]
   endsProne: boolean
-  physical: { kind: 'charge' | 'dfa'; targetId: UnitId } | null
+  /**
+   * Non-null exactly when `action.attack` is set (00 §9.6). `fromHex` (always set by the engine) is the hex the unit waits in
+   * until resolution: the charge's end hex, or the DFA's `dfaFrom`. Feed it to physicalPreview as `attackerAt.hex`.
+   */
+  physical: { kind: 'charge' | 'dfa'; targetId: UnitId; fromHex?: Hex } | null
   action: MoveAction
 }
 export interface LosReason {
@@ -119,6 +123,8 @@ export interface LosReason {
   hex?: Hex
   value?: number
 }
+/** query.los hypothetical endpoints (00 §11.5): override a unit endpoint, or put a 'Mech on a hex endpoint (default standing). */
+export interface LosOptions { fromAt?: UnitAt; toAt?: UnitAt }
 export interface LosVerdict {
   visible: boolean
   attackAllowed: boolean // false also for the water line (LOS-040)
@@ -131,6 +137,10 @@ export interface LosVerdict {
   partialCover: boolean
   reasons: LosReason[]
 }
+/**
+ * Hypothetical position for previews (00 §11.5). Omitted fields keep the unit's current value. `mode` drives the attacker
+ * movement modifier; `hexesMoved` + `jumped` drive the target's TMM unless `tmm` is given; `immobile` forces TOHIT-017.
+ */
 export interface UnitAt { hex?: Hex; facing?: Facing; twist?: Twist; mode?: MoveMode; hexesMoved?: number; prone?: boolean; tmm?: number; jumped?: boolean; immobile?: boolean }
 export interface AttackPreviewRequest {
   attackerId: UnitId
@@ -139,6 +149,7 @@ export interface AttackPreviewRequest {
   binId?: LocalId
   attackerAt?: UnitAt
   targetAt?: UnitAt
+  /** Omitted or null: the request's target is primary. Another unit id: this target is secondary (+1, TOHIT-024/005). */
   primaryTargetId?: UnitId | null
   aimedAt?: Loc
   propArm?: ArmLoc
@@ -229,10 +240,10 @@ export interface TerrainInfo { label: HexLabel; level: number; terrain: string[]
 export const query = {
   /** Hex distance (HEX-005). */
   distance: (_a: Hex, _b: Hex): number => todo('query.distance', 'M1'),
-  /** Every (hex, facing, mode) the unit can end its move in, cheapest path each, with a ready MoveAction. */
+  /** Every (hex, facing, mode) the unit can end its move in, cheapest path each, with a ready MoveAction; plus one entry per legal charge/DFA (00 §9.6). */
   reachable: (_state: GameState, _unitId: UnitId): ReachEntry[] => todo('query.reachable', 'M1'),
   /** LOS between two units (or a unit and a hex) with reasons and blockers (LOS-020). */
-  los: (_state: GameState, _from: UnitId | Hex, _to: UnitId | Hex): LosVerdict => todo('query.los', 'M1'),
+  los: (_state: GameState, _from: UnitId | Hex, _to: UnitId | Hex, _opts?: LosOptions): LosVerdict => todo('query.los', 'M1'),
   arcs: (_state: GameState, _unitId: UnitId, _twist?: Twist): ArcsView => todo('query.arcs', 'M1'),
   attackPreview: (_state: GameState, _req: AttackPreviewRequest): AttackPreview => todo('query.attackPreview', 'M2'),
   firePreview: (_state: GameState, _unitId: UnitId, _plan: FirePlan): FirePreview => todo('query.firePreview', 'M2'),

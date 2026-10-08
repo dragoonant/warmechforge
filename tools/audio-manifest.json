@@ -292,9 +292,9 @@
       "id": "ph-dfa",
       "kind": "sfx",
       "group": "physical",
-      "prompt": "A death from above leap: a short descending whistle then one sharp catastrophic crushing metal impact with a single shockwave boom and a fast decay, strong transient attack, no music, no voices",
+      "prompt": "A huge armored war machine drops from a jump onto another: a deep jet-thruster roar that cuts off abruptly, a split second of silence, then a massive feet-first crash of heavy steel onto steel, armor plates buckling and tearing, a deep ground-shaking thud with low rumble decay. Heavy, serious and violent, realistic industrial foley. No whistle, no falling-pitch sound, no cartoon effects, no music, no voices",
       "durationSeconds": 1.8,
-      "promptInfluence": 0.65
+      "promptInfluence": 0.7
     },
     {
       "id": "dm-armor",

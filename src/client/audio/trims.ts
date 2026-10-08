@@ -37,7 +37,6 @@ export const TRIMS: Record<string, number> = {
   'nar-ranged': 1.82,
   'nar-victory': 1.57,
   'ph-charge': 0.54,
-  'ph-dfa': 0.52,
   'ph-kick': 0.86,
   'ph-punch': 0.65,
   'ui-click': 1.98,
@@ -63,4 +62,5 @@ export const TRIMS: Record<string, number> = {
   'wp-ppc-light': 0.88,
   'wp-ppc': 0.72,
   'wp-srm': 0.6,
+  'ph-dfa': 1.2,
 }

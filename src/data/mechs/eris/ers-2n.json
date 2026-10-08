@@ -1,0 +1,79 @@
+{
+  "id": "mech.eris.ers-2n",
+  "chassis": "Eris",
+  "model": "ERS-2N",
+  "figure": "bt-eris",
+  "tonnage": 50,
+  "techBase": "IS",
+  "engine": { "type": "xl", "rating": 250 },
+  "movement": { "walk": 5, "run": 8, "jump": 5 },
+  "heatSinks": { "count": 10, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "standard",
+    "front": { "HD": 9, "CT": 23, "LT": 18, "RT": 18, "LA": 15, "RA": 15, "LL": 22, "RL": 22 },
+    "rear": { "CT": 8, "LT": 5, "RT": 5 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "#sxp-hd", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#jj1", "structure"],
+    "LT": ["engine", "engine", "engine", "#wing-lt", "#wing-lt", "#wing-lt", "#wing-lt", "#mml-lt", "#mml-lt", "#mml-lt", "#ammo-mml-lt", "#case2-lt"],
+    "RT": ["engine", "engine", "engine", "#wing-rt", "#wing-rt", "#wing-rt", "#wing-rt", "#mml-rt", "#mml-rt", "#mml-rt", "#ammo-mml-rt", "#case2-rt"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "#sxp-la1", "#sxp-la2", "structure", "structure", "structure", "structure", "structure", "structure"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "#snppc", "#snppc", "structure", "structure", "structure", "structure", "structure", "structure", "structure"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "#jj2", "#jj3"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "#jj4", "#jj5"]
+  },
+  "mounts": [
+    { "id": "sxp-la1", "item": "is.w.small-x-pulse-laser", "location": "LA" },
+    { "id": "sxp-la2", "item": "is.w.small-x-pulse-laser", "location": "LA" },
+    { "id": "snppc", "item": "is.w.snub-nose-ppc", "location": "RA" },
+    { "id": "mml-lt", "item": "is.w.mml-5", "location": "LT" },
+    { "id": "mml-rt", "item": "is.w.mml-5", "location": "RT" },
+    { "id": "sxp-hd", "item": "is.w.small-x-pulse-laser", "location": "HD" },
+    { "id": "wing-lt", "item": "is.eq.partial-wing", "location": "LT", "tons": 2 },
+    { "id": "wing-rt", "item": "is.eq.partial-wing", "location": "RT", "tons": 1.5 },
+    { "id": "case2-lt", "item": "is.eq.case-ii", "location": "LT" },
+    { "id": "case2-rt", "item": "is.eq.case-ii", "location": "RT" },
+    { "id": "jj1", "item": "is.eq.jump-jet", "location": "CT", "tons": 0.5 },
+    { "id": "jj2", "item": "is.eq.jump-jet", "location": "LL", "tons": 0.5 },
+    { "id": "jj3", "item": "is.eq.jump-jet", "location": "LL", "tons": 0.5 },
+    { "id": "jj4", "item": "is.eq.jump-jet", "location": "RL", "tons": 0.5 },
+    { "id": "jj5", "item": "is.eq.jump-jet", "location": "RL", "tons": 0.5 }
+  ],
+  "ammoBins": [
+    {
+      "id": "ammo-mml-lt",
+      "ammo": "is.ammo.mml-5-lrm",
+      "options": ["is.ammo.mml-5-lrm", "is.ammo.mml-5-srm"],
+      "location": "LT"
+    },
+    {
+      "id": "ammo-mml-rt",
+      "ammo": "is.ammo.mml-5-srm",
+      "options": ["is.ammo.mml-5-lrm", "is.ammo.mml-5-srm"],
+      "location": "RT"
+    }
+  ],
+  "bv": 1400,
+  "source": {
+    "ref": "megamek",
+    "note": "Eris ERS-2N MTF (Recognition Guide ilClan vol. 18) cross-check; BV from MUL and the Core Box review",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": {
+    "/bv": { "ref": "mul", "note": "1,400; also stated in the Core Box review" }
+  },
+  "verify": [
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/movement/jump",
+      "note": "partial wing jump bonus is not modelled; jump 5 is the jump-jet count",
+      "status": "unconfirmed"
+    }
+  ]
+}

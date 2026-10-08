@@ -1,0 +1,71 @@
+{
+  "id": "mech.uziel.uzl-2s",
+  "chassis": "Uziel",
+  "model": "UZL-2S",
+  "figure": "bt-uziel",
+  "tonnage": 50,
+  "techBase": "IS",
+  "engine": { "type": "xl", "rating": 300 },
+  "movement": { "walk": 6, "run": 9, "jump": 6 },
+  "heatSinks": { "count": 10, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "standard",
+    "front": { "HD": 9, "CT": 17, "LT": 14, "RT": 14, "LA": 12, "RA": 12, "LL": 18, "RL": 18 },
+    "rear": { "CT": 6, "LT": 4, "RT": 4 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "empty", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#srm6", "#srm6"],
+    "LT": ["engine", "engine", "engine", "#jj1", "#jj2", "#jj3", "#mg-lt", "#ammo-mg", "#ammo-srm6", "#probe", "#probe", "structure"],
+    "RT": ["engine", "engine", "engine", "#jj4", "#jj5", "#jj6", "#mg-rt", "structure", "structure", "structure", "structure", "structure"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "#ppc-la", "#ppc-la", "#ppc-la", "structure", "structure", "empty", "empty", "empty", "empty"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "#ppc-ra", "#ppc-ra", "#ppc-ra", "structure", "structure", "empty", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"]
+  },
+  "mounts": [
+    { "id": "ppc-la", "item": "is.w.ppc", "location": "LA" },
+    { "id": "ppc-ra", "item": "is.w.ppc", "location": "RA" },
+    { "id": "mg-lt", "item": "is.w.machine-gun", "location": "LT" },
+    { "id": "mg-rt", "item": "is.w.machine-gun", "location": "RT" },
+    { "id": "srm6", "item": "is.w.srm-6", "location": "CT" },
+    { "id": "jj1", "item": "is.eq.jump-jet", "location": "LT", "tons": 0.5 },
+    { "id": "jj2", "item": "is.eq.jump-jet", "location": "LT", "tons": 0.5 },
+    { "id": "jj3", "item": "is.eq.jump-jet", "location": "LT", "tons": 0.5 },
+    { "id": "jj4", "item": "is.eq.jump-jet", "location": "RT", "tons": 0.5 },
+    { "id": "jj5", "item": "is.eq.jump-jet", "location": "RT", "tons": 0.5 },
+    { "id": "jj6", "item": "is.eq.jump-jet", "location": "RT", "tons": 0.5 },
+    { "id": "probe", "item": "is.eq.beagle-active-probe", "location": "LT" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-mg", "ammo": "is.ammo.machine-gun", "location": "LT", "load": "half" },
+    { "id": "ammo-srm6", "ammo": "is.ammo.srm-6", "location": "LT" }
+  ],
+  "bv": 1352,
+  "source": {
+    "ref": "megamek",
+    "note": "Uziel UZL-2S MTF (3067) cross-check; BV from MUL and the Core Box review",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": {
+    "/bv": { "ref": "mul", "note": "1,352; also stated in the Core Box review" }
+  },
+  "verify": [
+    {
+      "path": "/quirks",
+      "note": "RULING: quirks are off in release 1 (the schema reserves quirks as empty). Dropped from the MTF: cowl, exposed actuators, bad reputation",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/ammoBins/0",
+      "note": "the record carries half a ton of machine gun ammo; modelled as a one-ton bin starting at a half load (100 shots), the same 100 rounds in one slot",
+      "status": "unconfirmed"
+    }
+  ]
+}

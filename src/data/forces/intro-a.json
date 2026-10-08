@@ -1,0 +1,13 @@
+{
+  "id": "force.intro-a",
+  "name": "Eris Lance",
+  "color": "#3b6ea8",
+  "units": [
+    { "slot": "u1", "mech": "mech.eris.ers-2n", "pilot": "pilot.generic-alpha" },
+    { "slot": "u2", "mech": "mech.uziel.uzl-2s", "pilot": "pilot.generic-bravo" }
+  ],
+  "source": { "ref": "ours", "note": "intro mission side a" },
+  "verify": [
+    { "path": "", "note": "intro mission forces not yet read from the booklet", "status": "unconfirmed" }
+  ]
+}

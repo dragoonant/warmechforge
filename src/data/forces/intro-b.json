@@ -1,0 +1,17 @@
+{
+  "id": "force.intro-b",
+  "name": "Solitaire Lance",
+  "color": "#a83b3b",
+  "units": [
+    { "slot": "u1", "mech": "mech.solitaire.prime", "pilot": "pilot.generic-charlie" },
+    { "slot": "u2", "mech": "mech.rakshasa.mdg-1a", "pilot": "pilot.generic-delta" }
+  ],
+  "source": { "ref": "ours", "note": "intro mission side b; stock stand-ins for the box variants" },
+  "verify": [
+    {
+      "path": "",
+      "note": "uses stock Solitaire Prime and Rakshasa MDG-1A in place of the box variants",
+      "status": "standIn"
+    }
+  ]
+}

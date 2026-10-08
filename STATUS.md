@@ -17,6 +17,11 @@
 - Not yet: rules engine logic, game data, client game screens, AI, figures, maps.
 - Follow-ups by work package: `tools/out/m0-followups.md` (local, not committed).
 
-## Next: M1
-- Hex grid and coordinates, LOS, movement (walk/run/jump, terrain costs, facing), headless sim.
-- Apply the WP-CORE spec follow-ups (00 §5.4/§7 and the 10/12/13 edits) before engine fan-out.
+## M1 done (engine math and slice data)
+- Engine modules in `src/engine/`: hex, terrain, los, dice, tohit, hitloc, cluster, damage, crits, ammo, heat, psr, pilot, prob. Tests in `tests/engine/` named by checklist ID.
+- Data in `src/data/`: core tables, weapons, ammo, equipment, SPAs, four slice 'Mechs, pilots, intro and skirmish missions, forces, stand-in map test-canyons. `tests/data/data.test.ts`, `npm run validate:data` (tools/validate-data.ts).
+- typecheck, 164 tests and validate:data pass.
+- Open: collectHooks stub (M2); Movement/heat must call partialWingBonuses; spec 10 PSR-053 side-fall columns and partial wing rule need updating; stand-in variants/map. See `docs/needs-rules-check.md`.
+
+## Next: M2
+- Movement (walk/run/jump, costs, facing, stand), phase loop, hooks registry, headless sim, AI.

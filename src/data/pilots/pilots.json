@@ -1,0 +1,42 @@
+[
+  {
+    "id": "pilot.generic-alpha",
+    "name": "Pilot Alpha",
+    "callsign": "Alpha",
+    "gunnery": 4,
+    "piloting": 5,
+    "spas": [],
+    "bio": "A generic line pilot with the standard skill pair.",
+    "source": { "ref": "ours", "note": "generic pilot at 4/5" }
+  },
+  {
+    "id": "pilot.generic-bravo",
+    "name": "Pilot Bravo",
+    "callsign": "Bravo",
+    "gunnery": 4,
+    "piloting": 5,
+    "spas": [],
+    "bio": "A generic line pilot with the standard skill pair.",
+    "source": { "ref": "ours", "note": "generic pilot at 4/5" }
+  },
+  {
+    "id": "pilot.generic-charlie",
+    "name": "Pilot Charlie",
+    "callsign": "Charlie",
+    "gunnery": 4,
+    "piloting": 5,
+    "spas": [],
+    "bio": "A generic line pilot with the standard skill pair.",
+    "source": { "ref": "ours", "note": "generic pilot at 4/5" }
+  },
+  {
+    "id": "pilot.generic-delta",
+    "name": "Pilot Delta",
+    "callsign": "Delta",
+    "gunnery": 4,
+    "piloting": 5,
+    "spas": [],
+    "bio": "A generic line pilot with the standard skill pair.",
+    "source": { "ref": "ours", "note": "generic pilot at 4/5" }
+  }
+]

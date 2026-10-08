@@ -1,0 +1,298 @@
+{
+  "height": 17,
+  "hexes": {
+    "1006": { "level": 1 },
+    "1007": { "level": 1 },
+    "1011": { "level": 1 },
+    "1012": { "level": 2 },
+    "1013": { "level": 1 },
+    "1104": { "level": 1 },
+    "1105": { "level": 2 },
+    "1106": { "level": 2 },
+    "1107": { "level": 3 },
+    "1108": { "level": 3 },
+    "1109": { "level": 2 },
+    "1110": { "level": 2 },
+    "1111": { "level": 3 },
+    "1112": { "level": 3 },
+    "1113": { "level": 2 },
+    "1114": { "level": 1 },
+    "1203": { "level": 1 },
+    "1204": { "level": 2 },
+    "1205": { "level": 3 },
+    "1206": { "level": 3 },
+    "1207": { "level": 3 },
+    "1208": { "level": 3 },
+    "1209": {
+      "level": 2,
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "1210": { "level": 2 },
+    "1211": { "level": 3 },
+    "1212": { "level": 3 },
+    "1213": { "level": 2 },
+    "1214": { "level": 1 },
+    "1302": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "1303": { "level": 1 },
+    "1304": { "level": 2 },
+    "1305": { "level": 2 },
+    "1306": {
+      "level": 3,
+      "terrain": [
+        { "type": "heavyWoods" }
+      ]
+    },
+    "1307": { "level": 3 },
+    "1308": { "level": 2 },
+    "1309": { "level": 2 },
+    "1310": {
+      "level": 2,
+      "terrain": [
+        { "type": "heavyWoods" }
+      ]
+    },
+    "1311": { "level": 2 },
+    "1312": { "level": 2 },
+    "1313": { "level": 1 },
+    "1315": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "1404": { "level": 1 },
+    "1405": { "level": 2 },
+    "1406": { "level": 2 },
+    "1407": { "level": 2 },
+    "1408": { "level": 2 },
+    "1409": { "level": 1 },
+    "1410": { "level": 1 },
+    "1411": { "level": 1 },
+    "1412": { "level": 1 },
+    "1505": { "level": 1 },
+    "1506": { "level": 1 },
+    "1507": { "level": 1 },
+    "1508": { "level": 1 },
+    "1513": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "1607": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0106": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0112": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0202": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0205": { "level": 1 },
+    "0206": { "level": 1 },
+    "0207": { "level": 1 },
+    "0208": { "level": 1 },
+    "0209": { "level": 1 },
+    "0212": { "level": 1 },
+    "0213": { "level": 1 },
+    "0216": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0304": { "level": 1 },
+    "0305": { "level": 2 },
+    "0306": { "level": 2 },
+    "0307": {
+      "level": 2,
+      "terrain": [
+        { "type": "heavyWoods" }
+      ]
+    },
+    "0308": {
+      "level": 2,
+      "terrain": [
+        { "type": "heavyWoods" }
+      ]
+    },
+    "0309": { "level": 2 },
+    "0310": { "level": 1 },
+    "0311": { "level": 1 },
+    "0312": { "level": 2 },
+    "0313": { "level": 2 },
+    "0314": { "level": 1 },
+    "0403": { "level": 1 },
+    "0404": { "level": 2 },
+    "0405": {
+      "level": 2,
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0406": { "level": 3 },
+    "0407": { "level": 3 },
+    "0408": { "level": 2 },
+    "0409": { "level": 2 },
+    "0410": { "level": 2 },
+    "0411": { "level": 2 },
+    "0412": { "level": 3 },
+    "0413": {
+      "level": 2,
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0414": { "level": 1 },
+    "0503": { "level": 1 },
+    "0504": { "level": 2 },
+    "0505": { "level": 3 },
+    "0506": { "level": 3 },
+    "0507": { "level": 3 },
+    "0508": { "level": 3 },
+    "0509": { "level": 2 },
+    "0510": { "level": 2 },
+    "0511": { "level": 3 },
+    "0512": { "level": 3 },
+    "0513": { "level": 2 },
+    "0514": { "level": 1 },
+    "0604": { "level": 1 },
+    "0605": { "level": 2 },
+    "0606": { "level": 2 },
+    "0607": { "level": 2 },
+    "0608": { "level": 1 },
+    "0611": { "level": 2 },
+    "0612": { "level": 2 },
+    "0613": { "level": 1 },
+    "0701": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0706": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0710": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0715": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0801": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0804": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0805": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0806": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0807": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0808": {
+      "terrain": [
+        { "depth": 1, "type": "water" }
+      ]
+    },
+    "0809": {
+      "terrain": [
+        { "depth": 2, "type": "water" }
+      ]
+    },
+    "0810": {
+      "terrain": [
+        { "depth": 1, "type": "water" }
+      ]
+    },
+    "0811": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0812": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0813": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0814": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0907": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0908": {
+      "terrain": [
+        { "depth": 1, "type": "water" }
+      ]
+    },
+    "0909": {
+      "terrain": [
+        { "depth": 1, "type": "water" }
+      ]
+    },
+    "0910": {
+      "terrain": [
+        { "type": "rough" }
+      ]
+    },
+    "0913": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    },
+    "0917": {
+      "terrain": [
+        { "type": "lightWoods" }
+      ]
+    }
+  },
+  "id": "map.test-canyons",
+  "name": "Test Canyons",
+  "notes": "Hand-built canyon-style sheet: two mesas with level 3 cores, a dry rough riverbed with a small pond, clear deployment rows at both ends.",
+  "source": { "note": "70-maps section 7, hand authored", "ref": "ours" },
+  "theme": "desert",
+  "width": 16
+}

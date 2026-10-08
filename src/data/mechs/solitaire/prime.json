@@ -1,0 +1,57 @@
+{
+  "id": "mech.solitaire.prime",
+  "chassis": "Solitaire",
+  "model": "Prime",
+  "figure": "bt-solitaire",
+  "tonnage": 25,
+  "techBase": "Clan",
+  "stock": true,
+  "engine": { "type": "xl", "rating": 250 },
+  "movement": { "walk": 10, "run": 15, "jump": 0 },
+  "heatSinks": { "count": 10, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroFibrous",
+    "front": { "HD": 9, "CT": 10, "LT": 9, "RT": 9, "LA": 8, "RA": 8, "LL": 12, "RL": 12 },
+    "rear": { "CT": 3, "LT": 3, "RT": 3 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "empty", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#hml-ct", "#hml-ct"],
+    "LT": ["engine", "engine", "#hml-lt", "#hml-lt", "#hsl-lt", "structure", "structure", "armor", "empty", "empty", "empty", "empty"],
+    "RT": ["engine", "engine", "#hll-rt", "#hll-rt", "#hll-rt", "structure", "armor", "armor", "empty", "empty", "empty", "empty"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "structure", "armor", "empty", "empty", "empty", "empty", "empty", "empty"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "hand", "structure", "armor", "empty", "empty", "empty", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "armor"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "armor"]
+  },
+  "mounts": [
+    { "id": "hml-lt", "item": "cl.w.heavy-medium-laser", "location": "LT" },
+    { "id": "hsl-lt", "item": "cl.w.heavy-small-laser", "location": "LT" },
+    { "id": "hll-rt", "item": "cl.w.heavy-large-laser", "location": "RT" },
+    { "id": "hml-ct", "item": "cl.w.heavy-medium-laser", "location": "CT" }
+  ],
+  "ammoBins": [],
+  "bv": 1284,
+  "source": { "ref": "megamek", "note": "Solitaire (Prime) MTF cross-check; BV from MUL", "retrieved": "2026-10-08" },
+  "valueSources": {
+    "/bv": { "ref": "mul", "note": "1,284 (Prime)" }
+  },
+  "verify": [
+    {
+      "path": "/quirks",
+      "note": "RULING: quirks are off in release 1 (the schema reserves quirks as empty). Dropped from the MTF: Improved Cooling (would make heat 17, not 18) and Stable Weapon",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "",
+      "note": "stand-in: the Core Box ships the Solitaire 3, which is not sourced anywhere yet (variant-research.md); this is the stock Prime",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    }
+  ]
+}

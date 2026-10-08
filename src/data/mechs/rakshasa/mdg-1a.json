@@ -1,0 +1,65 @@
+{
+  "id": "mech.rakshasa.mdg-1a",
+  "chassis": "Rakshasa",
+  "model": "MDG-1A",
+  "figure": "bt-rakshasa",
+  "tonnage": 75,
+  "techBase": "IS",
+  "stock": true,
+  "engine": { "type": "xl", "rating": 375 },
+  "movement": { "walk": 5, "run": 8, "jump": 0 },
+  "heatSinks": { "count": 15, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroFibrous",
+    "front": { "HD": 9, "CT": 32, "LT": 22, "RT": 22, "LA": 21, "RA": 21, "LL": 28, "RL": 28 },
+    "rear": { "CT": 9, "LT": 7, "RT": 7 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "armor", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "structure", "structure"],
+    "LT": ["engine", "engine", "engine", "#lrm-lt", "#lrm-lt", "#art-lt", "#mpl-lt", "#ammo-lrm-lt", "structure", "structure", "armor", "armor"],
+    "RT": ["engine", "engine", "engine", "#lrm-rt", "#lrm-rt", "#art-rt", "#ammo-lrm-rt", "structure", "structure", "armor", "armor", "armor"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "#erll-la", "#erll-la", "#ml-la", "structure", "structure", "structure", "armor", "armor", "armor"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "#erll-ra", "#erll-ra", "#ml-ra", "structure", "structure", "structure", "armor", "armor", "armor"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "armor"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "armor"]
+  },
+  "mounts": [
+    { "id": "erll-la", "item": "is.w.er-large-laser", "location": "LA" },
+    { "id": "ml-la", "item": "is.w.medium-laser", "location": "LA" },
+    { "id": "erll-ra", "item": "is.w.er-large-laser", "location": "RA" },
+    { "id": "ml-ra", "item": "is.w.medium-laser", "location": "RA" },
+    { "id": "lrm-lt", "item": "is.w.lrm-10", "location": "LT" },
+    { "id": "lrm-rt", "item": "is.w.lrm-10", "location": "RT" },
+    { "id": "mpl-lt", "item": "is.w.medium-pulse-laser", "location": "LT" },
+    { "id": "art-lt", "item": "is.eq.artemis-iv", "location": "LT", "linkedTo": "lrm-lt" },
+    { "id": "art-rt", "item": "is.eq.artemis-iv", "location": "RT", "linkedTo": "lrm-rt" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-lrm-lt", "ammo": "is.ammo.lrm-10", "location": "LT" },
+    { "id": "ammo-lrm-rt", "ammo": "is.ammo.lrm-10", "location": "RT" }
+  ],
+  "bv": 1795,
+  "source": { "ref": "megamek", "note": "Rakshasa MDG-1A MTF (3055U) cross-check; BV from MUL", "retrieved": "2026-10-08" },
+  "valueSources": {
+    "/bv": { "ref": "mul", "note": "1,795 (MDG-1A)" }
+  },
+  "verify": [
+    {
+      "path": "/quirks",
+      "note": "RULING: quirks are off in release 1 (the schema reserves quirks as empty). Dropped from the MTF: weak head 1, easy to maintain",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "",
+      "note": "stand-in: the Core Box ships the MDG-3D, which is not sourced anywhere yet (variant-research.md); this is the stock MDG-1A",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    }
+  ]
+}

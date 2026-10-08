@@ -1,0 +1,34 @@
+{
+  "id": "mission.skirmish",
+  "name": "Skirmish",
+  "kind": "skirmish",
+  "status": "ready",
+  "order": 1,
+  "briefing": "Pick your lance within the points budget and fight a single battle on any ready map. The last side with a fighting force wins.",
+  "map": "choose",
+  "sides": [
+    {
+      "id": "a",
+      "label": "Blue",
+      "force": "pick",
+      "control": "either",
+      "homeEdge": "south",
+      "deployment": { "mode": "edgeEntry" }
+    },
+    {
+      "id": "b",
+      "label": "Red",
+      "force": "pick",
+      "control": "either",
+      "homeEdge": "north",
+      "deployment": { "mode": "edgeEntry" }
+    }
+  ],
+  "defaultHumanSide": "a",
+  "victory": [
+    { "type": "eliminate", "cripple": true },
+    { "type": "turnLimitBV" }
+  ],
+  "options": { "forcedWithdrawal": "playerChoice", "halfLoads": true, "pilotCards": true, "bvBudget": 7500 },
+  "source": { "ref": "ours", "note": "11-missions section 7" }
+}

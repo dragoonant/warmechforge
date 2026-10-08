@@ -1,0 +1,42 @@
+{
+  "internalStructure": {
+    "20": { "HD": 3, "CT": 6, "sideTorso": 5, "arm": 3, "leg": 4 },
+    "25": { "HD": 3, "CT": 8, "sideTorso": 6, "arm": 4, "leg": 6 },
+    "30": { "HD": 3, "CT": 10, "sideTorso": 7, "arm": 5, "leg": 7 },
+    "35": { "HD": 3, "CT": 11, "sideTorso": 8, "arm": 6, "leg": 8 },
+    "40": { "HD": 3, "CT": 12, "sideTorso": 10, "arm": 6, "leg": 10 },
+    "45": { "HD": 3, "CT": 14, "sideTorso": 11, "arm": 7, "leg": 11 },
+    "50": { "HD": 3, "CT": 16, "sideTorso": 12, "arm": 8, "leg": 12 },
+    "55": { "HD": 3, "CT": 18, "sideTorso": 13, "arm": 9, "leg": 13 },
+    "60": { "HD": 3, "CT": 20, "sideTorso": 14, "arm": 10, "leg": 14 },
+    "65": { "HD": 3, "CT": 21, "sideTorso": 15, "arm": 10, "leg": 15 },
+    "70": { "HD": 3, "CT": 22, "sideTorso": 15, "arm": 11, "leg": 15 },
+    "75": { "HD": 3, "CT": 23, "sideTorso": 16, "arm": 12, "leg": 16 },
+    "80": { "HD": 3, "CT": 25, "sideTorso": 17, "arm": 13, "leg": 17 },
+    "85": { "HD": 3, "CT": 27, "sideTorso": 18, "arm": 14, "leg": 18 },
+    "90": { "HD": 3, "CT": 29, "sideTorso": 19, "arm": 15, "leg": 19 },
+    "95": { "HD": 3, "CT": 30, "sideTorso": 20, "arm": 16, "leg": 20 },
+    "100": { "HD": 3, "CT": 31, "sideTorso": 21, "arm": 17, "leg": 21 }
+  },
+  "bvSkillMultiplier": {
+    "rows": [
+      [2.42, 2.31, 2.21, 2.1, 1.93, 1.75, 1.68, 1.59, 1.5],
+      [2.21, 2.11, 2.02, 1.92, 1.76, 1.6, 1.54, 1.46, 1.38],
+      [1.93, 1.85, 1.76, 1.68, 1.54, 1.4, 1.35, 1.28, 1.21],
+      [1.66, 1.58, 1.51, 1.44, 1.32, 1.2, 1.16, 1.1, 1.04],
+      [1.38, 1.32, 1.26, 1.2, 1.1, 1, 0.95, 0.9, 0.85],
+      [1.31, 1.19, 1.13, 1.08, 0.99, 0.9, 0.86, 0.81, 0.77],
+      [1.24, 1.12, 1.07, 1.02, 0.94, 0.85, 0.81, 0.77, 0.72],
+      [1.17, 1.06, 1.01, 0.96, 0.88, 0.8, 0.76, 0.72, 0.68],
+      [1.1, 0.99, 0.95, 0.9, 0.83, 0.75, 0.71, 0.68, 0.64]
+    ],
+    "source": { "ref": "derived", "note": "TechManual-era table; Core Box table not in hand" },
+    "verify": [
+      {
+        "path": "/rows",
+        "note": "replace with the Core Box table when the booklet is read; 4/5 = 1.00 matches the box BV values",
+        "status": "unconfirmed"
+      }
+    ]
+  }
+}

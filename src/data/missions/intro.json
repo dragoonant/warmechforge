@@ -1,0 +1,45 @@
+{
+  "id": "mission.intro",
+  "name": "Intro Mission",
+  "kind": "intro",
+  "status": "ready",
+  "order": 0,
+  "briefing": "Two small lances meet in a dry canyon basin. Knock out every working enemy 'Mech, or leave them too crippled to fight, and the field is yours.",
+  "map": "map.test-canyons",
+  "sides": [
+    {
+      "id": "a",
+      "label": "Eris Lance",
+      "force": "force.intro-a",
+      "control": "either",
+      "homeEdge": "south",
+      "deployment": { "mode": "edgeEntry" }
+    },
+    {
+      "id": "b",
+      "label": "Solitaire Lance",
+      "force": "force.intro-b",
+      "control": "either",
+      "homeEdge": "north",
+      "deployment": { "mode": "edgeEntry" }
+    }
+  ],
+  "defaultHumanSide": "a",
+  "victory": [
+    { "type": "eliminate", "cripple": true }
+  ],
+  "options": { "forcedWithdrawal": "off", "halfLoads": false, "pilotCards": false },
+  "source": { "ref": "ours", "note": "shape per 11-missions section 6; booklet not read" },
+  "verify": [
+    {
+      "path": "/map",
+      "note": "the real intro map is Scorched Oasis or Arid Canyons; the hand-built test canyon stands in",
+      "status": "standIn"
+    },
+    {
+      "path": "/sides",
+      "note": "forces use stock stand-ins for two box variants; base BV a 2752 vs b 3079 (b heavier), not rebalanced",
+      "status": "standIn"
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "is.eq.single-heat-sink",
+    "name": "Heat Sink",
+    "techBase": "IS",
+    "kind": "heatSink",
+    "slots": 1,
+    "tons": 1,
+    "heatSink": { "dissipation": 1 },
+    "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }
+  },
+  {
+    "id": "is.eq.double-heat-sink",
+    "name": "Double Heat Sink",
+    "techBase": "IS",
+    "kind": "heatSink",
+    "slots": 3,
+    "tons": 1,
+    "heatSink": { "dissipation": 2 },
+    "source": { "ref": "sarna", "note": "TechManual" }
+  },
+  {
+    "id": "cl.eq.double-heat-sink",
+    "name": "Double Heat Sink",
+    "techBase": "Clan",
+    "kind": "heatSink",
+    "slots": 2,
+    "tons": 1,
+    "heatSink": { "dissipation": 2 },
+    "source": { "ref": "sarna", "note": "TechManual" }
+  },
+  {
+    "id": "is.eq.jump-jet",
+    "name": "Jump Jet",
+    "techBase": "IS",
+    "kind": "jumpJet",
+    "slots": 1,
+    "tons": "perMech",
+    "jumpJet": { "improved": false },
+    "notes": "Mount tons: 0.5 for 20-55 t, 1 for 60-85 t, 2 for 90-100 t.",
+    "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }
+  },
+  {
+    "id": "is.eq.case-ii",
+    "name": "CASE II",
+    "techBase": "IS",
+    "kind": "caseII",
+    "slots": 1,
+    "tons": 1,
+    "code": ["caseIIProtect"],
+    "source": { "ref": "sarna", "note": "TechManual" }
+  },
+  {
+    "id": "is.eq.artemis-iv",
+    "name": "Artemis IV FCS",
+    "techBase": "IS",
+    "kind": "artemis",
+    "slots": 1,
+    "tons": 1,
+    "notes": "Release 1 has no Artemis rules hook yet; it occupies its slot and weight only.",
+    "source": { "ref": "sarna", "note": "TechManual" },
+    "verify": [
+      { "path": "", "note": "no engine hook registered yet", "status": "unconfirmed" }
+    ]
+  },
+  {
+    "id": "is.eq.beagle-active-probe",
+    "name": "Beagle Active Probe",
+    "techBase": "IS",
+    "kind": "other",
+    "slots": 2,
+    "tons": 1.5,
+    "notes": "Release 1 has no probe rules; it occupies its slots and weight only.",
+    "source": { "ref": "megamek", "note": "UZL-2S MTF lists it in the left torso; 1.5 t and 2 slots per the TechManual Beagle Active Probe entry (MegaMek ISBeagleActiveProbe)" }
+  },
+  {
+    "id": "is.eq.partial-wing",
+    "name": "Partial Wing",
+    "techBase": "IS",
+    "kind": "other",
+    "slots": 4,
+    "tons": "perMech",
+    "notes": "One mount per torso. Release 1 has no wing rules; it occupies slots and weight only.",
+    "source": { "ref": "megamek", "note": "ERS-2N MTF lists four slots in each side torso; IS partial wing weighs 7% of chassis tonnage rounded up to the half ton, 3.5 t at 50 t (BattleMech Manual p.116; TacOps)" },
+    "verify": [
+      {
+        "path": "/tons",
+        "note": "RULING: the 3.5 t total is sourced; how it splits between the two torsos (2 / 1.5 in ers-2n) is ours and arbitrary, the wing has no rules in release 1; jump bonus not modelled",
+        "status": "unconfirmed"
+      }
+    ]
+  }
+]

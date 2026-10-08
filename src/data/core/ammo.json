@@ -1,0 +1,54 @@
+[
+  {
+    "id": "is.ammo.machine-gun",
+    "name": "Machine Gun Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.machine-gun"],
+    "shotsPerTon": 200,
+    "explosionPerShot": 2,
+    "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }
+  },
+  {
+    "id": "is.ammo.srm-6",
+    "name": "SRM 6 Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.srm-6"],
+    "shotsPerTon": 15,
+    "explosionPerShot": 12,
+    "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }
+  },
+  {
+    "id": "is.ammo.lrm-10",
+    "name": "LRM 10 Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.lrm-10"],
+    "shotsPerTon": 12,
+    "explosionPerShot": 10,
+    "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table" }
+  },
+  {
+    "id": "is.ammo.mml-5-lrm",
+    "name": "MML 5 LRM Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.mml-5"],
+    "shotsPerTon": 24,
+    "explosionPerShot": 5,
+    "source": { "ref": "sarna", "note": "MML 5 page" },
+    "notes": "Uses the weapon default (long-range) profile."
+  },
+  {
+    "id": "is.ammo.mml-5-srm",
+    "name": "MML 5 SRM Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.mml-5"],
+    "shotsPerTon": 20,
+    "explosionPerShot": 10,
+    "override": {
+      "damage": 2,
+      "cluster": { "rackSize": 5, "groupSize": 1 },
+      "ranges": { "short": 3, "medium": 6, "long": 9 },
+      "removeFlags": ["indirect"]
+    },
+    "source": { "ref": "sarna", "note": "MML 5 page" }
+  }
+]

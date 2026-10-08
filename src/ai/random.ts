@@ -3,7 +3,7 @@
 // - movement: closes on the nearest enemy, ends facing it, avoids risky piloting rolls and big jump heat;
 // - fire: picks the target with the best expected damage and adds weapons while the projected heat stays below shutdown;
 // - physical: kicks (or punches) when adjacent; prone units try to stand.
-// Reads only the engine's public API. Randomness: deriveSeed(seed, 'ai', side, decisionId) streams, never Math.random.
+// Reads only the engine's public API. Randomness: deriveSeed(seed, 'ai', side, decisionId) streams, never the global random source.
 import type {
   Action, DeclareFireAction, Decider, FireShot, GameState, Hex, MoveAction, PendingDecision, PlayerView, ReachEntry, UnitId,
 } from '../engine/index'

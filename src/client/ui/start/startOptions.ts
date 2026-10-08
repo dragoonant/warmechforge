@@ -34,11 +34,11 @@ export function forceView(f: ForceInfo): ForceView {
 
 export const formatBv = (n: number): string => n.toLocaleString('en-US')
 
-/** What the opponent can be. Only the random bot exists today; the others are listed but unavailable. */
+/** What the opponent can be: the random bot or the utility AI (40-ai) at easy or normal. Default normal. */
 export const OPPONENTS: readonly { id: BotTier; label: string; ready: boolean }[] = [
   { id: 'random', label: 'Random bot', ready: true },
-  { id: 'easy', label: 'Easy AI (coming later)', ready: false },
-  { id: 'normal', label: 'Normal AI (coming later)', ready: false },
+  { id: 'easy', label: 'Easy AI', ready: true },
+  { id: 'normal', label: 'Normal AI', ready: true },
 ]
 
 /** Speed choices: values are the settings store's animation speeds (0 = instant). */
@@ -83,7 +83,7 @@ export function defaultForm(cat: StartCatalogue, missionId?: string): StartForm 
   const m = cat.missions.find((x) => x.id === missionId) ?? cat.missions.find((x) => x.ready) ?? cat.missions[0]
   const mission = m?.id ?? ''
   const controllers: Record<Side, Controller> = mission ? defaultControllers(mission) : { A: 'human', B: 'bot' }
-  return { mission, forces: defaultForces(m, cat.forces), controllers, opponent: 'random', seed: '', map: null }
+  return { mission, forces: defaultForces(m, cat.forces), controllers, opponent: 'normal', seed: '', map: null }
 }
 
 /** Switch mission: forces, sides and map reset to that mission's; seed and opponent are kept. */

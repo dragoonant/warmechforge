@@ -43,7 +43,7 @@ describe('start screen model', () => {
     expect(o.mission).toBe('mission.intro')
     expect(o.forces).toEqual(['force.intro-a', 'force.intro-b'])
     expect(o.controllers).toEqual({ A: 'human', B: 'bot' })
-    expect(o.bot).toEqual({ tier: 'random' })
+    expect(o.bot).toEqual({ tier: 'normal' })
     expect(o.seed).toBe('abc')
     expect(buildStartOptions(defaultForm(cat)).seed).toBeUndefined()
     expect(cleanSeed('x'.repeat(80))).toHaveLength(40)

@@ -11,7 +11,7 @@ export function bundle(): TypedBundle {
 }
 
 export type Controller = 'human' | 'bot'
-/** Bot tiers. Only 'random' (src/ai/random.ts) exists in M3; the others play as random until the utility AI lands. */
+/** Bot tiers: 'random' (src/ai/random.ts) and the utility AI at 'easy' / 'normal' (src/ai/decider.ts, M4). */
 export type BotTier = 'random' | 'easy' | 'normal'
 export const BOT_TIERS: readonly BotTier[] = ['random', 'easy', 'normal']
 

@@ -1,4 +1,5 @@
-// M3 vertical slice, played through the real UI: start screen -> How to Play -> start the intro mission vs the random bot ->
+// M3 vertical slice, played through the real UI: start screen -> How to Play -> start the intro mission vs the bot (default
+// opponent since M4: the normal-tier utility AI, answering from its Web Worker within the watchdog) ->
 // the human moves (walk / run / jump + facing), twists, fires, kicks when it can, until a 'Mech is destroyed or turn 4.
 // The rest of the battle is then fast-forwarded (both sides handed to the bot via a save) to reach the end screen.
 // window.__game is used only to read state and to fast-forward. Screenshots land in e2e-out/ for review.
@@ -17,6 +18,11 @@ test('play the intro mission against the bot through the UI', async ({ page }) =
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
+  // the bot must answer from its worker: no AiFallback, no worker failure, no watchdog force-answer
+  const botTrouble: string[] = []
+  page.on('console', (m) => { const t = m.text(); if (/AiFallback|\[ai worker\]|\[bot\] watchdog/.test(t)) botTrouble.push(t) })
+  const workers: string[] = []
+  page.on('worker', (w) => workers.push(w.url()))
   await page.setViewportSize({ width: 1600, height: 900 })
   // fresh profile: game shop surroundings (the default), tips on
   await page.goto('./?test=1')
@@ -36,7 +42,7 @@ test('play the intro mission against the bot through the UI', async ({ page }) =
   await page.getByTestId('help-close').click()
   await expect(page.getByTestId('help-overlay')).toBeHidden()
 
-  // ---- start: intro mission, we are the Eris Lance (human), the enemy is the random bot; fixed seed for a repeatable game
+  // ---- start: intro mission, we are the Eris Lance (human), the enemy is the normal AI (the default); fixed seed
   await page.getByTestId('start-mission-intro').click()
   await page.getByTestId('start-seed').fill('7')
   await page.getByTestId('start-go').click()
@@ -144,4 +150,6 @@ test('play the intro mission against the bot through the UI', async ({ page }) =
   await expect(page.getByTestId('end-cause')).not.toBeEmpty()
   await shot(page, 'end')
   expect(errors.filter((e) => !/THREE\.|WebGL|GPU stall|X4122/.test(e))).toEqual([])
+  expect(workers.length, 'the AI ran in a Web Worker').toBeGreaterThan(0)
+  expect(botTrouble).toEqual([])
 })

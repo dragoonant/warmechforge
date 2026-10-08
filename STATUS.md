@@ -57,7 +57,20 @@
   end screen (screenshots in `e2e-out/`: start, howto, shop-wide, move, fire-prompt, record-sheet, midgame, board, shop-play,
   end). Sim: 20/20 games end, 0 violations.
 
+## M4 done (utility AI in a worker, easy/normal tiers)
+- AI: `src/ai/` utility decider per `40-ai` (`decider`, `ctx` value model, `damage` per-location marginals/pKill, `threat`
+  with sampled enemy reach, `moves` two-stage movement score, `fire` heat knapsack + primary target + twist + plan memo,
+  `physical`, `order`, `heat` caps, `tiers`, `tune`). Every rules number from `query.*` and `src/engine/prob.ts`.
+- Tiers: random, easy (noise, cap 13, no threat model), normal (full; end heat <= 9 unless kill shot / about to die).
+  Start screen opponent selector, default Normal AI.
+- Worker: `src/ai/worker.ts` + `src/client/bot/aiWorkerClient.ts` (3 s timeout, random-bot fallback); the bot driver's
+  watchdog now counts only time with no presentation progress.
+- Bench `npm run bench:ai -- --games 20 --seed 1`: normal beats random 19/20, normal vs easy 12/20; 0 rejections, stalls,
+  fallbacks, unhandled; move p95 ~110 ms, max ~150 ms.
+- Tests: 40 files, 406 unit tests (tests/ai: kill shot, heat cap, rear arc, legality over seeded games, driver). Sim 30/30,
+  0 violations. E2E plays vs the normal AI from its worker with no fallback or watchdog answer.
+
 ## Next
-- Owner playtest on Pages (feel, readability, anything confusing).
+- Owner playtest on Pages (feel, readability, anything confusing), now against the normal AI.
 - M3 figure gate: owner review of the two generated figures (`?gallery`) and the size proposal in `30-figures`.
-- M4: utility AI (`40-ai`) in a worker, threat overlay.
+- Threat overlay (T) in the client; AI trace overlay; §4.5 Monte Carlo refinement.

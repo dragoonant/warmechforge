@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/mission.schema.json",
+  "title": "Mission",
+  "description": "src/data/missions/<id>.json. Exactly two sides in release 1. Rules in 11-missions.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "kind",
+    "map",
+    "sides",
+    "victory",
+    "options",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "mission.<kebab>, e.g. mission.intro, mission.skirmish, mission.focal-point."
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/Name"
+    },
+    "kind": {
+      "enum": [
+        "intro",
+        "skirmish",
+        "box"
+      ]
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "todo"
+      ],
+      "default": "ready",
+      "description": "todo = placeholder; hidden from the start screen."
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Start-screen order."
+    },
+    "briefing": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "map": {
+      "description": "A map id, or 'choose' (the player picks a map at setup).",
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/Id"
+        },
+        {
+          "const": "choose"
+        }
+      ]
+    },
+    "mapChoices": {
+      "$ref": "common.schema.json#/$defs/IdList",
+      "description": "With map 'choose': allowed maps (absent = all ready maps)."
+    },
+    "sides": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/Side"
+      }
+    },
+    "defaultHumanSide": {
+      "$ref": "common.schema.json#/$defs/LocalId",
+      "description": "Side the human plays unless changed at setup."
+    },
+    "turnLimit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "description": "Absent = no limit."
+    },
+    "victory": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Checked in order at the end of every phase that can remove units, and at the End Phase.",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "eliminate"
+              },
+              "cripple": {
+                "type": "boolean",
+                "default": true,
+                "description": "Crippled enemy units count as eliminated (11-missions.md section 2.2)."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "turnLimitBV"
+              }
+            },
+            "description": "At turnLimit: side that eliminated more enemy BV wins; equal = draw."
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "hook"
+            ],
+            "properties": {
+              "type": {
+                "const": "objective"
+              },
+              "hook": {
+                "$ref": "common.schema.json#/$defs/HookName"
+              },
+              "params": {
+                "type": "object"
+              },
+              "text": {
+                "$ref": "common.schema.json#/$defs/Text"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "forcedWithdrawal"
+      ],
+      "properties": {
+        "forcedWithdrawal": {
+          "enum": [
+            "off",
+            "on",
+            "playerChoice"
+          ],
+          "description": "playerChoice = toggle on the setup screen, default off."
+        },
+        "halfLoads": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow the 2026 half-load setup choice."
+        },
+        "pilotCards": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow pilot cards and SPAs."
+        },
+        "bvBudget": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50000,
+          "description": "Per-side adjusted-BV cap for 'pick' forces."
+        },
+        "weather": {
+          "type": "array",
+          "maxItems": 0,
+          "description": "Reserved for M8 weather complications."
+        }
+      }
+    },
+    "specialRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/LocalId"
+          },
+          "text": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "hook": {
+            "$ref": "common.schema.json#/$defs/HookName"
+          },
+          "params": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/Source"
+    },
+    "verify": {
+      "$ref": "common.schema.json#/$defs/VerifyList"
+    }
+  },
+  "$defs": {
+    "Side": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "force",
+        "deployment",
+        "homeEdge"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/LocalId",
+          "description": "e.g. a, b."
+        },
+        "label": {
+          "$ref": "common.schema.json#/$defs/Name"
+        },
+        "force": {
+          "description": "Fixed force id, or 'pick' (built in the force picker under options.bvBudget).",
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/Id"
+            },
+            {
+              "const": "pick"
+            }
+          ]
+        },
+        "control": {
+          "enum": [
+            "human",
+            "ai",
+            "either"
+          ],
+          "default": "either"
+        },
+        "homeEdge": {
+          "$ref": "common.schema.json#/$defs/Edge",
+          "description": "Entry edge and forced-withdrawal edge."
+        },
+        "initiativeMod": {
+          "type": "integer",
+          "minimum": -4,
+          "maximum": 4,
+          "default": 0
+        },
+        "deployment": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "edgeEntry"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "depth"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "edgePlace"
+                },
+                "depth": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5,
+                  "description": "Rows/columns from the home edge where units may be placed."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "hexes"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "hexes"
+                },
+                "hexes": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "common.schema.json#/$defs/HexLabel"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,523 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/mech.schema.json",
+  "title": "BattleMech variant",
+  "description": "One file per variant: src/data/mechs/<chassis>/<model>.json. Biped only. Internal structure is derived from tonnage (tables.json), never stored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "chassis",
+    "model",
+    "tonnage",
+    "techBase",
+    "engine",
+    "movement",
+    "heatSinks",
+    "structure",
+    "armor",
+    "crits",
+    "mounts",
+    "ammoBins",
+    "bv",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "mech.<chassis-kebab>.<model-kebab>, e.g. mech.uziel.uzl-2s, mech.solitaire.3, mech.mad-cat-mk-ii.base."
+    },
+    "chassis": {
+      "$ref": "common.schema.json#/$defs/Name",
+      "description": "e.g. 'Uziel'."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24,
+      "description": "e.g. 'UZL-2S', '3', 'Prime'. Display = chassis + ' ' + model."
+    },
+    "figure": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "Figure slug for the 3D model (both variants of a chassis share one), e.g. bt-uziel."
+    },
+    "tonnage": {
+      "type": "integer",
+      "minimum": 20,
+      "maximum": 100,
+      "multipleOf": 5
+    },
+    "techBase": {
+      "$ref": "common.schema.json#/$defs/MechTechBase"
+    },
+    "omni": {
+      "type": "boolean",
+      "default": false
+    },
+    "stock": {
+      "type": "boolean",
+      "default": false,
+      "description": "true = a stock variant standing in for an unsourced box variant; UI labels it '(stock)'."
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "rating"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "standard",
+            "xl",
+            "light",
+            "compact",
+            "xxl"
+          ]
+        },
+        "techBase": {
+          "$ref": "common.schema.json#/$defs/TechBase",
+          "description": "Defaults to the mech's techBase (Mixed -> required)."
+        },
+        "rating": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 400,
+          "multipleOf": 5
+        }
+      }
+    },
+    "gyro": {
+      "enum": [
+        "standard",
+        "compact",
+        "heavyDuty",
+        "xl"
+      ],
+      "default": "standard"
+    },
+    "cockpit": {
+      "enum": [
+        "standard",
+        "small"
+      ],
+      "default": "standard"
+    },
+    "movement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "walk",
+        "run",
+        "jump"
+      ],
+      "description": "Base MP before damage/heat. run = ceil(walk * 1.5); supercharger/MASC sprint values are computed by the engine, never stored.",
+      "properties": {
+        "walk": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "run": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 30
+        },
+        "jump": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      }
+    },
+    "heatSinks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "type"
+      ],
+      "description": "count = total sinks (engine-integral + mounted). Dissipation = count x (1 single | 2 double).",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 40
+        },
+        "type": {
+          "enum": [
+            "single",
+            "double"
+          ]
+        },
+        "techBase": {
+          "$ref": "common.schema.json#/$defs/TechBase"
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "standard",
+            "endoSteel",
+            "composite",
+            "reinforced",
+            "endoComposite"
+          ]
+        },
+        "techBase": {
+          "$ref": "common.schema.json#/$defs/TechBase"
+        }
+      }
+    },
+    "armor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "front",
+        "rear"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "standard",
+            "ferroFibrous",
+            "lightFerro",
+            "heavyFerro",
+            "ferroLamellor",
+            "stealth",
+            "hardened",
+            "reactive",
+            "reflective"
+          ]
+        },
+        "techBase": {
+          "$ref": "common.schema.json#/$defs/TechBase"
+        },
+        "front": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "HD",
+            "CT",
+            "LT",
+            "RT",
+            "LA",
+            "RA",
+            "LL",
+            "RL"
+          ],
+          "properties": {
+            "HD": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "CT": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 62
+            },
+            "LT": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 42
+            },
+            "RT": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 42
+            },
+            "LA": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 34
+            },
+            "RA": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 34
+            },
+            "LL": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 42
+            },
+            "RL": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 42
+            }
+          }
+        },
+        "rear": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "CT",
+            "LT",
+            "RT"
+          ],
+          "properties": {
+            "CT": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 62
+            },
+            "LT": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 42
+            },
+            "RT": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 42
+            }
+          }
+        }
+      }
+    },
+    "crits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "HD",
+        "CT",
+        "LT",
+        "RT",
+        "LA",
+        "RA",
+        "LL",
+        "RL"
+      ],
+      "description": "Critical slot table, slot 1 first. 12 slots per torso/arm, 6 per head/leg.",
+      "properties": {
+        "HD": {
+          "$ref": "#/$defs/Slots6"
+        },
+        "CT": {
+          "$ref": "#/$defs/Slots12"
+        },
+        "LT": {
+          "$ref": "#/$defs/Slots12"
+        },
+        "RT": {
+          "$ref": "#/$defs/Slots12"
+        },
+        "LA": {
+          "$ref": "#/$defs/Slots12"
+        },
+        "RA": {
+          "$ref": "#/$defs/Slots12"
+        },
+        "LL": {
+          "$ref": "#/$defs/Slots6"
+        },
+        "RL": {
+          "$ref": "#/$defs/Slots6"
+        }
+      }
+    },
+    "mounts": {
+      "type": "array",
+      "description": "Every weapon and equipment item, one entry per physical item (each heat sink and jump jet is its own mount).",
+      "items": {
+        "$ref": "#/$defs/Mount"
+      }
+    },
+    "ammoBins": {
+      "type": "array",
+      "description": "One entry per ton of ammo (one slot each).",
+      "items": {
+        "$ref": "#/$defs/AmmoBin"
+      }
+    },
+    "bv": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000,
+      "description": "Base BV at Gunnery 4 / Piloting 5 (Core Box BV table)."
+    },
+    "quirks": {
+      "type": "array",
+      "maxItems": 0,
+      "description": "Reserved; design quirks are out of scope for release 1."
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/Source"
+    },
+    "valueSources": {
+      "type": "object",
+      "description": "Optional per-value sources keyed by JSON Pointer (e.g. '/armor/front/CT'). Overrides 'source' for that value.",
+      "propertyNames": {
+        "pattern": "^(/[^/]+)+$"
+      },
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/Source"
+      }
+    },
+    "verify": {
+      "$ref": "common.schema.json#/$defs/VerifyList"
+    }
+  },
+  "$defs": {
+    "SlotValue": {
+      "description": "A system token, or '#<mountId|binId>' for a mount or ammo bin of this mech.",
+      "oneOf": [
+        {
+          "enum": [
+            "lifeSupport",
+            "sensors",
+            "cockpit",
+            "engine",
+            "gyro",
+            "shoulder",
+            "upperArm",
+            "lowerArm",
+            "hand",
+            "hip",
+            "upperLeg",
+            "lowerLeg",
+            "foot",
+            "structure",
+            "armor",
+            "empty"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^#[a-z][a-z0-9-]{0,23}$"
+        }
+      ]
+    },
+    "Slots6": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/SlotValue"
+      }
+    },
+    "Slots12": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/SlotValue"
+      }
+    },
+    "Mount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "item",
+        "location"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/LocalId",
+          "description": "e.g. ppc-ra, hs3, jj1."
+        },
+        "item": {
+          "$ref": "common.schema.json#/$defs/Id",
+          "description": "Weapon or equipment id."
+        },
+        "location": {
+          "$ref": "common.schema.json#/$defs/Location"
+        },
+        "rear": {
+          "type": "boolean",
+          "default": false,
+          "description": "Rear-firing; only in CT/LT/RT."
+        },
+        "split": {
+          "$ref": "common.schema.json#/$defs/Location",
+          "description": "Second location for an item whose slots cross into an adjacent location."
+        },
+        "linkedTo": {
+          "$ref": "common.schema.json#/$defs/LocalId",
+          "description": "Capacitor/Artemis: the weapon mount it serves."
+        },
+        "slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12,
+          "description": "Required when the item's slots = 'perMech'."
+        },
+        "tons": {
+          "$ref": "common.schema.json#/$defs/Tons",
+          "description": "Required when the item's tons = 'perMech'."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "rear": {
+                "const": true
+              }
+            },
+            "required": [
+              "rear"
+            ]
+          },
+          "then": {
+            "properties": {
+              "location": {
+                "enum": [
+                  "CT",
+                  "LT",
+                  "RT"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AmmoBin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ammo",
+        "location"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/LocalId",
+          "description": "e.g. ammo-srm6-ct."
+        },
+        "ammo": {
+          "$ref": "common.schema.json#/$defs/Id",
+          "description": "Default ammo type loaded."
+        },
+        "options": {
+          "$ref": "common.schema.json#/$defs/IdList",
+          "description": "Alternative ammo ids the player may load at setup (LB-X slug/cluster, MML LRM/SRM). Includes 'ammo'."
+        },
+        "location": {
+          "$ref": "common.schema.json#/$defs/Location"
+        },
+        "load": {
+          "enum": [
+            "full",
+            "half"
+          ],
+          "default": "full",
+          "description": "2026 half-load option; forces/missions may override per bin."
+        }
+      }
+    }
+  }
+}

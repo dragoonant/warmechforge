@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/common.schema.json",
+  "title": "Shared primitives",
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9-]+)*$",
+      "description": "Lowercase kebab segments joined by dots, e.g. is.w.medium-laser, mech.uziel.uzl-2s."
+    },
+    "IdList": { "type": "array", "items": { "$ref": "#/$defs/Id" }, "uniqueItems": true },
+    "LocalId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,23}$",
+      "description": "Id unique inside one record (mount ids, bin ids, side ids)."
+    },
+    "Name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "Text": { "type": "string", "maxLength": 600, "description": "Our own words. Never copied rulebook or card text." },
+    "TechBase": { "enum": ["IS", "Clan"] },
+    "MechTechBase": { "enum": ["IS", "Clan", "Mixed"] },
+    "Location": {
+      "enum": ["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL"],
+      "description": "Biped 'Mech locations. Quads/tripods are out of scope for release 1."
+    },
+    "TorsoLocation": { "enum": ["CT", "LT", "RT"] },
+    "Hexes": { "type": "integer", "minimum": 0, "maximum": 60 },
+    "Tons": { "type": "number", "minimum": 0, "multipleOf": 0.5 },
+    "HexLabel": {
+      "type": "string",
+      "pattern": "^[0-9]{2}[0-9]{2}$",
+      "description": "XXYY: column then row, both 1-based, 0101 = top-left."
+    },
+    "Edge": { "enum": ["north", "south", "east", "west"] },
+    "Facing": { "type": "integer", "minimum": 0, "maximum": 5, "description": "0 = north, clockwise." },
+    "Skill": { "type": "integer", "minimum": 0, "maximum": 8 },
+    "HookName": {
+      "type": "string",
+      "pattern": "^[a-z][A-Za-z0-9]*$",
+      "description": "Registered in src/engine/code-hooks.ts; validate-data checks the registry."
+    },
+    "HookList": { "type": "array", "items": { "$ref": "#/$defs/HookName" }, "uniqueItems": true },
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": {
+          "enum": ["booklet", "core-rulebook", "agoac", "changelog", "bmm-errata", "sarna", "megamek", "mul", "review", "retailer", "derived", "ours"],
+          "description": "Where the value came from. megamek = cross-check only, never copied files."
+        },
+        "url": { "type": "string", "maxLength": 300 },
+        "note": { "type": "string", "maxLength": 300 },
+        "retrieved": { "type": "string", "format": "date" }
+      }
+    },
+    "VerifyNote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "note"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^(/[^/]+)*$", "description": "JSON Pointer into this record; '' = whole record." },
+        "note": { "type": "string", "maxLength": 300 },
+        "status": { "enum": ["unconfirmed", "standIn", "conflict"], "default": "unconfirmed" }
+      }
+    },
+    "VerifyList": { "type": "array", "items": { "$ref": "#/$defs/VerifyNote" } },
+    "Ranges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["short", "medium", "long"],
+      "description": "Upper bound of each bracket in hexes. Short = min..short (1 if no min), medium = short+1..medium, long = medium+1..long.",
+      "properties": {
+        "min": { "$ref": "#/$defs/Hexes", "default": 0, "description": "Minimum range; 0 = none. Attacks at range <= min take the min-range modifier." },
+        "short": { "type": "integer", "minimum": 1, "maximum": 60 },
+        "medium": { "type": "integer", "minimum": 1, "maximum": 60 },
+        "long": { "type": "integer", "minimum": 1, "maximum": 60 }
+      }
+    },
+    "Damage": {
+      "description": "Per shot (or per missile/pellet when cluster is set). Integer, or one value per bracket.",
+      "oneOf": [
+        { "type": "integer", "minimum": 0, "maximum": 50 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["short", "medium", "long"],
+          "properties": {
+            "short": { "type": "integer", "minimum": 0, "maximum": 50 },
+            "medium": { "type": "integer", "minimum": 0, "maximum": 50 },
+            "long": { "type": "integer", "minimum": 0, "maximum": 50 }
+          }
+        }
+      ]
+    },
+    "Cluster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rackSize", "groupSize"],
+      "description": "Cluster Hits Table use. Hits = table(rackSize, 2d6 + mods); damage applied in groups of groupSize hits, each group rolls its own location.",
+      "properties": {
+        "rackSize": { "type": "integer", "minimum": 2, "maximum": 40 },
+        "groupSize": { "type": "integer", "minimum": 1, "maximum": 5, "description": "LRM/MML-LRM = 5, SRM/Streak/MML-SRM = 1, LB-X cluster = 1." },
+        "clusterMod": { "type": "integer", "minimum": -4, "maximum": 4, "default": 0, "description": "Modifier to the Cluster Hits Table roll." }
+      }
+    },
+    "WeaponFlag": {
+      "enum": ["cluster", "streak", "pulse", "explodes", "oneShot", "rapidFire", "lbx", "indirect", "directFire", "heavyLaser", "ppc", "gauss", "ac", "missile", "energy"],
+      "description": "Semantic flags the engine and AI read. directFire = eligible for the targeting computer."
+    }
+  }
+}

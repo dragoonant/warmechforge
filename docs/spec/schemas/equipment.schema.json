@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/equipment.schema.json",
+  "title": "Non-weapon equipment",
+  "description": "One entry of src/data/core/equipment.json: anything a 'Mech mounts that is not a weapon or ammo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "techBase",
+    "kind",
+    "slots",
+    "tons",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "<is|cl>.eq.<kebab>, e.g. is.eq.double-heat-sink, cl.eq.case, is.eq.targeting-computer."
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/Name"
+    },
+    "techBase": {
+      "$ref": "common.schema.json#/$defs/TechBase"
+    },
+    "kind": {
+      "enum": [
+        "heatSink",
+        "jumpJet",
+        "case",
+        "caseII",
+        "targetingComputer",
+        "supercharger",
+        "masc",
+        "capacitor",
+        "artemis",
+        "ams",
+        "other"
+      ]
+    },
+    "slots": {
+      "description": "Fixed slot count, or 'perMech' when the mount must state its own slots (targeting computer, supercharger, MASC).",
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        {
+          "const": "perMech"
+        }
+      ]
+    },
+    "tons": {
+      "description": "Fixed tons, or 'perMech' when the mount must state its own tons (jump jets, TC, supercharger, MASC).",
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/Tons"
+        },
+        {
+          "const": "perMech"
+        }
+      ]
+    },
+    "heatSink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dissipation"
+      ],
+      "properties": {
+        "dissipation": {
+          "enum": [
+            1,
+            2
+          ]
+        }
+      }
+    },
+    "jumpJet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "improved"
+      ],
+      "properties": {
+        "improved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "explodes": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for items that blow up when crit (none in release 1 except via code hook)."
+    },
+    "critEffect": {
+      "enum": [
+        "destroy",
+        "none"
+      ],
+      "default": "destroy",
+      "description": "destroy = the item stops working when any of its slots is hit. none = slot is hit but nothing changes (CASE itself)."
+    },
+    "code": {
+      "$ref": "common.schema.json#/$defs/HookList",
+      "description": "Hooks: targetingComputer, supercharger, ppcCapacitor, caseProtect, caseIIProtect ..."
+    },
+    "notes": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/Source"
+    },
+    "verify": {
+      "$ref": "common.schema.json#/$defs/VerifyList"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "heatSink"
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "heatSink"
+        ],
+        "properties": {
+          "heatSink": true
+        }
+      },
+      "else": {
+        "type": "object",
+        "not": {
+          "type": "object",
+          "required": [
+            "heatSink"
+          ],
+          "properties": {
+            "heatSink": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "jumpJet"
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "jumpJet"
+        ],
+        "properties": {
+          "jumpJet": true
+        }
+      },
+      "else": {
+        "type": "object",
+        "not": {
+          "type": "object",
+          "required": [
+            "jumpJet"
+          ],
+          "properties": {
+            "jumpJet": true
+          }
+        }
+      }
+    }
+  ]
+}

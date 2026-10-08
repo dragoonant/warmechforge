@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/weapon.schema.json",
+  "title": "Weapon",
+  "description": "One entry of src/data/core/weapons.json. Numbers are 2026 Core Rules values; unconfirmed ones carry verify notes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "techBase",
+    "category",
+    "heat",
+    "damage",
+    "ranges",
+    "slots",
+    "tons",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "<is|cl>.w.<kebab>, e.g. is.w.medium-laser, cl.w.er-medium-laser."
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/Name",
+      "description": "Display name, e.g. 'ER Medium Laser'."
+    },
+    "shortName": {
+      "type": "string",
+      "maxLength": 14,
+      "description": "Record-sheet column label, e.g. 'ER ML'."
+    },
+    "techBase": {
+      "$ref": "common.schema.json#/$defs/TechBase"
+    },
+    "category": {
+      "enum": [
+        "energy",
+        "ballistic",
+        "missile"
+      ]
+    },
+    "heat": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 30,
+      "description": "Per firing; for rapidFire, per shot."
+    },
+    "damage": {
+      "$ref": "common.schema.json#/$defs/Damage",
+      "description": "Per shot; with cluster set, per missile/pellet."
+    },
+    "cluster": {
+      "$ref": "common.schema.json#/$defs/Cluster"
+    },
+    "ranges": {
+      "$ref": "common.schema.json#/$defs/Ranges"
+    },
+    "toHitMod": {
+      "type": "integer",
+      "minimum": -4,
+      "maximum": 4,
+      "default": 0,
+      "description": "Built-in attack modifier: pulse -2, heavy laser +1, LB-X cluster ammo sets its own via ammo override."
+    },
+    "slots": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 15
+    },
+    "tons": {
+      "$ref": "common.schema.json#/$defs/Tons"
+    },
+    "ammo": {
+      "$ref": "common.schema.json#/$defs/IdList",
+      "description": "Ammo ids this weapon can fire. Empty/absent = no ammo (energy). First entry is the default load."
+    },
+    "flags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/WeaponFlag"
+      }
+    },
+    "rapidFire": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modes"
+      ],
+      "description": "Shots-per-turn choices (RAC 1/2/4/6, Ultra 1/2). Each shot costs heat and one round. Multi-shot modes roll the Cluster Hits Table with rackSize = shots.",
+      "properties": {
+        "modes": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          }
+        },
+        "jamHook": {
+          "$ref": "common.schema.json#/$defs/HookName"
+        }
+      }
+    },
+    "linkable": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "capacitor",
+          "artemis",
+          "targetingComputer"
+        ]
+      },
+      "description": "Equipment that may link to a mount of this weapon."
+    },
+    "code": {
+      "$ref": "common.schema.json#/$defs/HookList",
+      "description": "Escape-hatch hooks for rules not expressed by fields (e.g. improvedHeavyGauss, xPulse)."
+    },
+    "notes": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/Source"
+    },
+    "verify": {
+      "$ref": "common.schema.json#/$defs/VerifyList"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "flags"
+        ],
+        "properties": {
+          "flags": {
+            "type": "array",
+            "contains": {
+              "const": "cluster"
+            }
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "cluster"
+        ],
+        "properties": {
+          "cluster": true
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "cluster"
+        ],
+        "properties": {
+          "cluster": true
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "flags"
+        ],
+        "properties": {
+          "flags": {
+            "type": "array",
+            "contains": {
+              "const": "cluster"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "flags"
+        ],
+        "properties": {
+          "flags": {
+            "type": "array",
+            "contains": {
+              "const": "rapidFire"
+            }
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "rapidFire"
+        ],
+        "properties": {
+          "rapidFire": true
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "enum": [
+              "ballistic",
+              "missile"
+            ]
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "ammo"
+        ],
+        "properties": {
+          "ammo": true
+        }
+      }
+    }
+  ]
+}

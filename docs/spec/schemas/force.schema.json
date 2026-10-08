@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/force.schema.json",
+  "title": "Force (lance)",
+  "description": "src/data/forces/<id>.json, or built at runtime by the force picker with the same shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "units"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id", "description": "force.<kebab>, e.g. force.intro-inner-sphere." },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "faction": { "type": "string", "maxLength": 40 },
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "description": "Team tint for figures and UI." },
+    "bvBudget": { "type": "integer", "minimum": 0, "maximum": 50000, "description": "If set, validate-data and the picker reject adjusted totals above it." },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mech"],
+        "properties": {
+          "slot": { "$ref": "common.schema.json#/$defs/LocalId", "description": "Unit id within the force, e.g. u1. Defaults to u<index+1>." },
+          "mech": { "$ref": "common.schema.json#/$defs/Id" },
+          "pilot": { "$ref": "common.schema.json#/$defs/Id", "description": "Pilot card id; omitted = generic pilot." },
+          "skills": {
+            "type": "object", "additionalProperties": false, "required": ["gunnery", "piloting"],
+            "description": "Overrides the pilot card skills (or sets a generic pilot's). Default 4/5.",
+            "properties": { "gunnery": { "$ref": "common.schema.json#/$defs/Skill" }, "piloting": { "$ref": "common.schema.json#/$defs/Skill" } }
+          },
+          "name": { "type": "string", "maxLength": 30, "description": "Generic pilot display name." },
+          "ammo": {
+            "type": "object",
+            "description": "Setup choice per bin id: an ammo id from that bin's options.",
+            "propertyNames": { "$ref": "common.schema.json#/$defs/LocalId" },
+            "additionalProperties": { "$ref": "common.schema.json#/$defs/Id" }
+          },
+          "halfLoad": {
+            "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/LocalId" },
+            "description": "Bin ids that start with a half load (2026 rule)."
+          }
+        }
+      }
+    },
+    "source": { "$ref": "common.schema.json#/$defs/Source" },
+    "verify": { "$ref": "common.schema.json#/$defs/VerifyList" }
+  }
+}

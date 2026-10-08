@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/tables.schema.json",
+  "title": "Core data tables",
+  "description": "src/data/core/tables.json. Rules tables owned by 10-rules-core (to-hit, cluster, hit location, heat) may be added as further properties by that spec.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["internalStructure", "bvSkillMultiplier"],
+  "properties": {
+    "internalStructure": {
+      "type": "object",
+      "description": "Key = tonnage as a string, '20'..'100' step 5. Values per location; LT/RT share 'sideTorso', LA/RA share 'arm', LL/RL share 'leg'. Head is always 3.",
+      "propertyNames": { "pattern": "^(20|25|30|35|40|45|50|55|60|65|70|75|80|85|90|95|100)$" },
+      "minProperties": 17,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["HD", "CT", "sideTorso", "arm", "leg"],
+        "properties": {
+          "HD": { "const": 3 },
+          "CT": { "type": "integer", "minimum": 1, "maximum": 31 },
+          "sideTorso": { "type": "integer", "minimum": 1, "maximum": 21 },
+          "arm": { "type": "integer", "minimum": 1, "maximum": 17 },
+          "leg": { "type": "integer", "minimum": 1, "maximum": 21 }
+        }
+      }
+    },
+    "bvSkillMultiplier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "source"],
+      "properties": {
+        "rows": {
+          "type": "array",
+          "description": "rows[gunnery][piloting], gunnery 0..8, piloting 0..8. rows[4][5] must be 1.",
+          "minItems": 9, "maxItems": 9,
+          "items": { "type": "array", "minItems": 9, "maxItems": 9, "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 5 } }
+        },
+        "source": { "$ref": "common.schema.json#/$defs/Source" },
+        "verify": { "$ref": "common.schema.json#/$defs/VerifyList" }
+      }
+    }
+  }
+}

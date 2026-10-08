@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/pilot.schema.json",
+  "title": "MechWarrior (pilot card)",
+  "description": "One entry of src/data/pilots/pilots.json. Names are real card names; any bio text is our own words.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "gunnery", "piloting", "spas", "source"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id", "description": "pilot.<kebab-name>, e.g. pilot.bitala-van-austen." },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "callsign": { "type": "string", "maxLength": 30 },
+    "affiliation": { "type": "string", "maxLength": 40 },
+    "gunnery": { "$ref": "common.schema.json#/$defs/Skill" },
+    "piloting": { "$ref": "common.schema.json#/$defs/Skill" },
+    "spas": { "$ref": "common.schema.json#/$defs/IdList", "description": "SPA ids; Core Box cards carry exactly one." },
+    "preferredMech": { "$ref": "common.schema.json#/$defs/Id", "description": "Chassis or variant the card is drawn with, if any (UI hint only)." },
+    "bio": { "$ref": "common.schema.json#/$defs/Text" },
+    "portrait": { "type": "string", "maxLength": 120, "description": "Path under public/assets/ui/ to our own generated art." },
+    "source": { "$ref": "common.schema.json#/$defs/Source" },
+    "verify": { "$ref": "common.schema.json#/$defs/VerifyList" }
+  }
+}

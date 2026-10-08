@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/ammo.schema.json",
+  "title": "Ammunition type",
+  "description": "One entry of src/data/core/ammo.json. One ton of this ammo fills one critical slot (one bin).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "techBase",
+    "weapons",
+    "shotsPerTon",
+    "explosionPerShot",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "<is|cl>.ammo.<kebab>, e.g. is.ammo.lrm-10, cl.ammo.lb-20x-cluster, is.ammo.mml-5-srm."
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/Name"
+    },
+    "techBase": {
+      "$ref": "common.schema.json#/$defs/TechBase"
+    },
+    "weapons": {
+      "$ref": "common.schema.json#/$defs/IdList",
+      "description": "Weapon ids that may fire it (each must list this id in its own 'ammo')."
+    },
+    "shotsPerTon": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "description": "Full-load shots in one bin. A half load (2026) = floor(shotsPerTon / 2)."
+    },
+    "explodes": {
+      "type": "boolean",
+      "default": true,
+      "description": "false only for inert rounds (Gauss slugs)."
+    },
+    "explosionPerShot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 40,
+      "description": "Damage per remaining shot when the bin explodes (missiles: damage per missile x rack size). Internal explosion damage is capped at 20 (2026); the engine applies the cap."
+    },
+    "override": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Fields that replace the firing weapon's profile while this ammo is loaded (MML LRM/SRM, LB-X slug/cluster).",
+      "properties": {
+        "damage": {
+          "$ref": "common.schema.json#/$defs/Damage"
+        },
+        "cluster": {
+          "$ref": "common.schema.json#/$defs/Cluster"
+        },
+        "noCluster": {
+          "const": true,
+          "description": "Removes the weapon's cluster block (LB-X slug)."
+        },
+        "ranges": {
+          "$ref": "common.schema.json#/$defs/Ranges"
+        },
+        "toHitMod": {
+          "type": "integer",
+          "minimum": -4,
+          "maximum": 4
+        },
+        "addFlags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/WeaponFlag"
+          }
+        },
+        "removeFlags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/WeaponFlag"
+          }
+        }
+      }
+    },
+    "code": {
+      "$ref": "common.schema.json#/$defs/HookList"
+    },
+    "notes": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/Source"
+    },
+    "verify": {
+      "$ref": "common.schema.json#/$defs/VerifyList"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "explodes"
+        ],
+        "properties": {
+          "explodes": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "explosionPerShot": {
+            "const": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "override"
+        ],
+        "properties": {
+          "override": {
+            "type": "object",
+            "required": [
+              "noCluster"
+            ],
+            "properties": {
+              "noCluster": true
+            }
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "override": {
+            "type": "object",
+            "not": {
+              "type": "object",
+              "required": [
+                "cluster"
+              ],
+              "properties": {
+                "cluster": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

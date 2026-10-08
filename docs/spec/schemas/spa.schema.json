@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/spa.schema.json",
+  "title": "Special Pilot Ability",
+  "description": "One entry of src/data/core/spas.json. Behaviour lives in a code hook; text is our own words.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "cost", "text", "hook", "source"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id", "description": "spa.<kebab-name>, e.g. spa.sniper." },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "cost": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Card cost (Core Box cards: 2)." },
+    "text": { "$ref": "common.schema.json#/$defs/Text", "description": "Our paraphrase of what the ability does, <= 600 chars." },
+    "hook": { "$ref": "common.schema.json#/$defs/HookName", "description": "Registered in src/engine/code-hooks.ts under spa.<hook>." },
+    "windows": {
+      "type": "array", "uniqueItems": true,
+      "items": { "enum": ["passive", "initiative", "movement", "attackDeclare", "toHit", "hitLocation", "cluster", "damage", "crit", "psr", "heat", "consciousness", "endPhase", "setup"] },
+      "description": "Phases where the hook is consulted (for UI badges and AI)."
+    },
+    "params": { "type": "object", "description": "Free-form numbers for the hook, e.g. {\"weaponCategory\": \"energy\", \"mod\": -1}." },
+    "usage": { "enum": ["always", "oncePerTurn", "oncePerGame", "choice"], "default": "always" },
+    "source": { "$ref": "common.schema.json#/$defs/Source" },
+    "verify": { "$ref": "common.schema.json#/$defs/VerifyList" }
+  }
+}

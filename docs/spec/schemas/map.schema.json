@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://warmechforge.dev/schemas/map.schema.json",
+  "title": "Hex map",
+  "description": "src/data/maps/<id>.json. Either a single sheet with its own hexes, or a composition of sheets. Hexes not listed are clear, level 'defaultLevel'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "theme",
+    "width",
+    "height",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/Id",
+      "description": "map.<kebab>, e.g. map.scorched-oasis."
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/Name"
+    },
+    "theme": {
+      "enum": [
+        "grasslands",
+        "desert"
+      ],
+      "description": "Selects ground mat, light and fog tint."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 4,
+      "maximum": 99,
+      "description": "Columns (XX). Standard sheet = 16."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 4,
+      "maximum": 99,
+      "description": "Rows (YY). Standard sheet = 17."
+    },
+    "defaultLevel": {
+      "type": "integer",
+      "minimum": -5,
+      "maximum": 10,
+      "default": 0
+    },
+    "hexes": {
+      "type": "object",
+      "description": "Sparse: key = XXYY label within width x height.",
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/HexLabel"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Hex"
+      }
+    },
+    "sheets": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Composite map: each placed sheet's hexes are copied in (later sheets win on overlap; validate-data rejects overlaps). Mutually exclusive with 'hexes'.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "map",
+          "col",
+          "row"
+        ],
+        "properties": {
+          "map": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "col": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Column offset (0 = flush left). Must be even so column parity is kept."
+          },
+          "row": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "rotate180": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "notes": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/Source"
+    },
+    "verify": {
+      "$ref": "common.schema.json#/$defs/VerifyList"
+    }
+  },
+  "$defs": {
+    "Hex": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": -5,
+          "maximum": 10,
+          "description": "Ground level; for water, the surface level (bottom = level - depth)."
+        },
+        "terrain": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/Feature"
+          },
+          "description": "At most one of lightWoods/heavyWoods/rough/rubble/water/building per hex; allowed combinations are in 20-data-schema.md section 8."
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Optional place name shown on hover (our own)."
+        }
+      }
+    },
+    "Feature": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "lightWoods",
+                "heavyWoods",
+                "rough",
+                "rubble",
+                "pavement",
+                "sand",
+                "mud",
+                "swamp",
+                "ice",
+                "snow",
+                "foliage"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "depth"
+          ],
+          "properties": {
+            "type": {
+              "const": "water"
+            },
+            "depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "exits"
+          ],
+          "properties": {
+            "type": {
+              "const": "road"
+            },
+            "exits": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "common.schema.json#/$defs/Facing"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "class",
+            "cf",
+            "height"
+          ],
+          "description": "Reserved for M8+; rules not in release 1.",
+          "properties": {
+            "type": {
+              "const": "building"
+            },
+            "class": {
+              "enum": [
+                "light",
+                "medium",
+                "heavy",
+                "hardened"
+              ]
+            },
+            "cf": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 150
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "hexes"
+      ],
+      "properties": {
+        "hexes": true
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "sheets"
+      ],
+      "properties": {
+        "sheets": true
+      }
+    }
+  ]
+}

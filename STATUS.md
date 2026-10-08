@@ -111,11 +111,13 @@
   `src/client/audio/trims.ts`. Generation used 756 credits (account 27,876 of 59,062).
 - Client: `src/client/audio/` Web Audio manager (master / sfx / voice / music buses, sfx limiter, persisted volumes and mute in
   Settings, unlock on first input, throttling with detune), beat-to-sound mapping in `beatAudio.ts` / `eventSounds.ts` hooked
-  into the presentation director. Music director (title, alternating battle loops, stingers, 2 s crossfades, ducking under
-  voice) is wired but silent: the 10 music items are `pending: true` in the runtime manifest and never requested.
+  into the presentation director. Music director: title theme, battle loops alternating 1a, 2a, 1b, 2b, victory / defeat
+  stingers, 2 s crossfades, ducked under voice; music trims match the SFX RMS and the music bus sits 14 dB lower.
 - Audition: `/warmechforge/sounds.html` lists every id. Verified headless: 65/65 decode, 0 failed, 0 console errors in a
   human game and a bot-vs-bot game (weapons, impacts, crits, footsteps, falls, narrator all fire).
-- Not yet: music (about 12k credits, needs owner OK; when generated, drop `pending` from those manifest rows).
+- Music: 10 tracks in `public/audio/music/` (title 75 s, two battle loops 150 s, victory / defeat 12 s; two candidates each; about
+  9.9k credits, account 37,870 of 59,062). Verified headless: title, battle, victory and defeat scenes start with 0 console errors,
+  and sounds.html plays all 75 rows. Owner picks -a or -b per slot on sounds.html.
 
 ## M8a done (equipment controls, Skirmish options, ferro-lamellor previews, lance balance)
 - Client: Fire panel "2 shots" for Ultra ACs, "Charge" for capacitor PPCs (held for +5 next turn), "Vent coolant pod" with the
@@ -135,4 +137,4 @@
 ## Next
 - Owner playtest on Pages: Skirmish with turn limit, forced withdrawal and "AI picks a force"; try 2 shots, Charge, Vent, MASC.
 - Re-baseline the AI bench on the rebalanced intro (or a fixed mirror); 40-ai §4.5 Monte Carlo.
-- M8b: smoke / hidden units (Beagle probe effects), figure gate follow-ups, music once the owner OKs the spend.
+- M8b: smoke / hidden units (Beagle probe effects), figure gate follow-ups, keep the owner's music picks.

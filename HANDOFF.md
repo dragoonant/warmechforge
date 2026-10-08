@@ -6,7 +6,7 @@ random bot, then walk, run or jump your two 'Mechs, pick facings, twist torsos, 
 number explained, and kick or punch at close range, until one side is down. The board sits on a table in a little game shop
 (Settings > Surroundings switches to a plain dark surround). Screenshots of a played game are in `e2e-out/` (local).
 M4 (utility AI in a worker, easy/normal tiers) is running/next; see Current state.
-M6 audio is in: audition every sound at https://dragoonant.github.io/warmechforge/sounds.html and name the ids to redo; music is not generated yet (needs your OK, about 12k credits).
+M6 audio is in, now with music: audition at https://dragoonant.github.io/warmechforge/sounds.html, name the ids to redo, and say -a or -b for each music slot (title, battle 1, battle 2, victory, defeat).
 
 Data notes: the box's new variants (Solitaire 3, Rakshasa MDG-3D, Hollander BZK-W4, Vulture E...) have no public stats yet
 (Sarna, MegaMek, MUL checked 2026-10-08; only BVs known), so the slice uses stock Solitaire Prime and Rakshasa MDG-1A,
@@ -16,8 +16,7 @@ Questions:
 1. Figure gate: do the Solitaire and Regent look right (`art/figure-sheets/bt-solitaire.png`, `bt-regent.png`, and the
    torso-twist / arm-loss sheets `*-split.png`; in game: `?gallery`)? Proportions are close to the real sculpts, only
    lightly stylised. Approve, or say "chunkier" / "more stylised", and I'll make the other six to match.
-3. Music: generate the title theme, two battle loops and victory / defeat stingers (two candidates each, about 12k
-   ElevenLabs credits)? SFX and voice are done (756 credits; account at 27,876 of 59,062).
+3. Music is generated (10 tracks, about 9.9k credits; account at 37,870 of 59,062): pick -a or -b per slot on sounds.html.
 2. Rulings: `docs/needs-rules-check.md` has every judgement call (about 120 lines). Skim when convenient; a newer 2026
    rulebook would settle most of them.
 
@@ -61,7 +60,7 @@ M8a: you can now use that equipment yourself (Ultra AC "2 shots", PPC "Charge", 
 1. Owner playtest on Pages: Skirmish with turn limit 8, forced withdrawal and "AI picks a force"; use 2 shots, Charge, Vent, MASC
    (Regent A: Charge + Vent; Solitaire 2: MASC; Vulture Mk IV A: 2 shots).
 2. Re-baseline the AI bench on the now-even intro (or bench a fixed mirror); 40-ai §4.5 Monte Carlo. List: `tools/out/m8-followups.md`.
-3. M8b: smoke and hidden units (Beagle probe effects), figure-gate follow-ups, music once the owner OKs the spend.
+3. M8b: smoke and hidden units (Beagle probe effects), figure-gate follow-ups; keep the music candidates the owner picks.
 
 ## Known gaps
 - Previews do not model crit chains inside one attack (an ammo explosion emptying a location mid-cluster).

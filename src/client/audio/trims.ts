@@ -63,4 +63,15 @@ export const TRIMS: Record<string, number> = {
   'wp-ppc': 0.72,
   'wp-srm': 0.6,
   'ph-dfa': 1.2,
+  // Music: normalised to the SFX target (RMS ~0.165); the music bus then sits MUSIC_DB (-14 dB) below SFX.
+  'mus-battle1-a': 0.84,
+  'mus-battle1-b': 0.92,
+  'mus-battle2-a': 0.81,
+  'mus-battle2-b': 0.87,
+  'mus-defeat-a': 1.42,
+  'mus-defeat-b': 0.89,
+  'mus-title-a': 0.79,
+  'mus-title-b': 0.85,
+  'mus-victory-a': 0.88,
+  'mus-victory-b': 0.85,
 }

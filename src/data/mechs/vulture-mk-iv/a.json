@@ -1,0 +1,69 @@
+{
+  "id": "mech.vulture-mk-iv.a",
+  "chassis": "Vulture Mk IV",
+  "model": "A",
+  "figure": "bt-vulture-mk-iv",
+  "tonnage": 60,
+  "techBase": "Clan",
+  "omni": true,
+  "stock": true,
+  "engine": { "type": "xl", "rating": 300 },
+  "movement": { "walk": 5, "run": 8, "jump": 0 },
+  "heatSinks": { "count": 12, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroLamellor",
+    "front": { "HD": 9, "CT": 30, "LT": 20, "RT": 20, "LA": 20, "RA": 20, "LL": 28, "RL": 28 },
+    "rear": { "CT": 10, "LT": 8, "RT": 8 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "structure", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#ersl-ct", "#ersl-ct2"],
+    "LT": ["engine", "engine", "#lrm5-lt", "#lrm5-lt2", "#ammo-lrm5-lt", "structure", "structure", "structure", "empty", "empty", "empty", "empty"],
+    "RT": ["engine", "engine", "#lrm5-rt", "#lrm5-rt2", "#ammo-lrm5-rt", "structure", "structure", "structure", "empty", "empty", "empty", "empty"],
+    "LA": ["shoulder", "upperArm", "#uac10-la", "#uac10-la", "#uac10-la", "#uac10-la", "#ammo-uac10-la", "#ammo-uac10-la2", "armor", "armor", "armor", "armor"],
+    "RA": ["shoulder", "upperArm", "#lpl-ra", "#lpl-ra", "armor", "armor", "armor", "armor", "empty", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "armor", "armor"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "armor", "armor"]
+  },
+  "mounts": [
+    { "id": "ersl-ct", "item": "cl.w.er-small-laser", "location": "CT" },
+    { "id": "ersl-ct2", "item": "cl.w.er-small-laser", "location": "CT" },
+    { "id": "lrm5-lt", "item": "cl.w.lrm-5", "location": "LT" },
+    { "id": "lrm5-lt2", "item": "cl.w.lrm-5", "location": "LT" },
+    { "id": "lrm5-rt", "item": "cl.w.lrm-5", "location": "RT" },
+    { "id": "lrm5-rt2", "item": "cl.w.lrm-5", "location": "RT" },
+    { "id": "uac10-la", "item": "cl.w.ultra-ac-10", "location": "LA" },
+    { "id": "lpl-ra", "item": "cl.w.large-pulse-laser", "location": "RA" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-lrm5-lt", "ammo": "cl.ammo.lrm-5", "location": "LT" },
+    { "id": "ammo-lrm5-rt", "ammo": "cl.ammo.lrm-5", "location": "RT" },
+    { "id": "ammo-uac10-la", "ammo": "cl.ammo.uac-10", "location": "LA" },
+    { "id": "ammo-uac10-la2", "ammo": "cl.ammo.uac-10", "location": "LA" }
+  ],
+  "bv": 2177,
+  "source": {
+    "ref": "megamek",
+    "note": "Vulture Mk IV A MTF (mm-data 3145/Merc) cross-check; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "2177 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Vulture Mk IV A standing in for the box's second Vulture Mk IV variant, whose stats are not public",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (stable, non_standard, pro_actuator)",
+      "status": "unconfirmed"
+    }
+  ]
+}

@@ -446,6 +446,8 @@ Conventions used below:
 | EQUIP-011 | Ultra AC firing at double rate never jams (no jam roll exists) | P1 |
 | EQUIP-012 | Firing a heavy Gauss rifle triggers no PSR | P2 |
 | EQUIP-013 | Capacitor PPC attack roll `[1,1]` does not destroy the capacitor | P2 |
+| EQUIP-014 | Ferro-lamellor: 5 points to armored LA land as 4, 6 as 4, 1 as 0 (no pilot hit on the head); bare structure and explosions are not reduced | P2 |
+| EQUIP-015 | Guardian ECM: Artemis +2 drops to 0 when the attacker or target is within 6 hexes of an operating hostile ECM; friendly or shut-down ECM does nothing | P2 |
 | EQUIP-020 | MASC used 3 turns running: avoid TNs 3, 5, 7; a failure makes one crit check on a random leg | P2 |
 | EQUIP-030 | Data containing flail, flechette/fragmentation ammo, full-head ejection, industrial weapons, mechanical jump boosters or UMUs fails validation | P1 |
 

@@ -1,0 +1,66 @@
+{
+  "id": "mech.eris.ers-2h",
+  "chassis": "Eris",
+  "model": "ERS-2H",
+  "figure": "bt-eris",
+  "tonnage": 50,
+  "techBase": "IS",
+  "stock": true,
+  "engine": { "type": "xl", "rating": 250 },
+  "movement": { "walk": 5, "run": 8, "jump": 5 },
+  "heatSinks": { "count": 14, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "standard",
+    "front": { "HD": 9, "CT": 23, "LT": 18, "RT": 18, "LA": 15, "RA": 15, "LL": 22, "RL": 22 },
+    "rear": { "CT": 8, "LT": 5, "RT": 5 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "empty", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#jj1", "structure"],
+    "LT": ["engine", "engine", "engine", "#hs1", "#hs1", "#hs1", "#ssrm6-lt", "#ssrm6-lt", "#ammo-ssrm6-lt", "#case2-lt", "structure", "structure"],
+    "RT": ["engine", "engine", "engine", "#hs2", "#hs2", "#hs2", "#hs3", "#hs3", "#hs3", "#hs4", "#hs4", "#hs4"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "#erml-la", "#erml-la2", "structure", "structure", "structure", "structure", "structure", "structure"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "#hppc-ra", "#hppc-ra", "#hppc-ra", "#hppc-ra", "structure", "structure", "structure", "structure", "structure"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "#jj2", "#jj3"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "#jj4", "#jj5"]
+  },
+  "mounts": [
+    { "id": "jj1", "item": "is.eq.jump-jet", "location": "CT", "tons": 0.5 },
+    { "id": "hs1", "item": "is.eq.double-heat-sink", "location": "LT" },
+    { "id": "ssrm6-lt", "item": "is.w.streak-srm-6", "location": "LT" },
+    { "id": "case2-lt", "item": "is.eq.case-ii", "location": "LT" },
+    { "id": "hs2", "item": "is.eq.double-heat-sink", "location": "RT" },
+    { "id": "hs3", "item": "is.eq.double-heat-sink", "location": "RT" },
+    { "id": "hs4", "item": "is.eq.double-heat-sink", "location": "RT" },
+    { "id": "erml-la", "item": "is.w.er-medium-laser", "location": "LA" },
+    { "id": "erml-la2", "item": "is.w.er-medium-laser", "location": "LA" },
+    { "id": "hppc-ra", "item": "is.w.heavy-ppc", "location": "RA" },
+    { "id": "jj2", "item": "is.eq.jump-jet", "location": "LL", "tons": 0.5 },
+    { "id": "jj3", "item": "is.eq.jump-jet", "location": "LL", "tons": 0.5 },
+    { "id": "jj4", "item": "is.eq.jump-jet", "location": "RL", "tons": 0.5 },
+    { "id": "jj5", "item": "is.eq.jump-jet", "location": "RL", "tons": 0.5 }
+  ],
+  "ammoBins": [
+    { "id": "ammo-ssrm6-lt", "ammo": "is.ammo.streak-srm-6", "location": "LT" }
+  ],
+  "bv": 1674,
+  "source": {
+    "ref": "megamek",
+    "note": "Eris ERS-2H MTF (mm-data Rec Guides ilClan/Vol 18) cross-check; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "1674 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Eris ERS-2H standing in for the box's second Eris variant, whose stats are not public",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    }
+  ]
+}

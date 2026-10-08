@@ -1,0 +1,82 @@
+{
+  "id": "mech.regent.prime",
+  "chassis": "Regent",
+  "model": "Prime",
+  "figure": "bt-regent",
+  "tonnage": 90,
+  "techBase": "Clan",
+  "omni": true,
+  "engine": { "type": "standard", "rating": 270 },
+  "movement": { "walk": 3, "run": 5, "jump": 0 },
+  "heatSinks": { "count": 19, "type": "double" },
+  "structure": { "type": "standard" },
+  "armor": {
+    "type": "standard",
+    "front": { "HD": 9, "CT": 42, "LT": 28, "RT": 28, "LA": 30, "RA": 30, "LL": 38, "RL": 38 },
+    "rear": { "CT": 16, "LT": 10, "RT": 10 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "#micro-hd", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#hs1", "#hs1"],
+    "LT": ["#hs2", "#hs2", "#hs3", "#hs3", "#hs4", "#hs4", "#erll-lt", "#ssrm4-lt", "#ammo-ssrm4-lt", "#ammo-lb20-slug-lt", "#ammo-lb20-clu-lt", "#case2-lt"],
+    "RT": ["#hs5", "#hs5", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#lb20-rt", "#erll-rt"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "#hs6", "#hs6", "#mpl-la", "empty", "empty", "empty", "empty", "empty"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "#hs7", "#hs7", "#erll-ra", "#mpl-ra", "empty", "empty", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "#hs8", "#hs8"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "#hs9", "#hs9"]
+  },
+  "mounts": [
+    { "id": "micro-hd", "item": "cl.w.micro-pulse-laser", "location": "HD" },
+    { "id": "hs1", "item": "cl.eq.double-heat-sink", "location": "CT" },
+    { "id": "hs2", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "hs3", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "hs4", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "erll-lt", "item": "cl.w.er-large-laser", "location": "LT" },
+    { "id": "ssrm4-lt", "item": "cl.w.streak-srm-4", "location": "LT" },
+    { "id": "case2-lt", "item": "cl.eq.case-ii", "location": "LT" },
+    { "id": "hs5", "item": "cl.eq.double-heat-sink", "location": "RT" },
+    { "id": "lb20-rt", "item": "cl.w.lb-20x", "location": "RT" },
+    { "id": "erll-rt", "item": "cl.w.er-large-laser", "location": "RT" },
+    { "id": "hs6", "item": "cl.eq.double-heat-sink", "location": "LA" },
+    { "id": "mpl-la", "item": "cl.w.medium-pulse-laser", "location": "LA" },
+    { "id": "hs7", "item": "cl.eq.double-heat-sink", "location": "RA" },
+    { "id": "erll-ra", "item": "cl.w.er-large-laser", "location": "RA" },
+    { "id": "mpl-ra", "item": "cl.w.medium-pulse-laser", "location": "RA" },
+    { "id": "hs8", "item": "cl.eq.double-heat-sink", "location": "LL" },
+    { "id": "hs9", "item": "cl.eq.double-heat-sink", "location": "RL" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-ssrm4-lt", "ammo": "cl.ammo.streak-srm-4", "location": "LT" },
+    {
+      "id": "ammo-lb20-slug-lt",
+      "ammo": "cl.ammo.lb-20x-slug",
+      "location": "LT",
+      "options": ["cl.ammo.lb-20x-slug", "cl.ammo.lb-20x-cluster"]
+    },
+    {
+      "id": "ammo-lb20-clu-lt",
+      "ammo": "cl.ammo.lb-20x-cluster",
+      "location": "LT",
+      "options": ["cl.ammo.lb-20x-slug", "cl.ammo.lb-20x-cluster"]
+    }
+  ],
+  "bv": 2437,
+  "source": {
+    "ref": "megamek",
+    "note": "Regent Prime MTF (mm-data Rec Guides ilClan/Vol 21) cross-check; armor, engine, heat sinks and weapons also match docs/BATTLETECH-HANDOFF.md; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "2437 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (easy_maintain)",
+      "status": "unconfirmed"
+    }
+  ]
+}

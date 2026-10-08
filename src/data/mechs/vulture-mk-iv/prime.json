@@ -1,0 +1,73 @@
+{
+  "id": "mech.vulture-mk-iv.prime",
+  "chassis": "Vulture Mk IV",
+  "model": "Prime",
+  "figure": "bt-vulture-mk-iv",
+  "tonnage": 60,
+  "techBase": "Clan",
+  "omni": true,
+  "stock": true,
+  "engine": { "type": "xl", "rating": 300 },
+  "movement": { "walk": 5, "run": 8, "jump": 0 },
+  "heatSinks": { "count": 12, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroLamellor",
+    "front": { "HD": 9, "CT": 30, "LT": 20, "RT": 20, "LA": 20, "RA": 20, "LL": 28, "RL": 28 },
+    "rear": { "CT": 10, "LT": 8, "RT": 8 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "structure", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#ersp-ct", "#ersp-ct2"],
+    "LT": ["engine", "engine", "#srm6-lt", "#srm6-lt2", "#ammo-srm6-lt", "structure", "structure", "structure", "empty", "empty", "empty", "empty"],
+    "RT": ["engine", "engine", "#srm6-rt", "#srm6-rt2", "#ammo-srm6-rt", "structure", "structure", "structure", "empty", "empty", "empty", "empty"],
+    "LA": ["shoulder", "upperArm", "#lb5-la", "#lb5-la", "#lb5-la", "#lb5-la", "#ammo-lb5-clu-la", "armor", "armor", "armor", "armor", "empty"],
+    "RA": ["shoulder", "upperArm", "#erppc-ra", "#erppc-ra", "armor", "armor", "armor", "armor", "empty", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "armor", "armor"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "armor", "armor"]
+  },
+  "mounts": [
+    { "id": "ersp-ct", "item": "cl.w.er-small-pulse-laser", "location": "CT" },
+    { "id": "ersp-ct2", "item": "cl.w.er-small-pulse-laser", "location": "CT" },
+    { "id": "srm6-lt", "item": "cl.w.srm-6", "location": "LT" },
+    { "id": "srm6-lt2", "item": "cl.w.srm-6", "location": "LT" },
+    { "id": "srm6-rt", "item": "cl.w.srm-6", "location": "RT" },
+    { "id": "srm6-rt2", "item": "cl.w.srm-6", "location": "RT" },
+    { "id": "lb5-la", "item": "cl.w.lb-5x", "location": "LA" },
+    { "id": "erppc-ra", "item": "cl.w.er-ppc", "location": "RA" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-srm6-lt", "ammo": "cl.ammo.srm-6", "location": "LT" },
+    { "id": "ammo-srm6-rt", "ammo": "cl.ammo.srm-6", "location": "RT" },
+    {
+      "id": "ammo-lb5-clu-la",
+      "ammo": "cl.ammo.lb-5x-cluster",
+      "location": "LA",
+      "options": ["cl.ammo.lb-5x-slug", "cl.ammo.lb-5x-cluster"]
+    }
+  ],
+  "bv": 2110,
+  "source": {
+    "ref": "megamek",
+    "note": "Vulture Mk IV Prime MTF (mm-data 3145/Merc) cross-check; armor, engine, heat sinks and weapons also match docs/BATTLETECH-HANDOFF.md; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "2110 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Vulture Mk IV Prime standing in for the box's Vulture Mk IV E, whose stats are not public (the E has BV 2,151)",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (stable, non_standard, pro_actuator)",
+      "status": "unconfirmed"
+    }
+  ]
+}

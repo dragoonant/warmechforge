@@ -195,5 +195,429 @@
     "tons": 4,
     "flags": ["energy", "heavyLaser", "directFire"],
     "source": { "ref": "sarna", "note": "Heavy Large Laser page (TechManual)" }
+  },
+  {
+    "id": "is.w.large-laser",
+    "name": "Large Laser",
+    "shortName": "Large Laser",
+    "techBase": "IS",
+    "category": "energy",
+    "heat": 8,
+    "damage": 8,
+    "ranges": { "short": 5, "medium": 10, "long": 15 },
+    "slots": 2,
+    "tons": 5,
+    "flags": ["energy", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "ISLaserLarge (2026-10-08): heat 8, damage 8, 5/10/15, 5 t, 2 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.w.er-medium-laser",
+    "name": "ER Medium Laser",
+    "shortName": "ER M Laser",
+    "techBase": "IS",
+    "category": "energy",
+    "heat": 5,
+    "damage": 5,
+    "ranges": { "short": 4, "medium": 8, "long": 12 },
+    "slots": 1,
+    "tons": 1,
+    "flags": ["energy", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "ISERLaserMedium (2026-10-08): heat 5, damage 5, 4/8/12, 1 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.w.heavy-ppc",
+    "name": "Heavy PPC",
+    "shortName": "Heavy PPC",
+    "techBase": "IS",
+    "category": "energy",
+    "heat": 15,
+    "damage": 15,
+    "ranges": { "min": 3, "short": 6, "medium": 12, "long": 18 },
+    "slots": 4,
+    "tons": 10,
+    "flags": ["energy", "ppc", "directFire"],
+    "linkable": ["capacitor"],
+    "source": {
+      "ref": "megamek",
+      "note": "ISHeavyPPC (2026-10-08): heat 15, damage 15, min 3, 6/12/18, 10 t, 4 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.w.streak-srm-6",
+    "name": "Streak SRM 6",
+    "shortName": "Streak SRM 6",
+    "techBase": "IS",
+    "category": "missile",
+    "heat": 4,
+    "damage": 2,
+    "cluster": { "rackSize": 6, "groupSize": 1 },
+    "ranges": { "short": 3, "medium": 6, "long": 9 },
+    "slots": 2,
+    "tons": 4.5,
+    "ammo": ["is.ammo.streak-srm-6"],
+    "flags": ["cluster", "streak", "missile"],
+    "source": {
+      "ref": "megamek",
+      "note": "ISStreakSRM6 (2026-10-08): heat 4, 2 per missile, rack 6, 3/6/9, 4.5 t, 2 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.w.lb-10x",
+    "name": "LB 10-X Autocannon",
+    "shortName": "LB 10-X",
+    "techBase": "IS",
+    "category": "ballistic",
+    "heat": 2,
+    "damage": 10,
+    "ranges": { "short": 6, "medium": 12, "long": 18 },
+    "slots": 6,
+    "tons": 11,
+    "ammo": ["is.ammo.lb-10x-slug", "is.ammo.lb-10x-cluster"],
+    "flags": ["ac", "lbx", "directFire"],
+    "notes": "Slug ammo fires one 10-point hit; cluster ammo fires 10 one-point pellets at -1 to hit.",
+    "source": {
+      "ref": "megamek",
+      "note": "ISLB10XAC (2026-10-08): heat 2, damage 10, 6/12/18, 11 t, 6 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.w.gauss-rifle",
+    "name": "Gauss Rifle",
+    "shortName": "Gauss",
+    "techBase": "IS",
+    "category": "ballistic",
+    "heat": 1,
+    "damage": 15,
+    "ranges": { "min": 2, "short": 7, "medium": 15, "long": 22 },
+    "slots": 7,
+    "tons": 15,
+    "ammo": ["is.ammo.gauss-rifle"],
+    "flags": ["gauss", "explodes", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "ISGaussRifle (2026-10-08): heat 1, damage 15, min 2, 7/15/22, 15 t, 7 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.er-large-laser",
+    "name": "Clan ER Large Laser",
+    "shortName": "ER LL",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 12,
+    "damage": 10,
+    "ranges": { "short": 8, "medium": 15, "long": 25 },
+    "slots": 1,
+    "tons": 4,
+    "flags": ["energy", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLERLaserLarge (2026-10-08): heat 12, damage 10, 8/15/25, 4 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.er-medium-laser",
+    "name": "Clan ER Medium Laser",
+    "shortName": "ER M Laser",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 5,
+    "damage": 7,
+    "ranges": { "short": 5, "medium": 10, "long": 15 },
+    "slots": 1,
+    "tons": 1,
+    "flags": ["energy", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLERLaserMedium (2026-10-08): heat 5, damage 7, 5/10/15, 1 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.er-small-laser",
+    "name": "Clan ER Small Laser",
+    "shortName": "ER S Laser",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 2,
+    "damage": 5,
+    "ranges": { "short": 2, "medium": 4, "long": 6 },
+    "slots": 1,
+    "tons": 0.5,
+    "flags": ["energy", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLERLaserSmall (2026-10-08): heat 2, damage 5, 2/4/6, 0.5 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.er-ppc",
+    "name": "Clan ER PPC",
+    "shortName": "ER PPC",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 15,
+    "damage": 15,
+    "ranges": { "short": 7, "medium": 14, "long": 23 },
+    "slots": 2,
+    "tons": 6,
+    "flags": ["energy", "ppc", "directFire"],
+    "linkable": ["capacitor"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLERPPC (2026-10-08): heat 15, damage 15, no minimum, 7/14/23, 6 t, 2 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.medium-pulse-laser",
+    "name": "Clan Medium Pulse Laser",
+    "shortName": "M Pulse",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 4,
+    "damage": 7,
+    "toHitMod": -2,
+    "ranges": { "short": 4, "medium": 8, "long": 12 },
+    "slots": 1,
+    "tons": 2,
+    "flags": ["energy", "pulse", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLPulseLaserMedium (2026-10-08): heat 4, damage 7, -2 to hit, 4/8/12, 2 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.large-pulse-laser",
+    "name": "Clan Large Pulse Laser",
+    "shortName": "L Pulse",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 10,
+    "damage": 10,
+    "toHitMod": -2,
+    "ranges": { "short": 6, "medium": 14, "long": 20 },
+    "slots": 2,
+    "tons": 6,
+    "flags": ["energy", "pulse", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLPulseLaserLarge (2026-10-08): heat 10, damage 10, -2 to hit, 6/14/20, 6 t, 2 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.micro-pulse-laser",
+    "name": "Clan Micro Pulse Laser",
+    "shortName": "Micro Pulse",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 1,
+    "damage": 3,
+    "toHitMod": -2,
+    "ranges": { "short": 1, "medium": 2, "long": 3 },
+    "slots": 1,
+    "tons": 0.5,
+    "flags": ["energy", "pulse", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLPulseLaserMicro (2026-10-08): heat 1, damage 3, -2 to hit, 1/2/3, 0.5 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.er-small-pulse-laser",
+    "name": "Clan ER Small Pulse Laser",
+    "shortName": "ER S Pulse",
+    "techBase": "Clan",
+    "category": "energy",
+    "heat": 3,
+    "damage": 5,
+    "toHitMod": -1,
+    "ranges": { "short": 2, "medium": 4, "long": 6 },
+    "slots": 1,
+    "tons": 1.5,
+    "flags": ["energy", "pulse", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLERPulseLaserSmall (2026-10-08): heat 3, damage 5, -1 to hit (ER pulse, not the full -2), 2/4/6, 1.5 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.lb-20x",
+    "name": "Clan LB 20-X Autocannon",
+    "shortName": "LB 20-X",
+    "techBase": "Clan",
+    "category": "ballistic",
+    "heat": 6,
+    "damage": 20,
+    "ranges": { "short": 4, "medium": 8, "long": 12 },
+    "slots": 9,
+    "tons": 12,
+    "ammo": ["cl.ammo.lb-20x-slug", "cl.ammo.lb-20x-cluster"],
+    "flags": ["ac", "lbx", "directFire"],
+    "notes": "Slug ammo fires one 20-point hit; cluster ammo fires 20 one-point pellets at -1 to hit.",
+    "source": {
+      "ref": "megamek",
+      "note": "CLLB20XAC (2026-10-08): heat 6, damage 20, 4/8/12, 12 t, 9 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.lb-5x",
+    "name": "Clan LB 5-X Autocannon",
+    "shortName": "LB 5-X",
+    "techBase": "Clan",
+    "category": "ballistic",
+    "heat": 1,
+    "damage": 5,
+    "ranges": { "min": 3, "short": 8, "medium": 15, "long": 24 },
+    "slots": 4,
+    "tons": 7,
+    "ammo": ["cl.ammo.lb-5x-slug", "cl.ammo.lb-5x-cluster"],
+    "flags": ["ac", "lbx", "directFire"],
+    "notes": "Slug ammo fires one 5-point hit; cluster ammo fires 5 one-point pellets at -1 to hit.",
+    "source": {
+      "ref": "megamek",
+      "note": "CLLB5XAC (2026-10-08): heat 1, damage 5, min 3, 8/15/24, 7 t, 4 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.ultra-ac-10",
+    "name": "Clan Ultra AC/10",
+    "shortName": "UAC/10",
+    "techBase": "Clan",
+    "category": "ballistic",
+    "heat": 3,
+    "damage": 10,
+    "ranges": { "short": 6, "medium": 12, "long": 18 },
+    "slots": 4,
+    "tons": 10,
+    "ammo": ["cl.ammo.uac-10"],
+    "flags": ["ac", "rapidFire", "directFire"],
+    "rapidFire": { "modes": [1,2] },
+    "code": ["ultraRapid"],
+    "notes": "Two-shot mode rolls the Cluster Hits Table; 2026 removed Ultra AC jamming.",
+    "source": {
+      "ref": "megamek",
+      "note": "CLUAC10 (2026-10-08): heat 3 per shot, damage 10, 6/12/18, 10 t, 4 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.gauss-rifle",
+    "name": "Clan Gauss Rifle",
+    "shortName": "Gauss",
+    "techBase": "Clan",
+    "category": "ballistic",
+    "heat": 1,
+    "damage": 15,
+    "ranges": { "min": 2, "short": 7, "medium": 15, "long": 22 },
+    "slots": 6,
+    "tons": 12,
+    "ammo": ["cl.ammo.gauss-rifle"],
+    "flags": ["gauss", "explodes", "directFire"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLGaussRifle (2026-10-08): heat 1, damage 15, min 2, 7/15/22, 12 t, 6 slots",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.streak-srm-4",
+    "name": "Clan Streak SRM 4",
+    "shortName": "Streak SRM 4",
+    "techBase": "Clan",
+    "category": "missile",
+    "heat": 3,
+    "damage": 2,
+    "cluster": { "rackSize": 4, "groupSize": 1 },
+    "ranges": { "short": 4, "medium": 8, "long": 12 },
+    "slots": 1,
+    "tons": 2,
+    "ammo": ["cl.ammo.streak-srm-4"],
+    "flags": ["cluster", "streak", "missile"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLStreakSRM4 (2026-10-08): heat 3, 2 per missile, rack 4, 4/8/12, 2 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.srm-6",
+    "name": "Clan SRM 6",
+    "shortName": "SRM 6",
+    "techBase": "Clan",
+    "category": "missile",
+    "heat": 4,
+    "damage": 2,
+    "cluster": { "rackSize": 6, "groupSize": 1 },
+    "ranges": { "short": 3, "medium": 6, "long": 9 },
+    "slots": 1,
+    "tons": 1.5,
+    "ammo": ["cl.ammo.srm-6"],
+    "flags": ["cluster", "missile"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLSRM6 (2026-10-08): heat 4, 2 per missile, rack 6, 3/6/9, 1.5 t, 1 slot",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.lrm-10",
+    "name": "Clan LRM 10",
+    "shortName": "LRM 10",
+    "techBase": "Clan",
+    "category": "missile",
+    "heat": 4,
+    "damage": 1,
+    "cluster": { "rackSize": 10, "groupSize": 5 },
+    "ranges": { "short": 7, "medium": 14, "long": 21 },
+    "slots": 1,
+    "tons": 2.5,
+    "ammo": ["cl.ammo.lrm-10"],
+    "flags": ["cluster", "missile", "indirect"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLLRM10 (2026-10-08): heat 4, rack 10, no minimum range, 2.5 t, 1 slot; 7/14/21 are the standard LRM brackets",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.w.lrm-5",
+    "name": "Clan LRM 5",
+    "shortName": "LRM 5",
+    "techBase": "Clan",
+    "category": "missile",
+    "heat": 2,
+    "damage": 1,
+    "cluster": { "rackSize": 5, "groupSize": 5 },
+    "ranges": { "short": 7, "medium": 14, "long": 21 },
+    "slots": 1,
+    "tons": 1,
+    "ammo": ["cl.ammo.lrm-5"],
+    "flags": ["cluster", "missile", "indirect"],
+    "source": {
+      "ref": "megamek",
+      "note": "CLLRM5 (2026-10-08): heat 2, rack 5, no minimum range, 1 t, 1 slot; 7/14/21 are the standard LRM brackets",
+      "retrieved": "2026-10-08"
+    }
   }
 ]

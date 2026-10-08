@@ -34,7 +34,9 @@ describe('data validity (20-data-schema)', () => {
     const asEngine: DataBundle = a
     expect(asEngine.version).toBe(b.version)
     expect(a.version).toMatch(/^[0-9a-f]{14}$/)
-    expect(Object.keys(a.mechs).sort()).toEqual(['mech.eris.ers-2n', 'mech.rakshasa.mdg-1a', 'mech.solitaire.prime', 'mech.uziel.uzl-2s'])
+    const ids = Object.keys(a.mechs)
+    for (const id of ['mech.eris.ers-2n', 'mech.rakshasa.mdg-1a', 'mech.solitaire.prime', 'mech.uziel.uzl-2s']) expect(ids).toContain(id)
+    expect(ids.length).toBe(16)
     expect(a.byId['mission.intro']).toBeDefined()
     expect(a.missions['mission.skirmish']!.map).toBe('choose')
   })

@@ -1,0 +1,67 @@
+{
+  "id": "mech.mad-cat-mk-ii.base",
+  "chassis": "Mad Cat Mk II",
+  "model": "Base",
+  "figure": "bt-mad-cat-mk-ii",
+  "tonnage": 90,
+  "techBase": "Clan",
+  "engine": { "type": "xl", "rating": 360 },
+  "movement": { "walk": 4, "run": 6, "jump": 3 },
+  "heatSinks": { "count": 14, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroFibrous",
+    "front": { "HD": 9, "CT": 38, "LT": 26, "RT": 26, "LA": 27, "RA": 27, "LL": 34, "RL": 34 },
+    "rear": { "CT": 12, "LT": 8, "RT": 8 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "armor", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#jj1", "structure"],
+    "LT": ["engine", "engine", "#erml-lt", "#erml-lt2", "#jj2", "#lrm10-lt", "#ammo-lrm10-lt", "#ammo-gauss-lt", "#ammo-gauss-lt2", "structure", "structure", "structure"],
+    "RT": ["engine", "engine", "#erml-rt", "#erml-rt2", "#jj3", "#lrm10-rt", "#ammo-lrm10-rt", "#ammo-gauss-rt", "#ammo-gauss-rt2", "armor", "armor", "armor"],
+    "LA": ["shoulder", "upperArm", "#gauss-la", "#gauss-la", "#gauss-la", "#gauss-la", "#gauss-la", "#gauss-la", "structure", "empty", "empty", "empty"],
+    "RA": ["shoulder", "upperArm", "#gauss-ra", "#gauss-ra", "#gauss-ra", "#gauss-ra", "#gauss-ra", "#gauss-ra", "armor", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "armor", "armor"]
+  },
+  "mounts": [
+    { "id": "jj1", "item": "cl.eq.jump-jet", "location": "CT", "tons": 2 },
+    { "id": "erml-lt", "item": "cl.w.er-medium-laser", "location": "LT" },
+    { "id": "erml-lt2", "item": "cl.w.er-medium-laser", "location": "LT" },
+    { "id": "jj2", "item": "cl.eq.jump-jet", "location": "LT", "tons": 2 },
+    { "id": "lrm10-lt", "item": "cl.w.lrm-10", "location": "LT" },
+    { "id": "erml-rt", "item": "cl.w.er-medium-laser", "location": "RT" },
+    { "id": "erml-rt2", "item": "cl.w.er-medium-laser", "location": "RT" },
+    { "id": "jj3", "item": "cl.eq.jump-jet", "location": "RT", "tons": 2 },
+    { "id": "lrm10-rt", "item": "cl.w.lrm-10", "location": "RT" },
+    { "id": "gauss-la", "item": "cl.w.gauss-rifle", "location": "LA" },
+    { "id": "gauss-ra", "item": "cl.w.gauss-rifle", "location": "RA" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-lrm10-lt", "ammo": "cl.ammo.lrm-10", "location": "LT" },
+    { "id": "ammo-gauss-lt", "ammo": "cl.ammo.gauss-rifle", "location": "LT" },
+    { "id": "ammo-gauss-lt2", "ammo": "cl.ammo.gauss-rifle", "location": "LT" },
+    { "id": "ammo-lrm10-rt", "ammo": "cl.ammo.lrm-10", "location": "RT" },
+    { "id": "ammo-gauss-rt", "ammo": "cl.ammo.gauss-rifle", "location": "RT" },
+    { "id": "ammo-gauss-rt2", "ammo": "cl.ammo.gauss-rifle", "location": "RT" }
+  ],
+  "bv": 3135,
+  "source": {
+    "ref": "megamek",
+    "note": "Mad Cat Mk II Base MTF (mm-data 3067) cross-check; armor, engine, heat sinks and weapons also match docs/BATTLETECH-HANDOFF.md; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "3135 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (imp_target_med)",
+      "status": "unconfirmed"
+    }
+  ]
+}

@@ -84,6 +84,8 @@ export interface DamageApplied extends Ev<'DamageApplied'> {
   transferredTo: Loc | null
   transferred: number
   lost: number
+  /** Points ferro-lamellor armor stopped before `damage` landed at this location (M5; absent when nothing was stopped). */
+  reduced?: number
 }
 export type DamageSourceKind = 'weapon' | 'physical' | 'fall' | 'ammoExplosion' | 'componentExplosion' | 'fallFromAbove' | 'other'
 export interface LocationDestroyed extends Ev<'LocationDestroyed'> { unitId: UnitId; location: Loc; cause: 'damage' | 'blownOff' | 'sideTorso' | 'explosion'; armorLost: number }

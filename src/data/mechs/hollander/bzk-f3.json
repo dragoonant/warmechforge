@@ -1,0 +1,62 @@
+{
+  "id": "mech.hollander.bzk-f3",
+  "chassis": "Hollander",
+  "model": "BZK-F3",
+  "figure": "bt-hollander",
+  "tonnage": 35,
+  "techBase": "IS",
+  "stock": true,
+  "engine": { "type": "standard", "rating": 175 },
+  "movement": { "walk": 5, "run": 8, "jump": 0 },
+  "heatSinks": { "count": 10, "type": "single" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroFibrous",
+    "front": { "HD": 8, "CT": 10, "LT": 8, "RT": 8, "LA": 6, "RA": 6, "LL": 8, "RL": 8 },
+    "rear": { "CT": 3, "LT": 3, "RT": 3 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "#hs1", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#ammo-gauss-ct", "#ammo-gauss-ct2"],
+    "LT": ["structure", "structure", "structure", "structure", "structure", "structure", "armor", "armor", "empty", "empty", "empty", "empty"],
+    "RT": ["#hs2", "#hs3", "#gauss-rt", "#gauss-rt", "#gauss-rt", "#gauss-rt", "#gauss-rt", "#gauss-rt", "#gauss-rt", "empty", "empty", "empty"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "structure", "structure", "armor", "armor", "armor", "armor", "armor", "armor"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "hand", "structure", "structure", "armor", "armor", "armor", "armor", "armor", "armor"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"]
+  },
+  "mounts": [
+    { "id": "hs1", "item": "is.eq.single-heat-sink", "location": "HD" },
+    { "id": "hs2", "item": "is.eq.single-heat-sink", "location": "RT" },
+    { "id": "hs3", "item": "is.eq.single-heat-sink", "location": "RT" },
+    { "id": "gauss-rt", "item": "is.w.gauss-rifle", "location": "RT" }
+  ],
+  "ammoBins": [
+    { "id": "ammo-gauss-ct", "ammo": "is.ammo.gauss-rifle", "location": "CT" },
+    { "id": "ammo-gauss-ct2", "ammo": "is.ammo.gauss-rifle", "location": "CT" }
+  ],
+  "bv": 953,
+  "source": {
+    "ref": "megamek",
+    "note": "Hollander BZK-F3 MTF (mm-data 3055U) cross-check; armor, engine, heat sinks and weapons also match docs/BATTLETECH-HANDOFF.md; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "953 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Hollander BZK-F3 standing in for the box's BZK-W4 (BV 920), whose stats are not public",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (unbalanced, reinforced_legs, stable_weapon)",
+      "status": "unconfirmed"
+    }
+  ]
+}

@@ -1,0 +1,689 @@
+{
+  "id": "map.headwater-crossing",
+  "name": "Headwater Crossing",
+  "theme": "grasslands",
+  "width": 16,
+  "height": 17,
+  "hexes": {
+    "1004": {
+      "level": 1
+    },
+    "1005": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1006": {
+      "level": 2
+    },
+    "1007": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            2
+          ]
+        }
+      ]
+    },
+    "1011": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1012": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1013": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1014": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1104": {
+      "level": 1
+    },
+    "1105": {
+      "level": 2
+    },
+    "1106": {
+      "level": 3
+    },
+    "1107": {
+      "level": 2
+    },
+    "1108": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            2,
+            5
+          ]
+        }
+      ]
+    },
+    "1112": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1113": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1114": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1203": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "1204": {
+      "level": 1
+    },
+    "1205": {
+      "level": 1
+    },
+    "1206": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1207": {
+      "level": 1
+    },
+    "1208": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            5
+          ]
+        }
+      ]
+    },
+    "1212": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1214": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "1304": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "1305": {
+      "level": 1
+    },
+    "1306": {
+      "level": 1
+    },
+    "1307": {
+      "level": 1
+    },
+    "1308": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    "1309": {
+      "level": 2
+    },
+    "1310": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "1313": {
+      "terrain": [
+        {
+          "type": "heavyWoods"
+        }
+      ]
+    },
+    "1314": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1407": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    "1408": {
+      "level": 1
+    },
+    "1409": {
+      "level": 1
+    },
+    "1415": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "1507": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    "1606": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    "0114": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    "0209": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0213": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    "0304": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0305": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0306": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0308": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0310": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0311": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            1,
+            3
+          ]
+        }
+      ]
+    },
+    "0312": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            0,
+            3
+          ]
+        }
+      ]
+    },
+    "0313": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            0,
+            4
+          ]
+        }
+      ]
+    },
+    "0314": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0402": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0403": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0404": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0405": {
+      "level": 2
+    },
+    "0406": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0410": {
+      "terrain": [
+        {
+          "type": "road",
+          "exits": [
+            4
+          ]
+        }
+      ]
+    },
+    "0411": {
+      "level": 2
+    },
+    "0412": {
+      "level": 2
+    },
+    "0413": {
+      "level": 1
+    },
+    "0501": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0502": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0503": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0504": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0505": {
+      "level": 2
+    },
+    "0506": {
+      "level": 2
+    },
+    "0507": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0511": {
+      "level": 3
+    },
+    "0512": {
+      "level": 2
+    },
+    "0513": {
+      "level": 2
+    },
+    "0514": {
+      "level": 1
+    },
+    "0515": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0604": {
+      "level": 1
+    },
+    "0605": {
+      "level": 1
+    },
+    "0606": {
+      "level": 1
+    },
+    "0607": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0610": {
+      "level": 2
+    },
+    "0611": {
+      "level": 3
+    },
+    "0612": {
+      "level": 2
+    },
+    "0613": {
+      "level": 1
+    },
+    "0614": {
+      "level": 1
+    },
+    "0704": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0706": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0708": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0709": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0710": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0711": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0712": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0713": {
+      "level": 1
+    },
+    "0714": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0803": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0810": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0811": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0812": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0813": {
+      "level": 1
+    },
+    "0814": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0902": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0903": {
+      "terrain": [
+        {
+          "type": "heavyWoods"
+        }
+      ]
+    },
+    "0905": {
+      "level": 1
+    },
+    "0906": {
+      "level": 1
+    },
+    "0907": {
+      "level": 1
+    },
+    "0912": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0913": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0914": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0915": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    }
+  },
+  "notes": "Layout of Grasslands #2. Skipped: five bridge hexes (0510 0609 0709 0808 0908; reserved terrain), kept as their ground (0709 water, others clear); road exits toward them trimmed (0410 NE, 1007 SW).",
+  "source": {
+    "ref": "megamek",
+    "note": "data/boards/AGoAC Maps/16x17 Grassland 2.board @ 7f6fd035bbc4f49618610b38fb394dfd7b80400d, hex-by-hex conversion, no file copied",
+    "retrieved": "2026-10-08"
+  },
+  "verify": [
+    {
+      "path": "/hexes",
+      "note": "second-source check pending; name-to-sheet mapping from the brief, no photo check yet",
+      "status": "unconfirmed"
+    }
+  ]
+}

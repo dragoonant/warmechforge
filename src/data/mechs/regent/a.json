@@ -1,0 +1,75 @@
+{
+  "id": "mech.regent.a",
+  "chassis": "Regent",
+  "model": "A",
+  "figure": "bt-regent",
+  "tonnage": 90,
+  "techBase": "Clan",
+  "omni": true,
+  "engine": { "type": "standard", "rating": 270 },
+  "movement": { "walk": 3, "run": 5, "jump": 0 },
+  "heatSinks": { "count": 26, "type": "double" },
+  "structure": { "type": "standard" },
+  "armor": {
+    "type": "standard",
+    "front": { "HD": 9, "CT": 42, "LT": 28, "RT": 28, "LA": 30, "RA": 30, "LL": 38, "RL": 38 },
+    "rear": { "CT": 16, "LT": 10, "RT": 10 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "#erml-hd", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#hs1", "#hs1"],
+    "LT": ["#hs2", "#hs2", "#hs3", "#hs3", "#hs4", "#hs4", "#hs5", "#hs5", "#erppc-lt", "#erppc-lt", "#cap-lt", "empty"],
+    "RT": ["#hs6", "#hs6", "#hs7", "#hs7", "#erppc-rt", "#erppc-rt", "#cap-rt", "#tc-rt", "#tc-rt", "#tc-rt", "#tc-rt", "empty"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "#hs8", "#hs8", "#hs9", "#hs9", "#hs10", "#hs10", "#hs11", "#hs11"],
+    "RA": ["shoulder", "upperArm", "#hs12", "#hs12", "#hs13", "#hs13", "#hs14", "#hs14", "#erppc-ra", "#erppc-ra", "#cap-ra", "#pod-ra"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "#hs15", "#hs15"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "#hs16", "#hs16"]
+  },
+  "mounts": [
+    { "id": "erml-hd", "item": "cl.w.er-medium-laser", "location": "HD" },
+    { "id": "hs1", "item": "cl.eq.double-heat-sink", "location": "CT" },
+    { "id": "hs2", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "hs3", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "hs4", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "hs5", "item": "cl.eq.double-heat-sink", "location": "LT" },
+    { "id": "erppc-lt", "item": "cl.w.er-ppc", "location": "LT" },
+    { "id": "cap-lt", "item": "cl.eq.ppc-capacitor", "location": "LT", "linkedTo": "erppc-lt" },
+    { "id": "hs6", "item": "cl.eq.double-heat-sink", "location": "RT" },
+    { "id": "hs7", "item": "cl.eq.double-heat-sink", "location": "RT" },
+    { "id": "erppc-rt", "item": "cl.w.er-ppc", "location": "RT" },
+    { "id": "cap-rt", "item": "cl.eq.ppc-capacitor", "location": "RT", "linkedTo": "erppc-rt" },
+    { "id": "tc-rt", "item": "cl.eq.targeting-computer", "location": "RT", "tons": 4, "slots": 4 },
+    { "id": "hs8", "item": "cl.eq.double-heat-sink", "location": "LA" },
+    { "id": "hs9", "item": "cl.eq.double-heat-sink", "location": "LA" },
+    { "id": "hs10", "item": "cl.eq.double-heat-sink", "location": "LA" },
+    { "id": "hs11", "item": "cl.eq.double-heat-sink", "location": "LA" },
+    { "id": "hs12", "item": "cl.eq.double-heat-sink", "location": "RA" },
+    { "id": "hs13", "item": "cl.eq.double-heat-sink", "location": "RA" },
+    { "id": "hs14", "item": "cl.eq.double-heat-sink", "location": "RA" },
+    { "id": "erppc-ra", "item": "cl.w.er-ppc", "location": "RA" },
+    { "id": "cap-ra", "item": "cl.eq.ppc-capacitor", "location": "RA", "linkedTo": "erppc-ra" },
+    { "id": "pod-ra", "item": "cl.eq.coolant-pod", "location": "RA" },
+    { "id": "hs15", "item": "cl.eq.double-heat-sink", "location": "LL" },
+    { "id": "hs16", "item": "cl.eq.double-heat-sink", "location": "RL" }
+  ],
+  "ammoBins": [],
+  "bv": 3412,
+  "source": {
+    "ref": "megamek",
+    "note": "Regent A MTF (mm-data Rec Guides ilClan/Vol 21) cross-check; armor, engine, heat sinks and weapons also match docs/BATTLETECH-HANDOFF.md; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "3412 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (easy_maintain)",
+      "status": "unconfirmed"
+    }
+  ]
+}

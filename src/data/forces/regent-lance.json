@@ -1,0 +1,17 @@
+{
+  "id": "force.regent-lance",
+  "name": "Regent Lance",
+  "faction": "Clan Sea Fox / Inner Sphere mercenaries",
+  "color": "#2f8f6b",
+  "bvBudget": 7500,
+  "units": [
+    { "slot": "u1", "mech": "mech.regent.prime", "pilot": "pilot.generic-alpha" },
+    { "slot": "u2", "mech": "mech.rakshasa.mdg-1b", "pilot": "pilot.generic-bravo" },
+    { "slot": "u3", "mech": "mech.eris.ers-2h", "pilot": "pilot.generic-charlie" },
+    { "slot": "u4", "mech": "mech.hollander.bzk-g1", "pilot": "pilot.generic-delta" }
+  ],
+  "source": { "ref": "ours", "note": "skirmish preset: Regent Prime with stock Rakshasa, Eris and Hollander variants; base BV 6,732 against the Mad Cat Lance's 6,952 (MUL values)" },
+  "verify": [
+    { "path": "", "note": "uses stock variants (Rakshasa MDG-1B, Eris ERS-2H, Hollander BZK-G1) in place of unknown box variants", "status": "standIn" }
+  ]
+}

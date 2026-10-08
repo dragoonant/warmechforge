@@ -1,6 +1,7 @@
 // Cluster Hits Table and grouping (10 §9, CLUS-001..006, HITLOC-010).
 import type { ClusterResolved } from './events'
-import type { AttackId, DataBundle, Id, LocalId, UnitId, UnitState } from './types'
+import type { AttackId, DataBundle, GameState, Hex, Id, LocalId, UnitId, UnitState } from './types'
+import { distance } from './hex'
 import type { Work } from './dice'
 import { clamp, roll2d6 } from './dice'
 
@@ -108,11 +109,36 @@ export function expectedClusterHits(size: number, modifier: number): number {
  * CLUS-004: Artemis IV adds +2 to the cluster roll when an intact Artemis mount is linked to the firing weapon AND the ammo
  * loaded is Artemis-capable (RULING: data marks that with an ammo id ending in "-artemis"). Streak never rolls, so never calls this.
  */
-export function artemisClusterMod(data: DataBundle, u: UnitState, mountId: LocalId, ammoId: Id | null): number {
+export function artemisClusterMod(data: DataBundle, u: UnitState, mountId: LocalId, ammoId: Id | null, ecm?: EcmContext): number {
   if (!ammoId || !ammoId.endsWith('-artemis')) return 0
   for (const m of Object.values(u.mounts)) {
     if (m.destroyed || m.linkedTo !== mountId) continue
-    if ((data.equipment[m.item] as { kind?: string } | undefined)?.kind === 'artemis') return 2
+    if ((data.equipment[m.item] as { kind?: string } | undefined)?.kind === 'artemis') {
+      if (ecm && ecmBlocksArtemis(data, ecm.state, u, ecm.targetHex)) return 0
+      return 2
+    }
   }
   return 0
+}
+
+// ---------- Guardian ECM (release 1: the Artemis effect only) ----------
+export interface EcmContext { state: GameState; targetHex: Hex | null }
+export const ECM_RADIUS = 6
+/** An operating ECM suite: an intact mount of kind 'ecm' in a live location on an active, powered unit that is on the board. */
+export function hasOperatingEcm(data: DataBundle, u: UnitState): boolean {
+  if (!u.pos || (u.status !== 'active' && u.status !== 'withdrawing') || u.shutdown) return false
+  return Object.values(u.mounts).some((m) => !m.destroyed && !u.locs[m.location].destroyed && (data.equipment[m.item] as { kind?: string } | undefined)?.kind === 'ecm')
+}
+/**
+ * RULING (2026 [CL W38]: hostile ECM acts only on what is directly inside its radius, no LOS tracing): an Artemis IV bonus is
+ * cancelled when the attacker or the target hex lies within 6 hexes of an operating ECM suite on a unit hostile to the attacker.
+ */
+export function ecmBlocksArtemis(data: DataBundle, state: GameState, attacker: UnitState, targetHex: Hex | null): boolean {
+  for (const id of state.unitOrder) {
+    const e = state.units[id]
+    if (!e || e.owner === attacker.owner || !e.pos || !hasOperatingEcm(data, e)) continue
+    if (attacker.pos && distance(e.pos, attacker.pos) <= ECM_RADIUS) return true
+    if (targetHex && distance(e.pos, targetHex) <= ECM_RADIUS) return true
+  }
+  return false
 }

@@ -37,3 +37,19 @@ Catalyst Game Labs, Topps or Microsoft art.
 ## Code
 
 Board, camera, presentation director, dice tray, frame-rate and test-hook patterns are adapted from our sibling game Whirr Machine.
+
+## Map layouts
+
+The hex layouts of the four Core Box maps (Headwater Crossing, Sodden Hills, Scorched Oasis, Arid Canyons) in `src/data/maps/`
+were converted hex by hex (level, woods, rough, water, road) from the AGoAC board data of MegaMek's `mm-data`
+(https://github.com/MegaMek/mm-data, CC BY-NC-SA 4.0, (C) The MegaMek Team). No board file is copied into this repository; each
+map's `source` note names the file and commit checked.
+
+## 'Mech and equipment numbers
+
+Stock 'Mech stats (armor, engine, heat sinks, slot layouts) and the weapon, ammo and equipment numbers added in the roster batch
+were read from MegaMek's `mm-data` MTF files and the MegaMek equipment classes (https://github.com/MegaMek/mm-data and
+https://github.com/MegaMek/megamek, mm-data CC BY-NC-SA 4.0, (C) The MegaMek Team) and typed in by hand as cross-checks against
+the Core Box brief. No MegaMek file is copied into this repository; each record's `source` note names what was checked.
+Battle Values come from the Master Unit List.
+The ferro-lamellor damage cut was checked against MegaMek's `TWDamageManager` (https://github.com/MegaMek/megamek, GPL v3); our code is our own.

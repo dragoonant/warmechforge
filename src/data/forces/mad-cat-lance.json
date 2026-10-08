@@ -1,0 +1,17 @@
+{
+  "id": "force.mad-cat-lance",
+  "name": "Mad Cat Lance",
+  "faction": "Clan / Inner Sphere mercenaries",
+  "color": "#c27a2c",
+  "bvBudget": 7500,
+  "units": [
+    { "slot": "u1", "mech": "mech.mad-cat-mk-ii.base", "pilot": "pilot.generic-alpha" },
+    { "slot": "u2", "mech": "mech.uziel.uzl-8s", "pilot": "pilot.generic-bravo" },
+    { "slot": "u3", "mech": "mech.solitaire.2", "pilot": "pilot.generic-charlie" },
+    { "slot": "u4", "mech": "mech.hollander.bzk-f3", "pilot": "pilot.generic-delta" }
+  ],
+  "source": { "ref": "ours", "note": "skirmish preset: Mad Cat Mk II with stock Uziel, Solitaire and Hollander variants; base BV 6,952 against the Regent Lance's 6,732 (MUL values)" },
+  "verify": [
+    { "path": "", "note": "uses stock variants (Uziel UZL-8S, Solitaire 2, Hollander BZK-F3) in place of unknown box variants", "status": "standIn" }
+  ]
+}

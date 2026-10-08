@@ -5,7 +5,7 @@
   "status": "ready",
   "order": 0,
   "briefing": "Two small lances meet in a dry canyon basin. Knock out every working enemy 'Mech, or leave them too crippled to fight, and the field is yours.",
-  "map": "map.test-canyons",
+  "map": "map.scorched-oasis",
   "sides": [
     {
       "id": "a",
@@ -33,8 +33,8 @@
   "verify": [
     {
       "path": "/map",
-      "note": "the real intro map is Scorched Oasis or Arid Canyons; the hand-built test canyon stands in",
-      "status": "standIn"
+      "note": "Scorched Oasis (Desert #2) layout from a MegaMek cross-check; Core Box name-to-sheet mapping and photo check pending",
+      "status": "unconfirmed"
     },
     {
       "path": "/sides",

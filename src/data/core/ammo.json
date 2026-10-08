@@ -60,5 +60,192 @@
       "removeFlags": ["indirect"]
     },
     "source": { "ref": "sarna", "note": "MML 5 page" }
+  },
+  {
+    "id": "cl.ammo.lb-20x-slug",
+    "name": "Clan LB 20-X Slug Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.lb-20x"],
+    "shotsPerTon": 5,
+    "explosionPerShot": 20,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan LB 20-X AC Ammo, 5 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.lb-20x-cluster",
+    "name": "Clan LB 20-X Cluster Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.lb-20x"],
+    "shotsPerTon": 5,
+    "explosionPerShot": 20,
+    "override": { "damage": 1, "cluster": {"rackSize": 20, "groupSize": 1}, "toHitMod": -1, "addFlags": ["cluster"] },
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan LB 20-X Cluster Ammo, 5 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.lb-5x-slug",
+    "name": "Clan LB 5-X Slug Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.lb-5x"],
+    "shotsPerTon": 20,
+    "explosionPerShot": 5,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan LB 5-X AC Ammo, 20 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.lb-5x-cluster",
+    "name": "Clan LB 5-X Cluster Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.lb-5x"],
+    "shotsPerTon": 20,
+    "explosionPerShot": 5,
+    "override": { "damage": 1, "cluster": {"rackSize": 5, "groupSize": 1}, "toHitMod": -1, "addFlags": ["cluster"] },
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan LB 5-X Cluster Ammo, 20 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.ammo.lb-10x-slug",
+    "name": "LB 10-X Slug Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.lb-10x"],
+    "shotsPerTon": 10,
+    "explosionPerShot": 10,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): IS LB 10-X AC Ammo, 10 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.ammo.lb-10x-cluster",
+    "name": "LB 10-X Cluster Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.lb-10x"],
+    "shotsPerTon": 10,
+    "explosionPerShot": 10,
+    "override": { "damage": 1, "cluster": {"rackSize": 10, "groupSize": 1}, "toHitMod": -1, "addFlags": ["cluster"] },
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): IS LB 10-X Cluster Ammo, 10 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.uac-10",
+    "name": "Clan Ultra AC/10 Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.ultra-ac-10"],
+    "shotsPerTon": 10,
+    "explosionPerShot": 10,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan Ultra AC/10 Ammo, 10 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.gauss-rifle",
+    "name": "Clan Gauss Rifle Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.gauss-rifle"],
+    "shotsPerTon": 8,
+    "explodes": false,
+    "explosionPerShot": 0,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan Gauss Ammo, 8 shots per ton; Gauss slugs are inert",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.ammo.gauss-rifle",
+    "name": "Gauss Rifle Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.gauss-rifle"],
+    "shotsPerTon": 8,
+    "explodes": false,
+    "explosionPerShot": 0,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): IS Gauss Ammo, 8 shots per ton; Gauss slugs are inert",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.streak-srm-4",
+    "name": "Clan Streak SRM 4 Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.streak-srm-4"],
+    "shotsPerTon": 25,
+    "explosionPerShot": 8,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan Streak SRM 4 Ammo, 25 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "is.ammo.streak-srm-6",
+    "name": "Streak SRM 6 Ammo",
+    "techBase": "IS",
+    "weapons": ["is.w.streak-srm-6"],
+    "shotsPerTon": 15,
+    "explosionPerShot": 12,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): IS Streak SRM 6 Ammo, 15 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.srm-6",
+    "name": "Clan SRM 6 Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.srm-6"],
+    "shotsPerTon": 15,
+    "explosionPerShot": 12,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan Ammo SRM-6, 15 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.lrm-10",
+    "name": "Clan LRM 10 Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.lrm-10"],
+    "shotsPerTon": 12,
+    "explosionPerShot": 10,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan Ammo LRM-10, 12 shots per ton",
+      "retrieved": "2026-10-08"
+    }
+  },
+  {
+    "id": "cl.ammo.lrm-5",
+    "name": "Clan LRM 5 Ammo",
+    "techBase": "Clan",
+    "weapons": ["cl.w.lrm-5"],
+    "shotsPerTon": 24,
+    "explosionPerShot": 5,
+    "source": {
+      "ref": "megamek",
+      "note": "AmmoType (2026-10-08): Clan Ammo LRM-5, 24 shots per ton",
+      "retrieved": "2026-10-08"
+    }
   }
 ]

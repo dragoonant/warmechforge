@@ -1,0 +1,74 @@
+{
+  "id": "mech.hollander.bzk-g1",
+  "chassis": "Hollander",
+  "model": "BZK-G1",
+  "figure": "bt-hollander",
+  "tonnage": 35,
+  "techBase": "IS",
+  "stock": true,
+  "engine": { "type": "standard", "rating": 175 },
+  "movement": { "walk": 5, "run": 8, "jump": 0 },
+  "heatSinks": { "count": 10, "type": "single" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroFibrous",
+    "front": { "HD": 9, "CT": 15, "LT": 12, "RT": 12, "LA": 10, "RA": 10, "LL": 13, "RL": 13 },
+    "rear": { "CT": 5, "LT": 4, "RT": 4 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "#hs1", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#ammo-lb10-slug-ct", "#ammo-lb10-clu-ct"],
+    "LT": ["structure", "structure", "structure", "structure", "structure", "structure", "structure", "armor", "armor", "empty", "empty", "empty"],
+    "RT": ["#hs2", "#hs3", "#lb10-rt", "#lb10-rt", "#lb10-rt", "#lb10-rt", "#lb10-rt", "#lb10-rt", "structure", "empty", "empty", "empty"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "#ml-la", "structure", "armor", "armor", "armor", "armor", "armor", "armor"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "hand", "#ml-ra", "structure", "armor", "armor", "armor", "armor", "armor", "armor"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "structure"]
+  },
+  "mounts": [
+    { "id": "hs1", "item": "is.eq.single-heat-sink", "location": "HD" },
+    { "id": "hs2", "item": "is.eq.single-heat-sink", "location": "RT" },
+    { "id": "hs3", "item": "is.eq.single-heat-sink", "location": "RT" },
+    { "id": "lb10-rt", "item": "is.w.lb-10x", "location": "RT" },
+    { "id": "ml-la", "item": "is.w.medium-laser", "location": "LA" },
+    { "id": "ml-ra", "item": "is.w.medium-laser", "location": "RA" }
+  ],
+  "ammoBins": [
+    {
+      "id": "ammo-lb10-slug-ct",
+      "ammo": "is.ammo.lb-10x-slug",
+      "location": "CT",
+      "options": ["is.ammo.lb-10x-slug", "is.ammo.lb-10x-cluster"]
+    },
+    {
+      "id": "ammo-lb10-clu-ct",
+      "ammo": "is.ammo.lb-10x-cluster",
+      "location": "CT",
+      "options": ["is.ammo.lb-10x-slug", "is.ammo.lb-10x-cluster"]
+    }
+  ],
+  "bv": 873,
+  "source": {
+    "ref": "megamek",
+    "note": "Hollander BZK-G1 MTF (mm-data 3055U) cross-check; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "873 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Hollander BZK-G1 standing in for the box's second Hollander variant, whose stats are not public",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (unbalanced, reinforced_legs, stable_weapon)",
+      "status": "unconfirmed"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ import type { MountArc } from '../hex'
 import { computeLos, legWeaponsBlocked } from '../los'
 import { effectivePos, directionFor } from '../physical'
 import { aimedShotLegal, computeRangedTn, rangeBand, armCritsFor, sensorCrits } from '../tohit'
-import { ammoRec, binsFor, defaultBin, effectiveProfile, hasFlag, spendAmmo, weaponRec } from '../ammo'
+import { ammoRec, binsFor, defaultBin, effectiveProfile, equipRec, hasFlag, spendAmmo, weaponRec } from '../ammo'
 import type { WeaponRec } from '../ammo'
 import { collectHooks } from '../hooks'
 import { hexAt, woodsPointsOf } from '../terrain'
@@ -160,13 +160,25 @@ function hookMods(state: GameState, unitId: UnitId, mountId: LocalId, targetId: 
   return out
 }
 
+/** An intact targeting computer on the unit (EQUIP-001): a live mount of kind 'targetingComputer' in a live location. */
+export function hasTargetingComputer(data: DataBundle, u: UnitState): boolean {
+  return Object.values(u.mounts).some((m) => !m.destroyed && !u.locs[m.location].destroyed && equipRec(data, m.item)?.kind === 'targetingComputer')
+}
+/** EQUIP-001: the TC helps direct-fire weapons only, never missiles, cluster fire (LB-X cluster ammo, MG arrays) or MGs. */
+export function tcEligible(prof: WeaponRec): boolean {
+  // machine guns and flamers carry no flag of their own (data marks the MG directFire): excluded by id
+  return hasFlag(prof, 'directFire') && !hasFlag(prof, 'cluster') && !hasFlag(prof, 'missile') && !hasFlag(prof, 'mgArray') && !/machine-gun|flamer/.test(prof.id)
+}
+const tcFor = (data: DataBundle, a: UnitState, prof: WeaponRec): boolean => tcEligible(prof) && hasTargetingComputer(data, a)
+
 /** The target number for a shot whose geometry is already known (TOHIT-001..036). */
-function shotTn(state: GameState, a: UnitState, g: ShotGeometry, shot: FireShot, secondary: boolean): ShotTn {
+function shotTn(state: GameState, data: DataBundle, a: UnitState, g: ShotGeometry, shot: FireShot, secondary: boolean): ShotTn {
   const t = g.targetId ? state.units[g.targetId]! : null
   const bhT = hexAt(state.board, g.targetHex)
   const immobile = t ? state.ledger.immobileAtStart.includes(t.id) : false
+  const tc = tcFor(data, a, g.prof)
   const aimed = shot.aimedAt
-    ? { at: shot.aimedAt, targetImmobile: immobile, tc: false }
+    ? { at: shot.aimedAt, targetImmobile: immobile, tc, pulse: hasFlag(g.prof, 'pulse') }
     : null
   const r = computeRangedTn({
     gunnery: a.pilot.gunnery, distance: g.distance, band: g.band,
@@ -185,6 +197,7 @@ function shotTn(state: GameState, a: UnitState, g: ShotGeometry, shot: FireShot,
     sensorCrits: sensorCrits(a),
     armCrits: armCritsFor(a, g.mount.location),
     aimed,
+    targetingComputer: tc,
     extra: hookMods(state, a.id, g.mount.id, g.targetId),
   })
   return r
@@ -268,10 +281,10 @@ export function evaluateShot(state: GameState, data: DataBundle, unitId: UnitId,
   if (sh.aimedAt) {
     const immobile = g.targetId ? state.ledger.immobileAtStart.includes(g.targetId) : false
     const allows = !g.prof.flags?.some((f) => NO_AIM_FLAGS.includes(f)) && g.targetId !== null
-    const ok = allows && aimedShotLegal({ at: sh.aimedAt, targetImmobile: immobile, tc: false, weaponAllowsAim: true, partialCover: g.los.partialCover })
+    const ok = allows && aimedShotLegal({ at: sh.aimedAt, targetImmobile: immobile, tc: tcFor(data, a, g.prof), pulse: hasFlag(g.prof, 'pulse'), weaponAllowsAim: true, partialCover: g.los.partialCover })
     if (!ok) return no('E_AIMED_SHOT', 'an aimed shot is not allowed here')
   }
-  const tn = shotTn(state, a, g, sh, opts.secondary)
+  const tn = shotTn(state, data, a, g, sh, opts.secondary)
   out.tn = tn
   if (!tn.legal) return { ...out, rejection: { code: 'E_TN_TOO_HIGH', message: 'target number above 12', detail: { tn: tn.tn } } }
   return out
@@ -377,10 +390,10 @@ export function declareFire(state: GameState, data: DataBundle, action: DeclareF
     if (sh.aimedAt) {
       const immobile = g.targetId ? state.ledger.immobileAtStart.includes(g.targetId) : false
       const allows = !g.prof.flags?.some((f) => NO_AIM_FLAGS.includes(f)) && g.targetId !== null
-      const ok = allows && aimedShotLegal({ at: sh.aimedAt, targetImmobile: immobile, tc: false, weaponAllowsAim: true, partialCover: g.los.partialCover })
+      const ok = allows && aimedShotLegal({ at: sh.aimedAt, targetImmobile: immobile, tc: tcFor(data, a, g.prof), pulse: hasFlag(g.prof, 'pulse'), weaponAllowsAim: true, partialCover: g.los.partialCover })
       if (!ok) return rej(state, 'E_AIMED_SHOT', 'an aimed shot is not allowed here')
     }
-    const tn = shotTn(state, a, { ...g, prof: g.prof }, sh, secondary)
+    const tn = shotTn(state, data, a, { ...g, prof: g.prof }, sh, secondary)
     if (!tn.legal) return rej(state, sensorCrits(a) >= 2 ? 'E_NO_RANGED' : 'E_TN_TOO_HIGH', 'target number above 12', { tn: tn.tn })
     plans.push({ g, shot: sh, tn, binId, ammoId, spend, streak, primary: !secondary })
   }

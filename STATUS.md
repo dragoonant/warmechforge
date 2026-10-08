@@ -70,7 +70,21 @@
 - Tests: 40 files, 406 unit tests (tests/ai: kill shot, heat cap, rear arc, legality over seeded games, driver). Sim 30/30,
   0 violations. E2E plays vs the normal AI from its worker with no fallback or watchdog answer.
 
+## M5 done (full stock roster, Core Box maps, skirmish picker, engine fixes)
+- Data: all 8 Core Box chassis with two variants each (16 'Mechs; box variants without public stats replaced by public stock variants
+  labelled "(stock)"), the 4 Core Box maps (Scorched Oasis, Arid Canyons, Headwater Crossing, Sodden Hills) and the dev map; new
+  weapons/ammo/equipment (Clan ER PPC, LB 5-X / 10-X / 20-X slug and cluster ammo, Ultra AC/10, Gauss rifles, Streak SRM 4,
+  heavy lasers, micro/ER pulse lasers, Clan TC, MASC, PPC capacitor, coolant pod, Guardian ECM, improved jump jets).
+- Engine: ferro-lamellor damage cut (EQUIP-014), Clan targeting computer (EQUIP-001), Guardian ECM vs Artemis IV (EQUIP-015),
+  stacking after a fall (MOVE-012), cached movement lookups; LB-X, Ultra AC and Gauss behaviour verified on the real roster.
+- Client: Skirmish any-vs-any picker (1-4 'Mechs per side, variant per chassis, pilot skills, BV per pick and per side, Even BV,
+  map choice). Feed lines show ferro-lamellor reductions.
+- Tools: sim and bench take `--map` and `--forces A,B|random`.
+- Gates: typecheck; 46 test files (437 tests); validate:data 0 errors; sim 30/30 (intro on Scorched Oasis) and 30/30 random-roster skirmishes,
+  0 violations; bench normal vs random 10/10, normal vs easy 8/10, 0 rejections / stalls / fallbacks; e2e play + skirmish specs.
+- Not yet: PPC capacitor, coolant pod, MASC, Ultra AC double-tap in the UI/AI (`tools/out/m5-followups.md`).
+
 ## Next
-- Owner playtest on Pages (feel, readability, anything confusing), now against the normal AI.
-- M3 figure gate: owner review of the two generated figures (`?gallery`) and the size proposal in `30-figures`.
-- Threat overlay (T) in the client; AI trace overlay; §4.5 Monte Carlo refinement.
+- Owner playtest on Pages: Skirmish any-vs-any on the Core Box maps, against the normal AI.
+- Remaining equipment rules (PPC capacitor, coolant pod, MASC), Ultra AC double-tap in the fire panel and AI.
+- M3 figure gate, then figures for the other six chassis; threat overlay (T); AI trace overlay; 40-ai §4.5 Monte Carlo refinement.

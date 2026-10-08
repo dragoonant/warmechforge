@@ -10,12 +10,34 @@ import { patchUnit } from './pilot'
 import type { Stepped } from './pilot'
 import { pAtLeast2d6 } from './prob'
 import { persistentMods, queuePsr, resolvePsrs } from './psr'
-import { floorLevel, hexAt } from './terrain'
+import { floorLevel, hexAt as boardHexAt } from './terrain'
 import { attackerMoveMod, tmmForHexes } from './tohit'
 import type {
-  BoardHex, Edge, Facing, GameState, Hex, MoveMode, Rejection, RejectionCode, StepOp, UnitId, UnitState,
+  BoardHex, BoardState, Edge, Facing, GameState, Hex, MoveMode, Rejection, RejectionCode, StepOp, UnitId, UnitState,
 } from './types'
 import { FACINGS } from './types'
+
+// ---------- per-board lookup caches (boards are immutable; the reach search and validate hit these thousands of times) ----------
+const HEX_CACHE = new WeakMap<BoardState, Map<number, BoardHex | null>>()
+const EDGE_CACHE = new WeakMap<BoardState, Map<Edge, Set<number>>>()
+const keyOf = (h: Hex): number => (h.q + 512) * 2048 + (h.r + 512)
+/** terrain.hexAt with a per-board cache (no label strings on the hot path). */
+function hexAt(board: BoardState, h: Hex): BoardHex | null {
+  let m = HEX_CACHE.get(board)
+  if (!m) { m = new Map(); HEX_CACHE.set(board, m) }
+  const k = keyOf(h)
+  let v = m.get(k)
+  if (v === undefined) { v = boardHexAt(board, h); m.set(k, v) }
+  return v
+}
+/** Is `h` one of the board's `edge` hexes? */
+function onEdge(board: BoardState, edge: Edge, h: Hex): boolean {
+  let m = EDGE_CACHE.get(board)
+  if (!m) { m = new Map(); EDGE_CACHE.set(board, m) }
+  let set = m.get(edge)
+  if (!set) { set = new Set(edgeHexes(board, edge).map(keyOf)); m.set(edge, set) }
+  return set.has(keyOf(h))
+}
 
 // ---------- current MP (MOVE-006..008) ----------
 export interface MpSet { walk: number; run: number; jump: number }
@@ -83,7 +105,8 @@ interface Sim {
   lastDir: 'f' | 'b' | null
   ran: number
   mode: MoveMode // effective mode (min move forces run)
-  steps: PlanStep[]
+  tail: StepNode | null // the plan's steps as a persistent list (no array copy per op in the search)
+  moved: boolean // a forward, backward or jump step left the start hex
   exited: boolean
   jumped: boolean
   origin?: { hex: Hex; facing: Facing } // edge entry: the virtual start
@@ -94,9 +117,10 @@ interface Ctx {
   mp: MpSet
   cap: number // MP available to this action in the chosen mode
   mode: MoveMode
-  hipCrits: number
+  hipCrits?: number // lazy (hipOf): only a 2-level change needs it
   firstAction: boolean // nothing spent yet this turn
   entering: boolean
+  endFlags?: { runOrJump: boolean; legCrit: boolean } // endPsrs memo (same for every plan of one context)
 }
 type Fail = { fail: Rejection }
 const rej = (code: RejectionCode, message: string, detail?: Record<string, unknown>): Fail => ({ fail: { code, message, ...(detail ? { detail } : {}) } })
@@ -111,6 +135,18 @@ export function unitAt(state: GameState, h: Hex, except?: UnitId): UnitState | n
   return null
 }
 const hitSlots = (u: UnitState, token: string): number => hitCount(u, token)
+/** Did the plan leave the hex it started in? Ending in an occupied hex is legal only for a unit already there (MOVE-012). */
+const changesHex = (s: Sim): boolean => s.virtual || s.moved
+interface StepNode { step: PlanStep; prev: StepNode | null; n: number }
+const nSteps = (s: Sim): number => s.tail?.n ?? 0
+const addStep = (s: Sim, step: PlanStep): StepNode => ({ step, prev: s.tail, n: nSteps(s) + 1 })
+const one = (step: PlanStep): StepNode => ({ step, prev: null, n: 1 })
+/** The plan's steps in order. */
+function stepsOf(s: Sim): PlanStep[] {
+  const out: PlanStep[] = new Array(nSteps(s))
+  for (let k = s.tail; k; k = k.prev) out[k.n - 1] = k.step
+  return out
+}
 
 // ---------- hex costs (MOVE-020..029) ----------
 export interface HexCost { terrain: number; level: number; total: number; delta: number }
@@ -152,40 +188,40 @@ function applyOp(c: Ctx, s: Sim, op: StepOp): Sim | Fail {
     if (s.mp + 1 > c.cap) return rej('E_NOT_ENOUGH_MP', 'not enough MP to turn')
     const facing = op === 'turnLeft' ? turnLeft(s.facing) : turnRight(s.facing)
     const step: PlanStep = { op, from: s.hex, to: s.hex, facing, cost: { base: 0, terrain: 0, level: 0, turn: 1, total: 1 }, mpLeft: c.cap - s.mp - 1, psrs: [], prone: s.prone }
-    return { ...s, facing, mp: s.mp + 1, steps: [...s.steps, step] }
+    return { ...s, facing, mp: s.mp + 1, tail: addStep(s, step) }
   }
   if (op === 'dropProne') {
     if (s.prone) return rej('E_PRONE', 'already prone')
     if (s.mp + 1 > c.cap) return rej('E_NOT_ENOUGH_MP', 'not enough MP to drop prone')
     const step: PlanStep = { op, from: s.hex, to: s.hex, facing: s.facing, cost: { base: 1, terrain: 0, level: 0, turn: 0, total: 1 }, mpLeft: c.cap - s.mp - 1, psrs: [], prone: true }
-    return { ...s, prone: true, mp: s.mp + 1, steps: [...s.steps, step] }
+    return { ...s, prone: true, mp: s.mp + 1, tail: addStep(s, step) }
   }
   if (op === 'exit') {
     if (u.status !== 'withdrawing') return rej('E_WITHDRAWAL', 'only a withdrawing unit may leave the map')
-    if (!edgeHexes(board, homeEdgeOf(state, u)).some((h) => hexEq(h, s.hex))) return rej('E_EXIT_EDGE', 'a unit may leave only by its home edge')
+    if (!onEdge(board, homeEdgeOf(state, u), s.hex)) return rej('E_EXIT_EDGE', 'a unit may leave only by its home edge')
     if (s.prone) return rej('E_PRONE', 'a prone unit cannot leave')
     if (s.mp + 1 > c.cap) return rej('E_NOT_ENOUGH_MP', 'not enough MP to leave')
     const step: PlanStep = { op, from: s.hex, to: s.hex, facing: s.facing, cost: { base: 1, terrain: 0, level: 0, turn: 0, total: 1 }, mpLeft: c.cap - s.mp - 1, psrs: [], prone: false }
-    return { ...s, mp: s.mp + 1, exited: true, steps: [...s.steps, step] }
+    return { ...s, mp: s.mp + 1, exited: true, tail: addStep(s, step) }
   }
   // forward / backward
   if (s.prone) return rej('E_PRONE', 'a prone unit can only turn')
   if (op === 'backward' && s.mode === 'run') return rej('E_NO_BACKWARD', 'no backward moves while running')
   const dir = op === 'forward' ? s.facing : opposite(s.facing)
   const to = s.virtual ? neighbor(s.hex, s.facing) : neighbor(s.hex, dir)
-  if (!onBoard(board, to)) return rej('E_OFF_BOARD', 'that hex is off the board')
-  const toBh = hexAt(board, to)!
+  const toBh = hexAt(board, to) // null: off the board (cached lookup, no onBoard pass)
+  if (!toBh) return rej('E_OFF_BOARD', 'that hex is off the board')
   const fromBh = s.virtual ? toBh : hexAt(board, s.hex)!
-  if (s.virtual && !edgeHexes(board, homeEdgeOf(state, u)).some((h) => hexEq(h, to))) return rej('E_BAD_ENTRY', 'must enter on a home-edge hex')
+  if (s.virtual && !onEdge(board, homeEdgeOf(state, u), to)) return rej('E_BAD_ENTRY', 'must enter on a home-edge hex')
   const occ = unitAt(state, to, u.id)
   if (occ && occ.owner !== u.owner && !isImmobile(state, occ)) return rej('E_PROHIBITED_HEX', 'a mobile enemy holds that hex', { hex: to })
   const cost = s.virtual ? { terrain: terrainCost(toBh), level: 0, total: 1 + terrainCost(toBh), delta: 0 } : enterCost(fromBh, toBh)
   if (!cost) return rej('E_LEVEL_CHANGE', 'a level change of 3 or more is prohibited')
-  if (c.hipCrits > 0 && cost.delta > 1) return rej('E_LEVEL_CHANGE', 'a hip crit limits a hex to one level of change')
+  if (cost.delta > 1 && hipOf(c) > 0) return rej('E_LEVEL_CHANGE', 'a hip crit limits a hex to one level of change')
   let mode = s.mode
   if (s.mp + cost.total > c.cap) {
     // MOVE-014 minimum movement: first hex ahead, nothing else spent, counts as a run
-    const minMove = op === 'forward' && s.steps.length === 0 && c.firstAction && c.cap >= 1 && (c.mode === 'walk' || c.mode === 'run')
+    const minMove = op === 'forward' && nSteps(s) === 0 && c.firstAction && c.cap >= 1 && (c.mode === 'walk' || c.mode === 'run')
     if (!minMove) return rej('E_NOT_ENOUGH_MP', 'not enough MP', { need: cost.total, have: c.cap - s.mp })
     mode = 'run'
   }
@@ -196,7 +232,7 @@ function applyOp(c: Ctx, s: Sim, op: StepOp): Sim | Fail {
     op, from: s.virtual ? s.hex : s.hex, to, facing: s.facing,
     cost: { base: 1, terrain: cost.terrain, level: cost.level, turn: 0, total: cost.total }, mpLeft: c.cap - s.mp - cost.total, psrs, prone: false,
   }
-  return { ...s, hex: to, virtual: false, mp: s.mp + cost.total, hexes, lastDir: thisDir, ran: s.ran + (mode === 'run' ? 1 : 0), mode, steps: [...s.steps, step] }
+  return { ...s, hex: to, virtual: false, mp: s.mp + cost.total, hexes, lastDir: thisDir, ran: s.ran + (mode === 'run' ? 1 : 0), mode, tail: addStep(s, step), moved: true }
 }
 
 const turnsTo = (from: Facing, to: Facing): StepOp[] => {
@@ -209,27 +245,41 @@ const turnsTo = (from: Facing, to: Facing): StepOp[] => {
 function buildCtx(state: GameState, u: UnitState, mode: MoveMode): Ctx | Fail {
   if (u.shutdown) return rej('E_SHUTDOWN', 'the unit is shut down')
   if (!u.pilot.conscious || u.pilot.dead) return rej('E_UNCONSCIOUS', 'the pilot is unconscious')
-  if (isImmobile(state, u)) return rej('E_NOT_ELIGIBLE', 'the unit is immobile')
+  // isImmobile and currentMp share their parts: work them out once (validate runs this per reach entry)
+  const dw = damagedWalk(u), jm = jumpMp(state, u)
+  if (dw === 0 && jm === 0) return rej('E_NOT_ELIGIBLE', 'the unit is immobile')
   if (u.move.done) return rej('E_NOT_ELIGIBLE', 'the unit already moved this turn')
   if (u.move.mode !== null && u.move.mode !== mode && !(u.move.mode === 'walk' && mode === 'run')) {
     return rej('E_BAD_MODE', `mode is locked to ${u.move.mode}`)
   }
-  const mp = currentMp(state, u.id)
+  const walk = Math.max(0, dw - heatMpLoss(u.heat))
+  const mp: MpSet = { walk, run: Math.ceil(1.5 * walk), jump: jm } // = currentMp(state, u.id)
   const total = mode === 'walk' ? mp.walk : mode === 'run' ? mp.run : mode === 'jump' ? mp.jump : 0
   if ((mode === 'walk' || mode === 'run') && total < 1) return rej('E_BAD_MODE', `no ${mode} MP`)
   return {
-    state, u, mp, mode, cap: Math.max(0, total - u.move.mpSpent), hipCrits: hitSlots(u, 'hip'),
+    state, u, mp, mode, cap: Math.max(0, total - u.move.mpSpent),
     firstAction: u.move.mpSpent === 0 && u.move.standAttempts === 0, entering: u.pos === null,
   }
 }
 const startSim = (u: UnitState, mode: MoveMode, c: Ctx, entry?: { hex: Hex; facing: Facing }): Sim =>
   entry
-    ? { hex: entry.hex, virtual: true, facing: entry.facing, prone: false, mp: 0, hexes: 0, lastDir: null, ran: 0, mode, steps: [], exited: false, jumped: false, origin: entry }
-    : { hex: u.pos!, virtual: false, facing: u.facing, prone: u.prone, mp: 0, hexes: c.u.move.hexesMoved, lastDir: null, ran: 0, mode, steps: [], exited: false, jumped: false }
+    ? { hex: entry.hex, virtual: true, facing: entry.facing, prone: false, mp: 0, hexes: 0, lastDir: null, ran: 0, mode, tail: null, moved: false, exited: false, jumped: false, origin: entry }
+    : { hex: u.pos!, virtual: false, facing: u.facing, prone: u.prone, mp: 0, hexes: c.u.move.hexesMoved, lastDir: null, ran: 0, mode, tail: null, moved: false, exited: false, jumped: false }
 
 // ---------- jump (MOVE-050..054) ----------
 /** MOVE-051: some shortest path whose hexes (and the landing hex) stay at or below `limit`. */
 function jumpPathOk(state: GameState, a: Hex, b: Hex, limit: number): boolean {
+  // terrain only (boards are immutable): memo per board, the reach search asks once per landing hex and facing
+  if (limit < -16 || limit > 47) return jumpPathSearch(state, a, b, limit)
+  let m = JUMP_CACHE.get(state.board)
+  if (!m) { m = new Map(); JUMP_CACHE.set(state.board, m) }
+  const k = (keyOf(a) * 2 ** 21 + keyOf(b)) * 64 + (limit + 16)
+  let v = m.get(k)
+  if (v === undefined) { v = jumpPathSearch(state, a, b, limit); m.set(k, v) }
+  return v
+}
+const JUMP_CACHE = new WeakMap<BoardState, Map<number, boolean>>()
+function jumpPathSearch(state: GameState, a: Hex, b: Hex, limit: number): boolean {
   let frontier: Hex[] = [a]
   for (let d = distance(a, b); d > 0; d--) {
     const next = new Map<string, Hex>()
@@ -261,15 +311,32 @@ function planJump(c: Ctx, jumpTo: Hex, facing: Facing): Sim | Fail {
   if (occ) return rej(occ.owner !== u.owner && !isImmobile(state, occ) ? 'E_PROHIBITED_HEX' : 'E_OCCUPIED', 'the landing hex is occupied')
   const step: PlanStep = { op: 'jump', from, to: jumpTo, facing, cost: { base: cost, terrain: 0, level: 0, turn: 0, total: cost }, mpLeft: c.cap - cost, psrs: [], prone: false }
   if (toBh.depth >= 1) step.psrs = [{ reason: 'landWater', mod: 0, levels: toBh.depth }]
-  return { hex: jumpTo, virtual: false, facing, prone: false, mp: cost, hexes: distance(from, jumpTo), lastDir: null, ran: 0, mode: 'jump', steps: [step], exited: false, jumped: true }
+  return { hex: jumpTo, virtual: false, facing, prone: false, mp: cost, hexes: distance(from, jumpTo), lastDir: null, ran: 0, mode: 'jump', tail: one(step), moved: true, exited: false, jumped: true }
 }
 
 // ---------- end-of-move PSRs (PSR-031) ----------
-function endPsrs(u: UnitState, s: Sim): PsrTrigger[] {
+const hipOf = (c: Ctx): number => (c.hipCrits ??= hitSlots(c.u, 'hip'))
+/** One pass over the slots: a gyro or hip hit or a missing leg (run/jump PSR), and upper/lower leg hits (jump PSR). */
+function endFlagsOf(u: UnitState): { runOrJump: boolean; legCrit: boolean } {
+  let runOrJump = legsDestroyed(u) > 0, legCrit = false
+  for (const slots of Object.values(u.slots)) {
+    for (const sl of slots) {
+      if (!sl.hit) continue
+      if (sl.token === 'gyro' || sl.token === 'hip') runOrJump = true
+      else if (sl.token === 'upperLeg' || sl.token === 'lowerLeg') legCrit = true
+    }
+  }
+  return { runOrJump, legCrit }
+}
+function endPsrs(c: Ctx, s: Sim): PsrTrigger[] {
+  const ran = s.mode === 'run' && s.ran > 0
+  if (!ran && !s.jumped) return []
+  const u = c.u
+  // count the slots once per context: the reach search summarizes thousands of plans
+  const d = (c.endFlags ??= endFlagsOf(u))
   const out: PsrTrigger[] = []
-  const gyro = hitSlots(u, 'gyro') > 0, hip = hitSlots(u, 'hip') > 0, legOut = legsDestroyed(u) > 0
-  if (s.mode === 'run' && s.ran > 0 && (gyro || hip || legOut)) out.push({ reason: 'runDamaged', mod: 0 })
-  if (s.jumped && (gyro || hip || legOut || legCrits(u, ['upperLeg', 'lowerLeg']) > 0)) out.push({ reason: 'jumpDamaged', mod: 0 })
+  if (ran && d.runOrJump) out.push({ reason: 'runDamaged', mod: 0 })
+  if (s.jumped && (d.runOrJump || d.legCrit)) out.push({ reason: 'jumpDamaged', mod: 0 })
   return out
 }
 
@@ -292,7 +359,7 @@ function summarize(c: Ctx, s: Sim): MovePlan {
   const tmm = eff === 'standStill' ? 0 : tmmForHexes(hexesMoved) + (s.jumped ? 1 : 0)
   const moved = spent > 2 * c.u.move.standAttempts
   const heat = eff === 'walk' || eff === 'run' ? (moved ? movementHeat(eff, 0) : 0) : eff === 'jump' ? movementHeat('jump', hexesMoved) : 0
-  return { sim: s, mode: eff, steps: s.steps, end: endPsrs(c.u, s), mpUsed: spent, hexesMoved, tmm, attackerMod: attackerMoveMod(eff), heat }
+  return { sim: s, mode: eff, steps: stepsOf(s), end: endPsrs(c, s), mpUsed: spent, hexesMoved, tmm, attackerMod: attackerMoveMod(eff), heat }
 }
 
 /** Validates a MoveAction against the state and builds its plan (no dice, no mutation). */
@@ -325,7 +392,7 @@ export function planMove(state: GameState, action: MoveAction): MovePlan | Fail 
     const edge = homeEdgeOf(state, u)
     if (!entryFacings(edge).includes(e.facing) || onBoard(state.board, e.hex)) return rej('E_BAD_ENTRY', 'bad entry hex or facing')
     const first = neighbor(e.hex, e.facing)
-    if (!edgeHexes(state.board, edge).some((h) => hexEq(h, first))) return rej('E_BAD_ENTRY', 'the entry must lead onto a home-edge hex')
+    if (!onEdge(state.board, edge, first)) return rej('E_BAD_ENTRY', 'the entry must lead onto a home-edge hex')
     entry = e
   }
   let s: Sim | Fail = startSim(u, action.mode, c, entry)
@@ -340,8 +407,10 @@ export function planMove(state: GameState, action: MoveAction): MovePlan | Fail 
       s = applyOp(c, s, op)
       if (isFail(s)) return s
     }
+    // MOVE-012: never enter and end in an occupied hex. A unit that fell into a friend's hex is already there (the stacking
+    // break was involuntary): it may finish in place (turns, drop prone, nothing) and endMove shoves it out (resolveStacking).
     const occ = unitAt(state, s.hex, u.id)
-    if (occ) return rej('E_OCCUPIED', 'cannot end a move in an occupied hex', { hex: s.hex })
+    if (occ && changesHex(s)) return rej('E_OCCUPIED', 'cannot end a move in an occupied hex', { hex: s.hex })
   }
   return summarize(c, s)
 }
@@ -385,6 +454,8 @@ function planAttackMove(state: GameState, u: UnitState, c: Ctx, action: MoveActi
     if (isFail(plain)) return plain
     const end = plain.sim
     if (end.exited || end.prone || distance(end.hex, tHex) !== 1) return rej('E_BAD_TARGET', 'a charge must end adjacent to the target')
+    // a unit finishing in place in a shared hex is shoved out at the end of its move (resolveStacking): no charge from there
+    if (unitAt(state, end.hex, u.id)) return rej('E_OCCUPIED', 'a charge cannot be made from a shared hex', { hex: end.hex })
     if (action.facing !== directionTo(end.hex, tHex)) return rej('E_BAD_FACING', 'a charger must face its target')
     const cost = enterCost(hexAt(state.board, end.hex)!, hexAt(state.board, tHex)!)
     if (!cost || c.cap - end.mp < cost.total) return rej('E_NOT_ENOUGH_MP', 'not enough MP left to enter the target hex')
@@ -411,7 +482,7 @@ function planAttackMove(state: GameState, u: UnitState, c: Ctx, action: MoveActi
   const limit = floorLevel(startBh) + c.mp.jump
   if (floorLevel(tBh) + (t.prone ? 1 : 2) > limit || !jumpPathOk(state, from, dfaFrom, limit)) return rej('E_JUMP_TOO_HIGH', 'the jump cannot clear the target')
   const step: PlanStep = { op: 'jump', from, to: dfaFrom, facing: action.facing, cost: { base: hexes, terrain: 0, level: 0, turn: 0, total: hexes }, mpLeft: c.cap - hexes, psrs: [], prone: false }
-  const sim: Sim = { hex: dfaFrom, virtual: false, facing: action.facing, prone: false, mp: hexes, hexes, lastDir: null, ran: 0, mode: 'jump', steps: [step], exited: false, jumped: true }
+  const sim: Sim = { hex: dfaFrom, virtual: false, facing: action.facing, prone: false, mp: hexes, hexes, lastDir: null, ran: 0, mode: 'jump', tail: one(step), moved: true, exited: false, jumped: true }
   return summarize(c, sim)
 }
 
@@ -459,7 +530,8 @@ const opsOf = (steps: PlanStep[]): { op: StepOp }[] => steps.map((st) => ({ op: 
 function entryFrom(state: GameState, u: UnitState, mode: MoveMode, p: MovePlan, extra: { entry?: { hex: Hex; facing: Facing }; jumpTo?: Hex }): ReachEntry {
   const sim = p.sim
   const action: MoveAction = {
-    type: 'move', decisionId: state.pending?.id ?? '', player: u.owner, unitId: u.id, mode: p.mode === 'standStill' ? 'standStill' : mode,
+    // the action keeps the search mode: a locked walk/run with nothing spent summarizes as stand still but must name its mode
+    type: 'move', decisionId: state.pending?.id ?? '', player: u.owner, unitId: u.id, mode,
     steps: mode === 'jump' ? [] : opsOf(p.steps), facing: sim.facing,
   }
   if (extra.jumpTo) action.jumpTo = extra.jumpTo
@@ -473,12 +545,12 @@ function entryFrom(state: GameState, u: UnitState, mode: MoveMode, p: MovePlan, 
 
 function labelOf(state: GameState, h: Hex): string | null { return hexAt(state.board, h)?.label ?? null }
 
-const nodeKey = (s: Sim): string => `${s.hex.q},${s.hex.r},${s.facing},${s.prone ? 1 : 0}`
-const better = (a: Sim, b: Sim): boolean => a.mp < b.mp || (a.mp === b.mp && (a.hexes > b.hexes || (a.hexes === b.hexes && a.steps.length < b.steps.length)))
+const nodeKey = (s: Sim): number => (keyOf(s.hex) * 6 + s.facing) * 2 + (s.prone ? 1 : 0)
+const better = (a: Sim, b: Sim): boolean => a.mp < b.mp || (a.mp === b.mp && (a.hexes > b.hexes || (a.hexes === b.hexes && nSteps(a) < nSteps(b))))
 
 /** Ground search (Dijkstra over hex, facing, prone) for one mode. Returns the cheapest node per state. */
 function groundSearch(c: Ctx, starts: Sim[]): Sim[] {
-  const best = new Map<string, Sim>()
+  const best = new Map<number, Sim>()
   const buckets: Sim[][] = []
   const forced: Sim[] = []
   const push = (s: Sim): void => {
@@ -536,9 +608,10 @@ export function reachable(state: GameState, unitId: UnitId): ReachEntry[] {
       }
     } else starts = [startSim(u, mode, c)]
     for (const s of groundSearch(c, starts)) {
-      if (!entering && s.steps.length === 0 && locked === null) continue
+      if (!entering && nSteps(s) === 0 && locked === null) continue
       // a move may pass through a friendly 'Mech's hex but never end there (validateMove's E_OCCUPIED); keep the reach set legal
-      if (!s.exited && !s.virtual && unitAt(state, s.hex, u.id)) continue
+      // (finishing in place in a shared hex after a fall stays legal, so a locked move always has its zero-step entry)
+      if (!s.exited && changesHex(s) && unitAt(state, s.hex, u.id)) continue
       out.push(entryFrom(state, u, mode, summarize(c, s), s.origin ? { entry: s.origin } : {}))
     }
     // exit step for withdrawing units standing on their home edge
@@ -661,13 +734,59 @@ export function endMove(state: GameState, unitId: UnitId, hexesJumped = 0): Step
   const h = addHeat(s, unitId, { source: 'movement', amount, ref: mode })
   s = h.state
   events.push(...h.events)
-  return { state: s, events }
+  const st = resolveStacking(s, unitId)
+  return { state: st.state, events: [...events, ...st.events] }
+}
+
+/**
+ * Stacking (MOVE-012; AGoAC "Stacking": an involuntary break of the one-'Mech-per-hex limit forces one 'Mech out). Only a fall
+ * while passing a friend's hex can leave a unit sharing a hex. RULING: the unit whose move ended there is moved out at once,
+ * with no PSR, to an adjacent empty hex it could stand in (no 3+ level climb, no drop of 2+ levels): nearest its start hex
+ * first, then behind it, then the sides, then ahead. No such hex: it stays (the next move may still leave or stay in place).
+ */
+export function resolveStacking(state: GameState, unitId: UnitId): Stepped {
+  const u = state.units[unitId]
+  if (!u || !u.pos || !liveOnBoard(u) || !unitAt(state, u.pos, unitId)) return { state, events: [] }
+  const from = u.pos
+  const here = floorLevel(hexAt(state.board, from)!)
+  const f = u.facing
+  const pref: Facing[] = [opposite(f), turnLeft(opposite(f)), turnRight(opposite(f)), turnLeft(f), turnRight(f), f]
+  const home = u.move.startHex
+  const cands = pref
+    .map((d, i) => ({ to: neighbor(from, d), i }))
+    .filter(({ to }) => {
+      if (!onBoard(state.board, to) || unitAt(state, to, unitId)) return false
+      const delta = floorLevel(hexAt(state.board, to)!) - here
+      return delta <= 2 && delta >= -1
+    })
+    .sort((a, b) => (home ? distance(a.to, home) - distance(b.to, home) : 0) || a.i - b.i)
+  const pick = cands[0]
+  if (!pick) return { state, events: [] }
+  const s = patchUnit(state, unitId, { pos: pick.to })
+  return { state: s, events: [{ type: 'UnitDisplaced', unitId, from, to: pick.to, cause: 'domino' }] }
 }
 
 function standPossibleAfterFall(state: GameState, id: UnitId): boolean {
   const u = state.units[id]!
   if (!u.prone || u.status === 'destroyed' || u.move.jumped) return false
+  if (u.shutdown || !u.pilot.conscious || u.pilot.dead) return false
   return standCheck(state, u, null).ok
+}
+
+/**
+ * The follow-up decision only when it has a legal answer (legalActions is never empty): a 'move' needs a reach entry, a
+ * 'standUp' an awake, powered pilot. Otherwise the move ends now.
+ */
+function settle(id: UnitId, out: MoveOutcome): MoveOutcome {
+  if (out.next === 'done') return out
+  const u = out.state.units[id]!
+  const ok = out.next === 'move'
+    ? reachable(out.state, id).length > 0
+    : u.prone && !u.shutdown && u.pilot.conscious && !u.pilot.dead && !u.move.done
+  if (ok) return out
+  if (u.status === 'destroyed' || u.move.done) return { ...out, next: 'done' }
+  const e = endMove(out.state, id)
+  return { state: e.state, events: [...out.events, ...e.events], next: 'done' }
 }
 
 /** Executes a validated MoveAction. */
@@ -746,7 +865,9 @@ export function executeMove(state: GameState, action: MoveAction): MoveOutcome |
   }
 
   if (truncated) {
-    return { state: s, events, next: standPossibleAfterFall(s, id) ? 'standUp' : finishNow() }
+    // decide `next` first: finishNow() replaces `s`, and the outcome must carry the state after it
+    const next: MoveNext = standPossibleAfterFall(s, id) ? 'standUp' : finishNow()
+    return settle(id, { state: s, events, next })
   }
   // end-of-move PSRs (PSR-031)
   for (const t of plan.end) {
@@ -830,7 +951,7 @@ export function executeStandUp(state: GameState, action: StandUpAction): MoveOut
       const e = endMove(s, id)
       return { state: e.state, events: [...events, ...e.events], next: 'done' }
     }
-    return { state: s, events, next: 'move' }
+    return settle(id, { state: s, events, next: 'move' })
   }
   const chk = standCheck(s, u0, (action.mode ?? null) as 'walk' | 'run' | null)
   const mode: MoveMode = chk.forcedRun ? 'run' : (u0.move.mode ?? action.mode!)
@@ -855,12 +976,12 @@ export function executeStandUp(state: GameState, action: StandUpAction): MoveOut
   events.push(...r.events)
   events.push({ type: 'StandAttempted', unitId: id, success, facing, mpLeft })
   if (success) {
-    if (mpLeft > 0) return { state: s, events, next: 'move' }
+    if (mpLeft > 0) return settle(id, { state: s, events, next: 'move' })
     const e = endMove(s, id)
     return { state: e.state, events: [...events, ...e.events], next: 'done' }
   }
   if (s.units[id]!.status === 'destroyed') return { state: setRecord(s, id, { done: true }), events, next: 'done' }
-  if (standCheck(s, s.units[id]!, null).ok) return { state: s, events, next: 'standUp' }
+  if (standCheck(s, s.units[id]!, null).ok) return settle(id, { state: s, events, next: 'standUp' })
   const e = endMove(s, id)
   return { state: e.state, events: [...events, ...e.events], next: 'done' }
 }

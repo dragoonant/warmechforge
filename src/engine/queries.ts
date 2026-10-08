@@ -133,7 +133,7 @@ export function attackPreviewQuery(state: GameState, req: AttackPreviewRequest):
   const rack = prof?.cluster?.rackSize ?? (rapid > 1 ? rapid : 0)
   if (prof && rack > 0) {
     const streak = hasFlag(prof, 'streak')
-    const mod = (prof.clusterMod ?? 0) + (a ? artemisClusterMod(data, a, req.mountId, ev.ammoId) : 0)
+    const mod = (prof.clusterMod ?? 0) + (a ? artemisClusterMod(data, a, req.mountId, ev.ammoId, { state: s, targetHex: tPos }) : 0)
     cluster = { rackSize: rack, expectedHits: streak ? rack : expectedClusterHits(rack, mod) }
   }
   const perHit = cluster ? cluster.expectedHits * damage : damage

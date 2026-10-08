@@ -40,7 +40,7 @@ import {
 } from './store/gameStore'
 import { panelActions, useRailCollapsed, type Rail } from './store/panelStore'
 import { SPEED_PRESETS, useSettingsStore, type Settings } from './store/settingsStore'
-import { defaultControllers, listForces, listMaps, listMissions, type Controller } from './store/setup'
+import { defaultControllers, listForces, listMaps, listMechs, listMissions, LINEUP_DEFAULTS, type Controller } from './store/setup'
 import { installTestHooks, registerHexToScreen, setupFromUrl, speedFromUrl } from './store/testHooks'
 import { ui, useUiStore, type FireDraft, type MoveDraft, type PhysicalDraft, type UiMode } from './store/uiStore'
 
@@ -49,7 +49,7 @@ export type {
   ActiveBeat, ActionPayload, AutosaveSlot, Banner, BeatFx, BeatKind, ClientRejection, Controller, DamagePop, FeedEntry, FireDraft,
   MoveDraft, NarrationLine, PhysicalDraft, Rail, Settings, ShownRoll, SideStats, TweenPose, UiMode, UnitTween,
 }
-export type { BotTier, ForceInfo, MapInfo, MissionInfo, NewGameOptions } from './store/setup'
+export type { BotTier, ForceInfo, Lineup, LineupUnit, MapInfo, MechInfo, MissionInfo, NewGameOptions } from './store/setup'
 export type { ClientSave, SaveSummary } from './store/gameStore'
 export type { GameTestApi, HexToScreen } from './store/testHooks'
 export type { GraphicsTier, HexLabelMode, OddsFormat } from './store/settingsStore'
@@ -510,7 +510,7 @@ export const settings = {
 export const panels = panelActions
 
 // ---------- start screen catalogue (data names; no rules) ----------
-export { defaultControllers, listForces, listMaps, listMissions }
+export { defaultControllers, listForces, listMaps, listMechs, listMissions, LINEUP_DEFAULTS }
 
 // ---------- labels and formatting (our words; names from state/data; numbers from the engine) ----------
 export {

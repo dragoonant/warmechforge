@@ -143,7 +143,9 @@ export function applyDamageW(w: Work, inst: DamageInstance): number {
   let amt: number = inst.amount
   const rearAttack = inst.side === 'rear'
   let dealt = 0
-  if (inst.location === 'HD' && !inst.internal && amt > 0) pilotHitW(w, id, 'head') // even if armor absorbs it
+  const lam = lamellorApplies(w.data, unitOf(w, id), inst)
+  // head hit: a pilot hit even if armor absorbs it, unless ferro-lamellor stops every point (nothing reaches the head)
+  if (inst.location === 'HD' && !inst.internal && amt > 0 && (!lam || lamellorAmount(unitOf(w, id), 'HD', 'front', amt) > 0)) pilotHitW(w, id, 'head')
   while (amt > 0 && loc !== null) {
     const cur: Loc = loc
     const L: LocState = unitOf(w, id).locs[cur]
@@ -171,6 +173,21 @@ export function applyDamageW(w: Work, inst: DamageInstance): number {
     }
     const armorBefore: number = side === 'rear' ? L.rear ?? 0 : L.armor
     const structBefore = L.structure
+    // ferro-lamellor (TO:AuE; MegaMek cross-check): damage entering a location whose struck armor still stands loses 1 point
+    // per 5 or part of 5, i.e. floor(4/5 x damage). A hit reduced to 0 does nothing more.
+    let reduced = 0
+    if (lam && armorBefore > 0) {
+      const after = Math.floor((amt * 4) / 5)
+      reduced = amt - after
+      amt = after
+      if (amt <= 0) {
+        w.ev.push({
+          ...base, damage: 0, armorBefore, armorAfter: armorBefore, structureBefore: structBefore, structureAfter: structBefore,
+          transferredTo: null, transferred: 0, lost: 0, reduced,
+        })
+        break
+      }
+    }
     const absorbed: number = inst.internal ? 0 : Math.min(amt, armorBefore)
     if (side === 'rear') L.rear = armorBefore - absorbed
     else L.armor = armorBefore - absorbed
@@ -184,6 +201,7 @@ export function applyDamageW(w: Work, inst: DamageInstance): number {
       ...base, damage: amt, armorBefore, armorAfter: armorBefore - absorbed, structureBefore: structBefore, structureAfter: structBefore - sdmg,
       transferredTo: transfers ? next : null, transferred: transfers ? excess : 0, lost: excess > 0 && !transfers ? excess : 0,
     }
+    if (reduced > 0) ev.reduced = reduced
     w.ev.push(ev)
     dealt += absorbed + sdmg
     tally(w, id, absorbed + sdmg)
@@ -193,6 +211,23 @@ export function applyDamageW(w: Work, inst: DamageInstance): number {
     loc = transfers ? next : null
   }
   return dealt
+}
+
+// ---------- ferro-lamellor armor (20 §12.2 'ferroLamellor'; the armor type is a 'Mech field, so no item carries a hook) ----------
+export function isLamellor(data: DataBundle, mechId: string): boolean {
+  return (data.mechs[mechId] as { armor?: { type?: string } } | undefined)?.armor?.type === 'ferroLamellor'
+}
+/** Does ferro-lamellor reduce this damage instance? Ferro-lamellor 'Mechs only; never explosions or internal damage. */
+export function lamellorApplies(data: DataBundle, u: { mechId: string }, inst: Pick<DamageInstance, 'internal' | 'source'>): boolean {
+  if (inst.internal || inst.source === 'ammoExplosion' || inst.source === 'componentExplosion') return false
+  return isLamellor(data, u.mechId)
+}
+/** Damage that lands at `loc` through ferro-lamellor: floor(4/5 x amount) while the struck armor side has points, else unchanged. */
+export function lamellorAmount(u: { locs: Record<Loc, LocState> }, loc: Loc, side: ArmorSide, amount: number): number {
+  const L = u.locs[loc]
+  if (!L || L.destroyed) return amount
+  const armor = side === 'rear' && isTorso(loc) ? L.rear ?? 0 : L.armor
+  return armor > 0 ? Math.floor((amount * 4) / 5) : amount
 }
 
 /** The public entry point (falls, physical self-damage, anything outside an attack). `data` defaults to the registered bundle. */
@@ -329,10 +364,13 @@ export function resolveGroupW(w: Work, g: GroupInput): GroupResult {
     w.ev.push({ type: 'HitAbsorbedByCover', attackId: g.attackId, unitId: g.targetId, location, damage: g.damage })
     return { location, dealt: 0, absorbedByCover: true }
   }
+  const lamOut = g.source !== 'ammoExplosion' && g.source !== 'componentExplosion' && isLamellor(w.data, target.mechId)
+    ? lamellorAmount(unitOf(w, g.targetId), location, side, g.damage) : null
   const dealt = applyDamageW(w, {
     unitId: g.targetId, amount: g.damage, location, side, source: g.source, sourceUnitId: g.attackerId, attackId: g.attackId,
   })
-  if (tac && g.damage >= 1) {
+  // a hit ferro-lamellor stops entirely gets no through-armor crit (MegaMek: no crits once the damage reaches 0)
+  if (tac && g.damage >= 1 && (lamOut === null || lamOut >= 1)) {
     // HITLOC-004: crit check on that torso even if armor remains; a torso destroyed by now (this hit or earlier) sends it to CT
     let critLoc: Loc = tacLocation ?? location
     if (isTorso(critLoc) && critLoc !== 'CT' && unitOf(w, g.targetId).locs[critLoc].destroyed) critLoc = 'CT'
@@ -419,7 +457,7 @@ export function resolveAttack(state: GameState, decl: RangedDeclaration, opts: R
   const cluster = prof.cluster ?? (rapid > 1 ? { rackSize: rapid, groupSize: 1 } : null)
   if (cluster) {
     groups = rollCluster(w, {
-      attackId, attackerId, targetId, rackSize: cluster.rackSize, mod: (prof.clusterMod ?? 0) + artemisClusterMod(w.data, attacker, decl.mountId, decl.ammoId ?? (decl.binId ? attacker.bins[decl.binId]?.ammo ?? null : null)), dmgPerHit: dmg, perGroup: cluster.groupSize, streak,
+      attackId, attackerId, targetId, rackSize: cluster.rackSize, mod: (prof.clusterMod ?? 0) + artemisClusterMod(w.data, attacker, decl.mountId, decl.ammoId ?? (decl.binId ? attacker.bins[decl.binId]?.ammo ?? null : null), { state: snapshot(w), targetHex: decl.targetHex }), dmgPerHit: dmg, perGroup: cluster.groupSize, streak,
     }).groups
   } else {
     groups = [dmg]

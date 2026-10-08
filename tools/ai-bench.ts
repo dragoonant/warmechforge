@@ -1,4 +1,5 @@
-// AI bench (40-ai §15): `npm run bench:ai -- --games N --seed S [--pairs normal:random,normal:easy] [--turnLimit 30]`.
+// AI bench (40-ai §15): `npm run bench:ai -- --games N --seed S [--pairs normal:random,normal:easy] [--turnLimit 30]`
+// [--map map.x] [--forces A,B | random] (as in tools/sim.ts; --forces switches to the skirmish mission).
 // Plays each pair on the intro mission with sides alternated (the first tier plays side A in even games, side B in odd
 // games). Prints wins by cause, mean turns, mean and p95 ms per AI decision, rejections, stalls and fallbacks, and writes
 // tools/out/bench-<date>.json. Exit 1 when any game has a rejection, stall, decision-cap hit, fallback or unhandled kind.
@@ -10,17 +11,19 @@ import type { Action, GameState, PlayerId, StepResult } from '../src/engine/inde
 import { createGame, deriveSeedString, legalActions, step, view } from '../src/engine/index'
 import { decideAi } from '../src/ai/decider'
 import { decideRandom } from '../src/ai/random'
-import { introSetup } from './sim'
+import { customSetup, randomForces } from './sim'
 
 type Tier = 'random' | 'easy' | 'normal'
 const DECISION_CAP = 5000
 const STALL_CAP = 200
 
-interface Args { games: number; seed: string; turnLimit: number; pairs: [Tier, Tier][]; mission: string; quiet: boolean }
+interface Args { games: number; seed: string; turnLimit: number; pairs: [Tier, Tier][]; mission: string; quiet: boolean; map?: string; forces?: string }
 function parseArgs(argv: string[]): Args {
   const get = (k: string, d: string): string => { const i = argv.indexOf(`--${k}`); return i >= 0 && argv[i + 1] ? argv[i + 1]! : d }
   const pairs = get('pairs', get('pair', 'normal:random,normal:easy')).split(',').map((p) => p.split(':') as [Tier, Tier])
-  return { games: Number(get('games', '20')), seed: get('seed', '1'), turnLimit: Number(get('turnLimit', '30')), pairs, mission: get('mission', 'mission.intro'), quiet: argv.includes('--quiet') }
+  const forces = get('forces', ''), map = get('map', '')
+  const mission = get('mission', forces ? 'mission.skirmish' : 'mission.intro')
+  return { games: Number(get('games', '20')), seed: get('seed', '1'), turnLimit: Number(get('turnLimit', '30')), pairs, mission, quiet: argv.includes('--quiet'), ...(map ? { map } : {}), ...(forces ? { forces } : {}) }
 }
 
 interface GameOut {
@@ -30,7 +33,8 @@ interface GameOut {
 }
 
 function playOne(bundle: ReturnType<typeof loadBundle>, args: Args, tiers: Record<PlayerId, Tier>, seed: string, index: number): GameOut {
-  const setup = introSetup(bundle, args.mission, args.turnLimit)
+  const forces: [string, string] | null = args.forces === 'random' ? randomForces(bundle, args.seed, index) : args.forces ? (args.forces.split(',') as [string, string]) : null
+  const setup = customSetup(bundle, args, forces)
   const out: GameOut = {
     index, seed, tierA: tiers.A, tierB: tiers.B, winnerTier: null, winner: null, reason: 'unfinished', turns: 0, decisions: 0, rejections: 0,
     stall: false, capHit: false, engineErrors: [], fallbacks: [], unhandled: [], ms: [], msByKind: {}, shutdowns: { A: 0, B: 0 }, ammoExplosions: { A: 0, B: 0 },

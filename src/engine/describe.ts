@@ -2,6 +2,7 @@
 import type { Action } from './actions'
 import type { GameEvent } from './events'
 import type { DecisionText } from './index'
+import { bundleFor } from './bundles'
 import { hexToLabel } from './hex'
 import type { GameState, Hex, Loc, PendingDecision, PhaseId, UnitId } from './types'
 
@@ -17,6 +18,25 @@ const FACING = ['north', 'north-east', 'south-east', 'south', 'south-west', 'nor
 const name = (s: GameState, id: UnitId | null | undefined): string => (id ? s.units[id]?.name ?? id : 'nobody')
 const hex = (s: GameState, h: Hex | null | undefined): string => (h ? hexToLabel(s.board, h) ?? `(${h.q},${h.r})` : 'off the board')
 const side = (s: GameState, p: 'A' | 'B'): string => s.sides[p]?.label ?? `side ${p}`
+
+/** Display name of a data record (weapon, ammo, equipment) from the state's bundle; null when unknown or no bundle. */
+function recordName(s: GameState, id: string): string | null {
+  try {
+    const r = bundleFor(s).byId[id] as { name?: unknown } | undefined
+    return typeof r?.name === 'string' && r.name ? r.name : null
+  } catch { return null } // no bundle registered (bare test states): fall back to the id
+}
+/** 'is.ammo.mml-5-lrm' -> 'MML 5 LRM ammo'; with shots: 'MML 5 LRM ammo (24 shots)'. Never a raw id when the record exists. */
+export function ammoLabel(s: GameState, ammoId: string, shots?: number): string {
+  const n = recordName(s, ammoId)
+  const base = n ? (/\bammo$/i.test(n) ? n.replace(/\bammo$/i, 'ammo') : `${n} ammo`) : ammoId
+  return shots === undefined ? base : `${base} (${shots} shot${shots === 1 ? '' : 's'})`
+}
+/** A unit's weapon by mount id ('Medium Laser'), else the mount id. */
+function mountName(s: GameState, unitId: UnitId | null | undefined, mountId: string): string {
+  const m = unitId ? s.units[unitId]?.mounts[mountId] : undefined
+  return (m && recordName(s, m.item)) ?? mountId
+}
 
 export function describeUnit(s: GameState, unitId: UnitId): string {
   const u = s.units[unitId]
@@ -59,8 +79,11 @@ export function describeDecision(s: GameState, p: PendingDecision): DecisionText
       return { title: PHASE[p.phase], prompt: `${unit}: twist the torso or keep it forward.`, lines }
     case 'declareFire':
       return { title: 'Ranged Attack Phase', prompt: `${unit}: choose weapons and targets, or hold fire.`, lines: (p.context.targets ?? []).map((id) => `In reach: ${name(s, id)}`) }
-    case 'chooseAmmo':
-      return { title: 'Ranged Attack Phase', prompt: `${unit}: choose which ammunition to load.`, lines: (p.context.bins ?? []).map((b) => `${b.ammo}: ${b.shots} shots`) }
+    case 'chooseAmmo': {
+      const weapon = p.context.mountId ? mountName(s, p.unitId, p.context.mountId) : null
+      const prompt = weapon ? `${unit}: choose which ammunition the ${weapon} fires.` : `${unit}: choose which ammunition to load.`
+      return { title: 'Ranged Attack Phase', prompt, lines: (p.context.bins ?? []).map((b) => ammoLabel(s, b.ammo, b.shots)) }
+    }
     case 'declarePhysical':
       return { title: 'Physical Attack Phase', prompt: `${unit}: choose a punch, kick or push, or none.`, lines: (p.context.targets ?? []).map((id) => `Adjacent: ${name(s, id)}`) }
     case 'powerChoice':
@@ -92,7 +115,14 @@ export function describeAction(s: GameState, a: Action): string {
     case 'declareFire':
       if (a.shots.length === 0) return `${name(s, a.unitId)} holds fire`
       return `${name(s, a.unitId)} fires ${a.shots.length} weapon${a.shots.length > 1 ? 's' : ''} at ${[...new Set(a.shots.map((x) => name(s, x.targetId)))].join(' and ')}`
-    case 'chooseAmmo': return `loads bin ${a.binId} for ${a.mountId}`
+    case 'chooseAmmo': {
+      // the action names no unit: the open chooseAmmo decision's unit, else the player's unit holding that mount and bin
+      const uid = (s.pending?.kind === 'chooseAmmo' && s.pending.id === a.decisionId ? s.pending.unitId : null)
+        ?? s.unitOrder.find((id) => { const u = s.units[id]!; return u.owner === a.player && !!u.mounts[a.mountId] && !!u.bins[a.binId] }) ?? null
+      const bin = uid ? s.units[uid]?.bins[a.binId] : undefined
+      const what = bin ? ammoLabel(s, bin.ammo) : `bin ${a.binId}`
+      return `${uid ? name(s, uid) : side(s, a.player)} loads ${what} into the ${mountName(s, uid, a.mountId)}`
+    }
     case 'declarePhysical': {
       const k = a.attack
       if (k.kind === 'none') return `${name(s, a.unitId)} makes no physical attack`

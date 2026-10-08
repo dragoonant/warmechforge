@@ -57,11 +57,8 @@
     "kind": "artemis",
     "slots": 1,
     "tons": 1,
-    "notes": "Release 1 has no Artemis rules hook yet; it occupies its slot and weight only.",
-    "source": { "ref": "sarna", "note": "TechManual" },
-    "verify": [
-      { "path": "", "note": "no engine hook registered yet", "status": "unconfirmed" }
-    ]
+    "notes": "Artemis IV FCS: +2 on the cluster roll for the linked launcher firing Artemis ammo (CLUS-004); a hostile Guardian ECM bubble cancels it.",
+    "source": { "ref": "sarna", "note": "TechManual" }
   },
   {
     "id": "is.eq.beagle-active-probe",
@@ -86,6 +83,116 @@
       {
         "path": "/tons",
         "note": "RULING: the 3.5 t total is sourced; how it splits between the two torsos (2 / 1.5 in ers-2n) is ours and arbitrary, the wing has no rules in release 1; jump bonus not modelled",
+        "status": "unconfirmed"
+      }
+    ]
+  },
+  {
+    "id": "cl.eq.jump-jet",
+    "name": "Clan Jump Jet",
+    "techBase": "Clan",
+    "kind": "jumpJet",
+    "slots": 1,
+    "tons": "perMech",
+    "jumpJet": { "improved": false },
+    "notes": "Mount tons: 0.5 for 20-55 t, 1 for 60-85 t, 2 for 90-100 t.",
+    "source": { "ref": "agoac", "note": "AGoAC Weapons and Equipment Table (same weights as the Inner Sphere jump jet)" }
+  },
+  {
+    "id": "is.eq.improved-jump-jet",
+    "name": "Improved Jump Jet",
+    "techBase": "IS",
+    "kind": "jumpJet",
+    "slots": 2,
+    "tons": "perMech",
+    "jumpJet": { "improved": true },
+    "notes": "Mount tons are twice the jump-jet value; the jump rating may reach the run MP.",
+    "source": { "ref": "megamek", "note": "MiscType (2026-10-08): Improved Jump Jet; 2 slots, weight twice a standard jet", "retrieved": "2026-10-08" }
+  },
+  {
+    "id": "cl.eq.case-ii",
+    "name": "Clan CASE II",
+    "techBase": "Clan",
+    "kind": "caseII",
+    "slots": 1,
+    "tons": 0.5,
+    "code": ["caseIIProtect"],
+    "source": { "ref": "megamek", "note": "MiscType createCLCASEII (2026-10-08): 0.5 t, 1 slot", "retrieved": "2026-10-08" }
+  },
+  {
+    "id": "cl.eq.ppc-capacitor",
+    "name": "PPC Capacitor",
+    "techBase": "Clan",
+    "kind": "capacitor",
+    "slots": 1,
+    "tons": 1,
+    "notes": "Release 1 has no capacitor rules yet; it occupies its slot and weight. Intended hook name: ppcCapacitor (not registered).",
+    "source": { "ref": "megamek", "note": "MiscType createISPPCCapacitor (2026-10-08): 1 t, 1 slot; the same item serves Clan PPCs", "retrieved": "2026-10-08" },
+    "verify": [
+      {
+        "path": "",
+        "note": "ENGINE: PPC capacitor charge/discharge hook (ppcCapacitor) is not registered",
+        "status": "unconfirmed"
+      }
+    ]
+  },
+  {
+    "id": "cl.eq.targeting-computer",
+    "name": "Clan Targeting Computer",
+    "techBase": "Clan",
+    "kind": "targetingComputer",
+    "slots": "perMech",
+    "tons": "perMech",
+    "notes": "Mount tons and slots both equal ceil(sum of direct-fire weapon tons / 5). The engine gives -1 to hit to direct-fire weapons (EQUIP-001) while the TC mount is intact, and allows TC aimed shots (TOHIT-030/034).",
+    "source": { "ref": "megamek", "note": "MiscType createCLTargComp / cost code (2026-10-08): Clan divider 5 per ton of direct-fire weapons", "retrieved": "2026-10-08" }
+  },
+  {
+    "id": "cl.eq.coolant-pod",
+    "name": "Coolant Pod",
+    "techBase": "Clan",
+    "kind": "other",
+    "slots": 1,
+    "tons": 1,
+    "notes": "Release 1 has no coolant-pod rules; it occupies its slot and weight only. It adds heat dissipation and can explode in the full rules.",
+    "source": { "ref": "megamek", "note": "AmmoType createISCoolantPod (2026-10-08): Coolant Pod is an ammo-type item (1 shot); 1 slot and 1 ton from the MTF slot table and the Regent A tonnage audit", "retrieved": "2026-10-08" },
+    "verify": [
+      {
+        "path": "",
+        "note": "ENGINE: coolant pod needs +1 heat dissipation per pod (hook name coolantPod, not registered)",
+        "status": "unconfirmed"
+      }
+    ]
+  },
+  {
+    "id": "cl.eq.masc",
+    "name": "Clan MASC",
+    "techBase": "Clan",
+    "kind": "masc",
+    "slots": "perMech",
+    "tons": "perMech",
+    "notes": "Mount tons and slots both equal tonnage / 25, rounded to the nearest ton (minimum 1): 1 for a 25 t Solitaire. Release 1 has no MASC rules yet. Intended hook name: masc (not registered).",
+    "source": { "ref": "megamek", "note": "MiscType createCLMASC (2026-10-08): weight = max(1, round(tonnage * 0.04)) for Clan", "retrieved": "2026-10-08" },
+    "verify": [
+      {
+        "path": "",
+        "note": "ENGINE: MASC sprint with escalating failure needs a hook (name masc, not registered)",
+        "status": "unconfirmed"
+      }
+    ]
+  },
+  {
+    "id": "is.eq.guardian-ecm",
+    "name": "Guardian ECM Suite",
+    "techBase": "IS",
+    "kind": "ecm",
+    "slots": 2,
+    "tons": 1.5,
+    "notes": "Guardian ECM: a 6-hex bubble. Release 1 models one effect: hostile Artemis IV loses its cluster bonus when the attacker or the target is within 6 hexes of an operating Guardian (2026 [CL W38]: radius only, no LOS tracing). Probe, TAG, C3 and stealth effects are not modelled.",
+    "source": { "ref": "megamek", "note": "MiscType createGECM (2026-10-08): 1.5 t, 2 slots", "retrieved": "2026-10-08" },
+    "verify": [
+      {
+        "path": "",
+        "note": "only the Artemis effect is modelled; probe and other ECM effects are follow-ups",
         "status": "unconfirmed"
       }
     ]

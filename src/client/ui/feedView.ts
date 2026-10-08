@@ -80,7 +80,7 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
         const where = locName(ev.location, ev.side === 'rear')
         if (ev.armorBefore !== ev.armorAfter) bits.push(`${where} ${ev.armorBefore}→${ev.armorAfter} armor`)
         if (ev.structureBefore !== ev.structureAfter) bits.push(`${where} internal ${ev.structureBefore}→${ev.structureAfter}`)
-        const line = `${n(ev.unitId)}: ${ev.damage} damage to ${where}: armor ${ev.armorBefore}→${ev.armorAfter}, internal ${ev.structureBefore}→${ev.structureAfter}${ev.lost ? `, ${ev.lost} lost` : ''}`
+        const line = `${n(ev.unitId)}: ${ev.damage} damage to ${where}: armor ${ev.armorBefore}→${ev.armorAfter}, internal ${ev.structureBefore}→${ev.structureAfter}${ev.lost ? `, ${ev.lost} lost` : ''}${ev.reduced ? ` (ferro-lamellor stopped ${ev.reduced})` : ''}`
         const xfer = ev.transferredTo ? `${ev.structureAfter === 0 ? `${locName(ev.location)} destroyed, ` : ''}${ev.transferred} transfers to ${locName(ev.transferredTo)}` : null
         const target = open && ((open.kind === 'attack' && (ev.source === 'weapon' || ev.source === 'physical')) || (open.kind === 'crit' && (ev.source === 'ammoExplosion' || ev.source === 'componentExplosion')) || (open.kind === 'psr' && (ev.source === 'fall' || ev.source === 'fallFromAbove'))) ? open : null
         if (target) {

@@ -772,6 +772,7 @@ order the table lists them.
 | 2026-10-08 | hooks.ts | `collectHooks` body (M2); additive `registeredHooks()` and `collectHooksWith(data, state, unitId, point)` (the damage pipeline's Work carries its own bundle); the registry is built from `CODE_HOOKS` in `code-hooks.ts` | M2 hook wiring (60 §7) |
 | 2026-10-08 | index.ts | `query.threat(state, hex)` returns `ThreatView {hex, bySide, sources}` (was `never`, an M4 placeholder); `ThreatView` exported | release-1 threat view for the client overlay; the AI's model stays 40-ai §5 |
 | 2026-10-08 | index.ts | `registerBundle` / `bundleFor` live in `bundles.ts` and are re-exported from index under the same names; API bodies delegate to `machine.ts`, `queries.ts`, `describe.ts` | rules modules read the bundle without an import cycle through index |
+| 2026-10-08 | events.ts | `DamageApplied.reduced?: number` (points ferro-lamellor stopped at that location; a fully stopped hit emits `damage: 0`) | M5 ferro-lamellor (10 EQUIP-014) |
 
 ### Rulings made in this spec
 

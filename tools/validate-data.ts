@@ -473,7 +473,7 @@ function checkMech(
   const itemTons = m.mounts.reduce((s, x) => { const it = W.get(x.item) ?? EQ.get(x.item); return s + (it ? (it.tons === 'perMech' ? x.tons ?? 0 : it.tons) : 0) }, 0) - sinkMountTons
   const sinkTons = Math.max(0, m.heatSinks.count - 10) // the first 10 sinks ride in the engine weight; each further one is 1 t, integral or not
   const points = Object.values(m.armor.front).reduce((s, v) => s + v, 0) + Object.values(m.armor.rear).reduce((s, v) => s + v, 0)
-  const mult = m.armor.type === 'ferroFibrous' ? (aTb === 'IS' ? 1.12 : 1.2) : 1
+  const mult = m.armor.type === 'ferroFibrous' ? (aTb === 'IS' ? 1.12 : 1.2) : m.armor.type === 'ferroLamellor' ? 0.875 : 1
   const armorTons = Math.ceil((points / (16 * mult)) * 2) / 2
   const structTons = Math.ceil(m.tonnage * (m.structure.type === 'endoSteel' ? 0.05 : 0.1) * 2) / 2
   const ammoTons = m.ammoBins.reduce((s, b) => s + (b.load === 'half' ? 0.5 : 1), 0)

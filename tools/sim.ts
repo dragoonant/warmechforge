@@ -1,4 +1,7 @@
-// Headless bot-vs-bot sim (60-testing §4): `npm run sim -- --games N --seed S [--turnLimit 30] [--mission mission.intro]`.
+// Headless bot-vs-bot sim (60-testing §4): `npm run sim -- --games N --seed S [--turnLimit 30] [--mission mission.intro]
+//   [--map map.sodden-hills] [--forces A,B]`. --forces takes two force ids or two '+'-joined 'Mech id lists
+//   ("mech.regent.a+mech.uziel.uzl-8s,force.mad-cat-lance"), or "random" for a seeded 1-4 'Mech draw per side and game from
+//   every 'Mech in the data (skirmish rules, no BV budget). --map overrides the mission map.
 // Random-tier bots on both sides; invariants after every step; save/load equality every 50 decisions; replay determinism at
 // the end. Prints a short summary and writes tools/out/sim-<date>.json. Exit 1 on any violation or unfinished game.
 import fs from 'node:fs'
@@ -16,7 +19,7 @@ const DECISION_CAP = 5000
 const STALL_CAP = 200
 const SAVE_EVERY = 50
 
-export interface SimArgs { games: number; seed: string; turnLimit: number; mission: string; quiet?: boolean }
+export interface SimArgs { games: number; seed: string; turnLimit: number; mission: string; map?: string; forces?: string; quiet?: boolean }
 export interface GameReport {
   index: number
   seed: string
@@ -32,19 +35,53 @@ export interface GameReport {
 
 function parseArgs(argv: string[]): SimArgs {
   const get = (k: string, d: string): string => { const i = argv.indexOf(`--${k}`); return i >= 0 && argv[i + 1] ? argv[i + 1]! : d }
-  return { games: Number(get('games', '10')), seed: get('seed', '1'), turnLimit: Number(get('turnLimit', '30')), mission: get('mission', 'mission.intro') }
+  const out: SimArgs = { games: Number(get('games', '10')), seed: get('seed', '1'), turnLimit: Number(get('turnLimit', '30')), mission: get('mission', 'mission.intro') }
+  const map = get('map', ''), forces = get('forces', '')
+  if (map) out.map = map
+  if (forces) out.forces = forces
+  if (forces && !argv.includes('--mission')) out.mission = 'mission.skirmish'
+  return out
 }
 
 export function introSetup(bundle: ReturnType<typeof loadBundle>, missionId: string, turnLimit: number): GameSetup {
   const mission = bundle.missions[missionId] as Mission
-  const sides = mission.sides.map((s) => {
-    const force = bundle.forces[s.force] as Force
+  const sides = mission.sides.map((s, i) => {
+    // a 'pick' side (skirmish) takes the i-th force in the data; --forces replaces it
+    const force = (bundle.forces[s.force] ?? Object.values(bundle.forces)[i]) as Force
     return { sideId: s.id, label: s.label, control: 'ai' as const, force: { id: force.id, name: force.name, units: force.units.map((u) => ({ ...u })) } }
   })
   return {
     missionId: mission.id, mapId: mission.map === 'choose' ? 'map.test-canyons' : mission.map, sides: [sides[0]!, sides[1]!],
     forcedWithdrawal: false, turnLimit, bvBudget: null,
   }
+}
+
+type Bundle = ReturnType<typeof loadBundle>
+/** One side's units from a force id or a '+'-joined list of 'Mech ids (default 4/5 pilots). */
+function unitsOf(bundle: Bundle, spec: string): { id: string; name: string; units: { mech: string; pilot?: string }[] } {
+  const f = bundle.forces[spec] as Force | undefined
+  if (f) return { id: f.id, name: f.name, units: f.units.map((u) => ({ ...u })) }
+  const mechs = spec.split('+').map((x) => x.trim()).filter(Boolean)
+  for (const m of mechs) if (!bundle.mechs[m]) throw new Error(`unknown force or 'Mech ${m}`)
+  return { id: `force.sim-${mechs.length}`, name: mechs.length === 1 ? mechs[0]! : `${mechs.length} 'Mechs`, units: mechs.map((mech) => ({ mech })) }
+}
+/** A seeded draw of 1-4 'Mechs per side from every 'Mech in the bundle (game index i). */
+export function randomForces(bundle: Bundle, seed: string, i: number): [string, string] {
+  const ids = Object.keys(bundle.mechs).sort()
+  let h = 2166136261
+  for (const ch of `${seed}|${i}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0
+  const next = (n: number): number => { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; return h % n }
+  const side = (): string => Array.from({ length: 1 + next(4) }, () => ids[next(ids.length)]!).join('+')
+  return [side(), side()]
+}
+/** Setup for --map / --forces (skirmish-style: no BV budget when forces are given). */
+export function customSetup(bundle: Bundle, args: Pick<SimArgs, 'mission' | 'turnLimit' | 'map'>, forces: [string, string] | null): GameSetup {
+  const base = introSetup(bundle, args.mission, args.turnLimit)
+  const out: GameSetup = { ...base, ...(args.map ? { mapId: args.map } : {}) }
+  if (!forces) return out
+  out.sides = [0, 1].map((i) => ({ ...base.sides[i]!, force: unitsOf(bundle, forces[i]!) })) as GameSetup['sides']
+  out.bvBudget = null
+  return out
 }
 
 const COUNTED: GameEvent['type'][] = ['PhysicalDeclaredInMove', 'PhysicalDeclared', 'UnitFell', 'UnitShutdown', 'AmmoExploded', 'LocationDestroyed', 'UnitDestroyed', 'PilotKilled', 'CritSlotHit', 'StandAttempted', 'UnitDisplaced']
@@ -110,10 +147,12 @@ export async function playGame(bundle: ReturnType<typeof loadBundle>, setup: Gam
 
 export async function runSim(args: SimArgs): Promise<{ reports: GameReport[]; summary: string[] }> {
   const bundle = loadBundle()
-  const setup = introSetup(bundle, args.mission, args.turnLimit)
+  const fixed: [string, string] | null = args.forces && args.forces !== 'random' ? (args.forces.split(',') as [string, string]) : null
+  if (fixed && fixed.length !== 2) throw new Error('--forces needs two sides separated by a comma')
   const reports: GameReport[] = []
   for (let i = 0; i < args.games; i++) {
     const seed = deriveSeedString(args.seed, 'sim', i)
+    const setup = args.forces === 'random' ? customSetup(bundle, args, randomForces(bundle, args.seed, i)) : customSetup(bundle, args, fixed)
     const { final: _f, ...rep } = await playGame(bundle, setup, seed, i)
     reports.push(rep)
     if (!args.quiet) process.stdout.write(rep.violations.length ? 'x' : rep.finished ? '.' : '?')
@@ -128,6 +167,7 @@ export async function runSim(args: SimArgs): Promise<{ reports: GameReport[]; su
   const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
   const decisions = reports.map((r) => r.decisions).sort((a, b) => a - b)
   const summary = [
+    `mission ${args.mission}${args.map ? ` on ${args.map}` : ''}${args.forces ? `, forces ${args.forces}` : ''}`,
     `games ${reports.length}, finished ${finished.length}, ended by turn limit ${finished.filter((r) => r.reason === 'turnLimitBV' || (r.reason === 'draw' && r.turns >= args.turnLimit)).length}`,
     `wins by cause: ${Object.entries(wins).map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}`,
     `mean turns ${mean(finished.map((r) => r.turns)).toFixed(1)}, decisions p50 ${decisions[Math.floor(decisions.length / 2)] ?? 0} max ${decisions[decisions.length - 1] ?? 0}, mean ms/game ${mean(reports.map((r) => r.ms)).toFixed(0)}`,

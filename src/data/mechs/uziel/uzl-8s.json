@@ -1,0 +1,73 @@
+{
+  "id": "mech.uziel.uzl-8s",
+  "chassis": "Uziel",
+  "model": "UZL-8S",
+  "figure": "bt-uziel",
+  "tonnage": 50,
+  "techBase": "IS",
+  "stock": true,
+  "engine": { "type": "xl", "rating": 250 },
+  "movement": { "walk": 5, "run": 8, "jump": 8 },
+  "heatSinks": { "count": 12, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "standard",
+    "front": { "HD": 9, "CT": 24, "LT": 18, "RT": 18, "LA": 16, "RA": 16, "LL": 20, "RL": 20 },
+    "rear": { "CT": 7, "LT": 6, "RT": 6 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "structure", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#ssrm6-ct", "#ssrm6-ct"],
+    "LT": ["engine", "engine", "engine", "#jj1", "#jj1", "#jj2", "#jj2", "#jj3", "#jj3", "structure", "structure", "structure"],
+    "RT": ["engine", "engine", "engine", "#jj4", "#jj4", "#jj5", "#jj5", "#jj6", "#jj6", "#ammo-ssrm6-rt", "#ecm-rt", "#ecm-rt"],
+    "LA": ["shoulder", "upperArm", "#hs1", "#hs1", "#hs1", "#mpl-la", "#mpl-la2", "structure", "structure", "structure", "structure", "structure"],
+    "RA": ["shoulder", "upperArm", "#hs2", "#hs2", "#hs2", "#mpl-ra", "#mpl-ra2", "structure", "structure", "structure", "structure", "structure"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "#jj7", "#jj7"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "#jj8", "#jj8"]
+  },
+  "mounts": [
+    { "id": "ssrm6-ct", "item": "is.w.streak-srm-6", "location": "CT" },
+    { "id": "jj1", "item": "is.eq.improved-jump-jet", "location": "LT", "tons": 1 },
+    { "id": "jj2", "item": "is.eq.improved-jump-jet", "location": "LT", "tons": 1 },
+    { "id": "jj3", "item": "is.eq.improved-jump-jet", "location": "LT", "tons": 1 },
+    { "id": "jj4", "item": "is.eq.improved-jump-jet", "location": "RT", "tons": 1 },
+    { "id": "jj5", "item": "is.eq.improved-jump-jet", "location": "RT", "tons": 1 },
+    { "id": "jj6", "item": "is.eq.improved-jump-jet", "location": "RT", "tons": 1 },
+    { "id": "ecm-rt", "item": "is.eq.guardian-ecm", "location": "RT" },
+    { "id": "hs1", "item": "is.eq.double-heat-sink", "location": "LA" },
+    { "id": "mpl-la", "item": "is.w.medium-pulse-laser", "location": "LA" },
+    { "id": "mpl-la2", "item": "is.w.medium-pulse-laser", "location": "LA" },
+    { "id": "hs2", "item": "is.eq.double-heat-sink", "location": "RA" },
+    { "id": "mpl-ra", "item": "is.w.medium-pulse-laser", "location": "RA" },
+    { "id": "mpl-ra2", "item": "is.w.medium-pulse-laser", "location": "RA" },
+    { "id": "jj7", "item": "is.eq.improved-jump-jet", "location": "LL", "tons": 1 },
+    { "id": "jj8", "item": "is.eq.improved-jump-jet", "location": "RL", "tons": 1 }
+  ],
+  "ammoBins": [
+    { "id": "ammo-ssrm6-rt", "ammo": "is.ammo.streak-srm-6", "location": "RT" }
+  ],
+  "bv": 1393,
+  "source": {
+    "ref": "megamek",
+    "note": "Uziel UZL-8S MTF (mm-data 3067 Unabridged/IS Meks) cross-check; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "1393 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Uziel UZL-8S standing in for the box's second Uziel variant (possibly the UZL-9S, which has no public stats)",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (bad_rep_is, cowl, exp_actuator)",
+      "status": "unconfirmed"
+    }
+  ]
+}

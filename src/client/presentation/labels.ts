@@ -187,7 +187,7 @@ export function narrate(state: GameState | null, ev: GameEvent): string | null {
     case 'DamageApplied': {
       const armor = ev.armorBefore !== ev.armorAfter ? ` armor ${ev.armorBefore}→${ev.armorAfter}` : ''
       const st = ev.structureBefore !== ev.structureAfter ? ` internal ${ev.structureBefore}→${ev.structureAfter}` : ''
-      return `${n(ev.unitId)} ${LOC_SHORT[ev.location]}${ev.side === 'rear' ? ' (rear)' : ''}: ${ev.damage} damage,${armor}${st}.`
+      return `${n(ev.unitId)} ${LOC_SHORT[ev.location]}${ev.side === 'rear' ? ' (rear)' : ''}: ${ev.damage} damage,${armor}${st}${ev.reduced ? ` (armor stopped ${ev.reduced})` : ''}.`
     }
     case 'LocationDestroyed': return `${n(ev.unitId)} loses its ${LOC_LABELS[ev.location]}.`
     case 'CritSlotHit': return `Critical hit on ${n(ev.unitId)}: ${ev.itemName ?? ev.token} (${LOC_SHORT[ev.location]}), ${CRIT_EFFECT_LABELS[ev.effect]}.`

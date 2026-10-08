@@ -31,7 +31,7 @@ export interface Ammo {
   explosionPerShot: number; override?: AmmoOverride; code?: string[]; notes?: string; source: Source; verify?: VerifyNote[]
 }
 export type EquipmentKind =
-  | 'heatSink' | 'jumpJet' | 'case' | 'caseII' | 'targetingComputer' | 'supercharger' | 'masc' | 'capacitor' | 'artemis' | 'ams' | 'other'
+  | 'heatSink' | 'jumpJet' | 'case' | 'caseII' | 'targetingComputer' | 'supercharger' | 'masc' | 'capacitor' | 'artemis' | 'ams' | 'ecm' | 'other'
 export interface Equipment {
   id: Id; name: string; techBase: TechBase; kind: EquipmentKind; slots: number | 'perMech'; tons: number | 'perMech'
   heatSink?: { dissipation: 1 | 2 }; jumpJet?: { improved: boolean }; explodes?: boolean; critEffect?: 'destroy' | 'none'

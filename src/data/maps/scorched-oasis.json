@@ -1,0 +1,376 @@
+{
+  "id": "map.scorched-oasis",
+  "name": "Scorched Oasis",
+  "theme": "desert",
+  "width": 16,
+  "height": 17,
+  "hexes": {
+    "1104": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1105": {
+      "terrain": [
+        {
+          "type": "heavyWoods"
+        }
+      ]
+    },
+    "1106": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1111": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1204": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1211": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1212": {
+      "level": 2
+    },
+    "1213": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "1214": {
+      "level": 1
+    },
+    "1215": {
+      "level": 1
+    },
+    "1309": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1310": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "1311": {
+      "level": 2
+    },
+    "1312": {
+      "level": 3
+    },
+    "1313": {
+      "level": 2
+    },
+    "1314": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1315": {
+      "level": 1
+    },
+    "1409": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1410": {
+      "level": 1
+    },
+    "1411": {
+      "level": 3
+    },
+    "1412": {
+      "level": 1
+    },
+    "1413": {
+      "level": 2
+    },
+    "1414": {
+      "level": 1
+    },
+    "0204": {
+      "level": 2
+    },
+    "0205": {
+      "level": 3
+    },
+    "0206": {
+      "terrain": [
+        {
+          "type": "heavyWoods"
+        }
+      ]
+    },
+    "0207": {
+      "level": 1
+    },
+    "0211": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0215": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0304": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0305": {
+      "level": 3
+    },
+    "0306": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0307": {
+      "level": 1
+    },
+    "0310": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0311": {
+      "terrain": [
+        {
+          "type": "heavyWoods"
+        }
+      ]
+    },
+    "0312": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0403": {
+      "level": 1
+    },
+    "0404": {
+      "level": 2
+    },
+    "0405": {
+      "level": 3
+    },
+    "0406": {
+      "terrain": [
+        {
+          "type": "rough"
+        }
+      ]
+    },
+    "0409": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0410": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0411": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0503": {
+      "level": 1
+    },
+    "0504": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0505": {
+      "level": 2
+    },
+    "0508": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0509": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0510": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0511": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0512": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0515": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0603": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0607": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0608": {
+      "terrain": [
+        {
+          "type": "water",
+          "depth": 1
+        }
+      ]
+    },
+    "0609": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0614": {
+      "terrain": [
+        {
+          "type": "heavyWoods"
+        }
+      ]
+    },
+    "0709": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0809": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0813": {
+      "level": 1
+    },
+    "0814": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0912": {
+      "level": 1
+    },
+    "0913": {
+      "level": 2
+    }
+  },
+  "notes": "Layout of Desert #2.",
+  "source": {
+    "ref": "megamek",
+    "note": "data/boards/AGoAC Maps/16x17 Desert 2.board @ 7f6fd035bbc4f49618610b38fb394dfd7b80400d, hex-by-hex conversion, no file copied",
+    "retrieved": "2026-10-08"
+  },
+  "verify": [
+    {
+      "path": "/hexes",
+      "note": "second-source check pending; name-to-sheet mapping from the brief, no photo check yet",
+      "status": "unconfirmed"
+    }
+  ]
+}

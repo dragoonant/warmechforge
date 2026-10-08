@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react'
 import { FAN_NOTICE, game, settings, useSettings, type NewGameOptions } from '../../contract'
 import { openHelp } from '../help/HelpGuide'
 import {
-  OPPONENTS, SPEED_CHOICES, buildStartOptions, catalogue, defaultForm, fixedForce, forceHeading, forceView, formatBv, mapChoices, mechTitle,
-  sideOrder, swapSides, withControl, withForce, withMission, continueSummary, type Side, type StartForm,
+  OPPONENTS, SPEED_CHOICES, buildStartOptions, catalogue, defaultForm, evenBv, evenSide, fixedForce, forceHeading, forceView, formatBv, isSkirmish,
+  mapChoices, mapLabel, mechTitle, sideOrder, swapSides, withControl, withForce, withMission, continueSummary, type Side, type StartForm,
 } from './startOptions'
+import { SkirmishPicker } from './SkirmishPicker'
 import './start.css'
 
 export interface StartScreenProps {
@@ -30,7 +31,8 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const slot = continueLabel && onContinue ? game.readAutosave() : null
   const patch = (f: StartForm) => { setForm(f); setError(null) }
 
-  const start = () => setError(onStart(buildStartOptions(form)))
+  const skirmish = isSkirmish(mission)
+  const start = () => setError(onStart(buildStartOptions(form, cat)))
   const resume = () => setError(onContinue ? onContinue() : null)
 
   const forceCard = (side: Side) => {
@@ -39,6 +41,24 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
     const view = info ? forceView(info) : null
     const fixed = !!fixedForce(mission, i as 0 | 1)
     const heading = forceHeading(form, side)
+    if (skirmish) {
+      return (
+        <section className="start-card start-force start-force-pick" key={side} data-testid={`start-force-${side}`}>
+          <header className="start-force-head">
+            <h2>{heading}</h2>
+            <div className="start-seg" role="group" aria-label={`${heading} controlled by`}>
+              {(['human', 'bot'] as const).map((c) => (
+                <button key={c} type="button" className={form.controllers[side] === c ? 'on' : ''} aria-pressed={form.controllers[side] === c}
+                  data-testid={`start-control-${side}-${c}`} onClick={() => patch(withControl(form, side, c))}>
+                  {c === 'human' ? 'Human' : 'Bot'}
+                </button>
+              ))}
+            </div>
+          </header>
+          <SkirmishPicker side={side} form={form} cat={cat} onChange={patch} />
+        </section>
+      )
+    }
     return (
       <section className="start-card start-force" key={side} data-testid={`start-force-${side}`} style={view?.color ? { borderTopColor: view.color } : undefined}>
         <header className="start-force-head">
@@ -102,7 +122,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
             {maps.length > 0 && (
               <label>Map
                 <select data-testid="start-map" value={form.map ?? maps[0]!.id} onChange={(e) => patch({ ...form, map: e.target.value })}>
-                  {maps.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  {maps.map((m) => <option key={m.id} value={m.id}>{mapLabel(m)}</option>)}
                 </select>
               </label>
             )}
@@ -126,6 +146,10 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
                 </select>
               </label>
               <button type="button" className="start-swap" data-testid="start-swap" onClick={() => patch(swapSides(form))}>Swap sides</button>
+              {skirmish && (
+                <button type="button" className="start-swap" data-testid="pick-even-bv" title={`Changes the pilot skills of ${forceHeading(form, evenSide(form)).toLowerCase()} to bring its BV close to the other side`}
+                  onClick={() => patch(evenBv(form, cat))}>Even BV</button>
+              )}
             </div>
           </section>
         </div>

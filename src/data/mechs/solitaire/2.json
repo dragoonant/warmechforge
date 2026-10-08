@@ -1,0 +1,59 @@
+{
+  "id": "mech.solitaire.2",
+  "chassis": "Solitaire",
+  "model": "2",
+  "figure": "bt-solitaire",
+  "tonnage": 25,
+  "techBase": "Clan",
+  "stock": true,
+  "engine": { "type": "xl", "rating": 250 },
+  "movement": { "walk": 10, "run": 15, "jump": 0 },
+  "heatSinks": { "count": 10, "type": "double" },
+  "structure": { "type": "endoSteel" },
+  "armor": {
+    "type": "ferroFibrous",
+    "front": { "HD": 9, "CT": 10, "LT": 9, "RT": 9, "LA": 8, "RA": 8, "LL": 12, "RL": 12 },
+    "rear": { "CT": 3, "LT": 3, "RT": 3 }
+  },
+  "crits": {
+    "HD": ["lifeSupport", "sensors", "cockpit", "empty", "sensors", "lifeSupport"],
+    "CT": ["engine", "engine", "engine", "gyro", "gyro", "gyro", "gyro", "engine", "engine", "engine", "#masc-ct", "empty"],
+    "LT": ["engine", "engine", "#hml-lt", "#hml-lt", "#hsl-lt", "structure", "structure", "armor", "empty", "empty", "empty", "empty"],
+    "RT": ["engine", "engine", "#hll-rt", "#hll-rt", "#hll-rt", "structure", "armor", "armor", "empty", "empty", "empty", "empty"],
+    "LA": ["shoulder", "upperArm", "lowerArm", "hand", "structure", "armor", "empty", "empty", "empty", "empty", "empty", "empty"],
+    "RA": ["shoulder", "upperArm", "lowerArm", "hand", "structure", "armor", "empty", "empty", "empty", "empty", "empty", "empty"],
+    "LL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "armor"],
+    "RL": ["hip", "upperLeg", "lowerLeg", "foot", "structure", "armor"]
+  },
+  "mounts": [
+    { "id": "masc-ct", "item": "cl.eq.masc", "location": "CT", "tons": 1, "slots": 1 },
+    { "id": "hml-lt", "item": "cl.w.heavy-medium-laser", "location": "LT" },
+    { "id": "hsl-lt", "item": "cl.w.heavy-small-laser", "location": "LT" },
+    { "id": "hll-rt", "item": "cl.w.heavy-large-laser", "location": "RT" }
+  ],
+  "ammoBins": [],
+  "bv": 1471,
+  "source": {
+    "ref": "megamek",
+    "note": "Solitaire 2 MTF (mm-data 3067 Unabridged/Clan Meks) cross-check; BV from MUL",
+    "retrieved": "2026-10-08"
+  },
+  "valueSources": { "/bv": {"ref": "mul", "note": "1471 (MUL, 2026-10-08)"} },
+  "verify": [
+    {
+      "path": "",
+      "note": "stock Solitaire 2 standing in for the box's second Solitaire variant, whose stats are not public",
+      "status": "standIn"
+    },
+    {
+      "path": "/crits",
+      "note": "slot order follows the MegaMek record, not a printed record sheet",
+      "status": "unconfirmed"
+    },
+    {
+      "path": "/quirks",
+      "note": "MTF quirks dropped in release 1 (exp_actuator, imp_cooling, stable_weapon)",
+      "status": "unconfirmed"
+    }
+  ]
+}

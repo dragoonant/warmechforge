@@ -46,3 +46,44 @@ Solitaire 3 and Rakshasa MDG-3D have only a BV (1608 and 2100, from the review) 
 - MegaMek mm-data MTF files (4), cross-check only, retrieved 2026-10-08.
 - Sarna wiki pages for the newer weapons: Small X-Pulse Laser, Snub-Nose PPC, MML 5, Heavy Small/Medium/Large Laser, Medium Pulse Laser.
 - Master Unit List BV values via `tools/out/variant-research.md`.
+
+## Roster batch (2026-10-08): the whole Core Box roster with public stock variants
+
+The box's new variants (Hollander BZK-W4, Vulture Mk IV E, Rakshasa MDG-3D, Solitaire 3, the unnamed second variants) have no public
+stats (`tools/out/variant-research.md`), so every chassis carries two public stock variants. All stats below were read from
+MegaMek mm-data MTF files (cross-check only, nothing committed); BV is the Master Unit List base value at 4/5, fetched 2026-10-08.
+Crit slot order follows the MTF, not a printed record sheet (`verify` on `/crits` of every file). MTF quirks are dropped.
+
+| 'Mech | File | Status | mm-data MTF | BV |
+|---|---|---|---|---|
+| Regent Prime | `mechs/regent/prime.json` | box variant | Rec Guides ilClan/Vol 21 | 2437 |
+| Regent A | `mechs/regent/a.json` | box variant (seen in the review prose) | Rec Guides ilClan/Vol 21 | 3412 |
+| Mad Cat Mk II (base) | `mechs/mad-cat-mk-ii/base.json` | box variant | 3067 | 3135 |
+| Mad Cat Mk II 2 | `mechs/mad-cat-mk-ii/2.json` | **(stock)** second variant unknown | 3067 Unabridged/Clan Meks | 2822 |
+| Vulture Mk IV Prime | `mechs/vulture-mk-iv/prime.json` | **(stock)** stand-in for E (BV 2151) | 3145/Merc | 2110 |
+| Vulture Mk IV A | `mechs/vulture-mk-iv/a.json` | **(stock)** second variant unknown | 3145/Merc | 2177 |
+| Hollander BZK-F3 | `mechs/hollander/bzk-f3.json` | **(stock)** stand-in for BZK-W4 (BV 920) | 3055U | 953 |
+| Hollander BZK-G1 | `mechs/hollander/bzk-g1.json` | **(stock)** second variant unknown | 3055U | 873 |
+| Eris ERS-2H | `mechs/eris/ers-2h.json` | **(stock)** second variant unknown | Rec Guides ilClan/Vol 18 | 1674 |
+| Uziel UZL-8S | `mechs/uziel/uzl-8s.json` | **(stock)** second variant unknown (maybe the UZL-9S) | 3067 Unabridged/IS Meks | 1393 |
+| Solitaire 2 | `mechs/solitaire/2.json` | **(stock)** second variant unknown | 3067 Unabridged/Clan Meks | 1471 |
+| Rakshasa MDG-1B | `mechs/rakshasa/mdg-1b.json` | **(stock)** second variant unknown | 3055U | 1748 |
+
+Armor, engine, heat sinks and weapons of Regent Prime, Mad Cat Mk II, Vulture Mk IV Prime and Hollander BZK-F3 also match the brief
+(`docs/BATTLETECH-HANDOFF.md` lines 1016-1032). The tonnage audit closes for all 16 'Mechs.
+
+New weapons (all `source.ref` megamek, equipment class named in each note): Large Laser, ER Medium Laser, Heavy PPC, Streak SRM 6,
+LB 10-X, Gauss Rifle (IS); Clan ER Large, ER Medium, ER Small, ER PPC, Medium Pulse, Large Pulse, Micro Pulse, ER Small Pulse,
+LB 20-X, LB 5-X, Ultra AC/10, Gauss, Streak SRM 4, SRM 6, LRM 10, LRM 5. Ammo shots per ton read from MegaMek `AmmoType`.
+New equipment: Clan jump jet, IS improved jump jet, Clan CASE II, PPC capacitor, Clan targeting computer, coolant pod, Clan MASC,
+Guardian ECM. The Clan ER small pulse laser is -1 to hit in MegaMek (not -2); the Clan medium pulse laser ranges are 4/8/12.
+
+### Roster gaps
+
+| Item | Gap |
+|---|---|
+| Coolant pod | slot/ton counts inferred from the MTF slot table and the Regent A tonnage audit (MegaMek models it as an ammo item); no rules |
+| Clan MASC / targeting computer | weights from MegaMek formulas (max(1, round(tons * 0.04)); ceil(direct-fire tons / 5)); the TC's -1 is in the engine (M5, EQUIP-001); MASC has no rules yet |
+| Ferro-lamellor armor | tonnage audit uses 14 points per ton (0.875 x 16), which closes the Vulture Mk IV audit; `tools/validate-data.ts` gained that multiplier; the damage cut is in the engine (M5, damage.ts, 10 EQUIP-014) |
+| Hooks the engine lacks | M5 added ferro-lamellor, the targeting computer and Guardian ECM vs Artemis; still missing: ppcCapacitor, masc, coolantPod, other ECM effects (see `tools/out/m5-followups.md`) |
+| Presets | `force.regent-lance` (base BV 6732) and `force.mad-cat-lance` (6952), both under the 7500 skirmish budget |

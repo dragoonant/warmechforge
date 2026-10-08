@@ -31,6 +31,45 @@ export interface NewGameOptions {
   turnLimit?: number | null
   /** Default: the mission's option ('on' = true, 'off' / 'playerChoice' = false). */
   forcedWithdrawal?: boolean
+  /**
+   * Skirmish any-vs-any (M5): the 'Mechs each side fields, 1-4, with pilot skills. Replaces `forces`; the mission's BV budget
+   * is not applied (the start screen shows both totals and offers Even BV instead).
+   */
+  lineups?: [Lineup, Lineup]
+}
+
+export interface LineupUnit { mech: Id; gunnery: number; piloting: number }
+export interface Lineup { name?: string; color?: string; units: LineupUnit[] }
+/** Default names and colours of hand-picked sides. */
+export const LINEUP_DEFAULTS: readonly { name: string; color: string }[] = [
+  { name: 'Blue Lance', color: '#3f7fd0' },
+  { name: 'Red Lance', color: '#c8452f' },
+]
+
+/** Every 'Mech in the data, for the skirmish picker. */
+export interface MechInfo { id: Id; chassis: string; model: string; tonnage: number; bv: number; stock: boolean }
+export function listMechs(): MechInfo[] {
+  return Object.values(bundle().mechs)
+    .map((m) => ({ id: m.id, chassis: m.chassis, model: m.model, tonnage: m.tonnage, bv: m.bv, stock: m.stock === true }))
+    .sort((a, b) => a.chassis.localeCompare(b.chassis) || a.bv - b.bv || a.model.localeCompare(b.model))
+}
+
+/** Lineup -> engine force: one unit per pick, repeated variants numbered ("Regent Prime 2"). */
+function lineupForce(l: Lineup, i: number): { id: Id; name: string; color: string; units: { mech: Id; name: string; skills: { gunnery: number; piloting: number } }[] } {
+  const b = bundle()
+  if (l.units.length === 0) throw new Error("every side needs at least one 'Mech")
+  const seen = new Map<string, number>()
+  const units = l.units.map((u) => {
+    const m = b.mechs[u.mech]
+    if (!m) throw new Error(`unknown 'Mech ${u.mech}`)
+    const base = `${m.chassis} ${m.model}`
+    const n = (seen.get(base) ?? 0) + 1
+    seen.set(base, n)
+    const dup = l.units.filter((x) => x.mech === u.mech).length > 1
+    return { mech: u.mech, name: dup ? `${base} ${n}` : base, skills: { gunnery: u.gunnery, piloting: u.piloting } }
+  })
+  const d = LINEUP_DEFAULTS[i] ?? LINEUP_DEFAULTS[0]!
+  return { id: `force.lineup-${i === 0 ? 'a' : 'b'}`, name: l.name ?? d.name, color: l.color ?? d.color, units }
 }
 
 export interface MissionInfo { id: Id; name: string; kind: Mission['kind']; briefing: string; ready: boolean; order: number; sides: { label: string; force: Id | 'pick' }[]; map: Id | 'choose' }
@@ -108,6 +147,10 @@ export function buildSetup(opts: NewGameOptions, controllers: Record<PlayerId, C
   if (!mapId || !b.maps[mapId]) throw new Error(`unknown map ${opts.map ?? mission.map}`)
   const players: PlayerId[] = ['A', 'B']
   const sides = mission.sides.map((s, i) => {
+    if (opts.lineups) {
+      const f = lineupForce(opts.lineups[i]!, i)
+      return { sideId: s.id, label: f.name, control: controllers[players[i]!] === 'human' ? ('human' as const) : ('ai' as const), force: f }
+    }
     const f = b.forces[forceIds[i]!]!
     return {
       sideId: s.id, label: s.force === 'pick' ? f.name : s.label, control: controllers[players[i]!] === 'human' ? ('human' as const) : ('ai' as const),
@@ -118,6 +161,6 @@ export function buildSetup(opts: NewGameOptions, controllers: Record<PlayerId, C
     missionId, mapId, sides: [sides[0]!, sides[1]!],
     forcedWithdrawal: opts.forcedWithdrawal ?? mission.options.forcedWithdrawal === 'on',
     turnLimit: opts.turnLimit !== undefined ? opts.turnLimit : mission.turnLimit ?? null,
-    bvBudget: mission.options.bvBudget ?? null,
+    bvBudget: opts.lineups ? null : mission.options.bvBudget ?? null,
   }
 }

@@ -1,0 +1,648 @@
+{
+  "id": "map.sodden-hills",
+  "name": "Sodden Hills",
+  "theme": "grasslands",
+  "width": 16,
+  "height": 17,
+  "hexes": {
+    "1002": {
+      "level": 1
+    },
+    "1007": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1009": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1010": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1013": {
+      "level": 1
+    },
+    "1014": {
+      "level": 2
+    },
+    "1015": {
+      "level": 1
+    },
+    "1106": {
+      "level": 1
+    },
+    "1108": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1109": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1110": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1112": {
+      "level": 1
+    },
+    "1113": {
+      "level": 2
+    },
+    "1114": {
+      "level": 2
+    },
+    "1115": {
+      "level": 2
+    },
+    "1202": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1203": {
+      "level": 1
+    },
+    "1204": {
+      "level": 1
+    },
+    "1205": {
+      "level": 1
+    },
+    "1207": {
+      "level": 1
+    },
+    "1208": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1209": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1210": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1211": {
+      "level": 1
+    },
+    "1212": {
+      "level": 2
+    },
+    "1213": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1216": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1302": {
+      "level": 1
+    },
+    "1303": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1304": {
+      "level": 2
+    },
+    "1307": {
+      "level": 1
+    },
+    "1308": {
+      "level": 2
+    },
+    "1309": {
+      "level": 1
+    },
+    "1310": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1311": {
+      "level": 1
+    },
+    "1312": {
+      "level": 1
+    },
+    "1313": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1314": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1316": {
+      "level": 1
+    },
+    "1402": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1403": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1404": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1407": {
+      "level": 2
+    },
+    "1408": {
+      "level": 2
+    },
+    "1410": {
+      "level": 1
+    },
+    "1414": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "1415": {
+      "level": 1
+    },
+    "1514": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0101": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0103": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0107": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0113": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0114": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0115": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0201": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0206": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0207": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0208": {
+      "level": 2
+    },
+    "0209": {
+      "level": 1
+    },
+    "0212": {
+      "level": 1
+    },
+    "0213": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0214": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0215": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0303": {
+      "level": 1
+    },
+    "0307": {
+      "level": 2
+    },
+    "0308": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0309": {
+      "level": 2
+    },
+    "0310": {
+      "level": 1
+    },
+    "0312": {
+      "level": 2
+    },
+    "0313": {
+      "level": 2
+    },
+    "0314": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0402": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0403": {
+      "level": 1
+    },
+    "0406": {
+      "level": 1
+    },
+    "0407": {
+      "level": 1
+    },
+    "0408": {
+      "level": 1
+    },
+    "0409": {
+      "level": 1
+    },
+    "0410": {
+      "level": 1
+    },
+    "0411": {
+      "level": 2
+    },
+    "0412": {
+      "level": 2
+    },
+    "0413": {
+      "level": 1
+    },
+    "0415": {
+      "level": 1
+    },
+    "0503": {
+      "level": 1
+    },
+    "0504": {
+      "level": 1
+    },
+    "0505": {
+      "level": 1
+    },
+    "0509": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0510": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0511": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0512": {
+      "level": 2
+    },
+    "0513": {
+      "level": 1
+    },
+    "0515": {
+      "level": 1
+    },
+    "0516": {
+      "level": 1
+    },
+    "0602": {
+      "level": 1
+    },
+    "0603": {
+      "level": 2
+    },
+    "0604": {
+      "level": 2
+    },
+    "0605": {
+      "level": 1
+    },
+    "0608": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0609": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0610": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0611": {
+      "level": 1
+    },
+    "0612": {
+      "level": 1
+    },
+    "0702": {
+      "level": 1
+    },
+    "0703": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0704": {
+      "level": 3
+    },
+    "0705": {
+      "level": 2
+    },
+    "0706": {
+      "level": 1
+    },
+    "0709": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0711": {
+      "level": 1
+    },
+    "0712": {
+      "level": 1
+    },
+    "0713": {
+      "level": 1
+    },
+    "0716": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0801": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0802": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0803": {
+      "level": 2,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0804": {
+      "level": 2
+    },
+    "0805": {
+      "level": 1
+    },
+    "0811": {
+      "level": 1
+    },
+    "0812": {
+      "level": 1
+    },
+    "0814": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0815": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0816": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0902": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0903": {
+      "level": 1,
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0904": {
+      "level": 1
+    },
+    "0905": {
+      "level": 1
+    },
+    "0907": {
+      "terrain": [
+        {
+          "type": "lightWoods"
+        }
+      ]
+    },
+    "0914": {
+      "level": 1
+    },
+    "0915": {
+      "level": 1
+    }
+  },
+  "notes": "Layout of Grasslands #3.",
+  "source": {
+    "ref": "megamek",
+    "note": "data/boards/AGoAC Maps/16x17 Grassland 3.board @ 7f6fd035bbc4f49618610b38fb394dfd7b80400d, hex-by-hex conversion, no file copied",
+    "retrieved": "2026-10-08"
+  },
+  "verify": [
+    {
+      "path": "/hexes",
+      "note": "second-source check pending; name-to-sheet mapping from the brief, no photo check yet",
+      "status": "unconfirmed"
+    }
+  ]
+}

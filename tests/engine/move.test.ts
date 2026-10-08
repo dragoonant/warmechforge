@@ -105,6 +105,14 @@ describe('modes, steps and heat (10 section 3.1-3.2)', () => {
     const down = mkUnit({ id: 'B1', owner: 'B', pos: ahead, shutdown: { cause: 'heat', turn: 1 } })
     expect(codeOf(mkState([base, down]), mv({ steps: fwd(2) }))).toBeNull()
   })
+  it('MOVE-012 reach set never ends in an occupied hex (every entry validates)', () => {
+    const ahead = { q: START.q, r: START.r - 1 }
+    const s = mkState([mkUnit(), mkUnit({ id: 'A2', pos: ahead })])
+    const es = reachable(s, 'A1').filter((e) => e.mode === 'walk' || e.mode === 'run')
+    expect(es.some((e) => e.hex.q === ahead.q && e.hex.r === ahead.r)).toBe(false)
+    expect(es.some((e) => e.hex.q === ahead.q && e.hex.r === ahead.r - 1)).toBe(true)
+    for (const e of es) expect(validateMove(s, e.action as MoveAction)).toBeNull()
+  })
   it('MOVE-013 forward 3 then backward 2 counts 2 hexes; facing changes add 0', () => {
     const r = run(mkState([mkUnit()]), mv({ mode: 'walk', steps: ['forward', 'forward', 'forward', 'backward', 'backward'] }))
     expect(r.state.units.A1!.move.hexesMoved).toBe(2)

@@ -537,6 +537,8 @@ export function reachable(state: GameState, unitId: UnitId): ReachEntry[] {
     } else starts = [startSim(u, mode, c)]
     for (const s of groundSearch(c, starts)) {
       if (!entering && s.steps.length === 0 && locked === null) continue
+      // a move may pass through a friendly 'Mech's hex but never end there (validateMove's E_OCCUPIED); keep the reach set legal
+      if (!s.exited && !s.virtual && unitAt(state, s.hex, u.id)) continue
       out.push(entryFrom(state, u, mode, summarize(c, s), s.origin ? { entry: s.origin } : {}))
     }
     // exit step for withdrawing units standing on their home edge

@@ -40,6 +40,24 @@
 - Tests: 30 files, 281 tests: golden GOLD-001..012 (+2b/2c, 6b/6c) with forced dice, action fuzz, API, hooks.
 - All M2 RULINGs recorded in `docs/needs-rules-check.md` (open items there: PHYS-097, SCN-020, objective hooks, askDefender).
 
-## Next: M3 playable client
-- Client game screens on Pages: board, units, decision prompts from `describe.*`, numbers from `query.*`,
-  `GameRunner` driving `step` with the random bot as the opponent.
+## M3 done (playable vertical slice vs random bot)
+- Client in `src/client/` (patterns copied from Whirr Machine): `GameScreen.tsx` (board canvas + HUD, lazy chunk), `contract.ts`
+  (frozen client surface), `store/` (gameStore is the only caller of `step`), `presentation/` (director, beats, banners,
+  narration), `board/` (bevelled hex tiles with ground mats, cliff strata, water, woods, rough, grid, labels, camera presets
+  1/2/3/0, `?fps` meter), `figures/` (GLB + procedural 'Mechs in force colours, `?gallery`), `interaction/` (reach, path, facing
+  picker, arcs, LOS, range rings, ruler), `ui/` (start screen, How to Play, coach tips, top bar, roster, event feed, move / fire /
+  physical panels, record sheet, heat scale, dice tray and log, settings, end screen), `vfx/`, `environment/` (game-shop
+  surroundings with an establishing shot; Settings > Surroundings: Game shop / Plain; Low graphics forces Plain).
+- Every number on screen comes from `query.*`, `describe.*`, the pending decision or event payloads.
+- Play: start screen -> intro mission vs the random bot; walk / run / jump with facing, torso twist, fire with the live heat
+  sum, kick / punch / push, charge and DFA chips, standing up, ammo choice; autosave + Continue; end screen with Play again.
+- Engine fix: `reachable` no longer lists ground moves that end in an occupied hex (MOVE-012 test added).
+- Bundle: main chunk 469 kB; game chunk 239 kB + three.js chunk 995 kB; the bot in its own lazy chunk.
+- Tests: 36 files, 395 unit tests. `tests/e2e/play.spec.ts` plays four turns through the real UI, then fast-forwards to the
+  end screen (screenshots in `e2e-out/`: start, howto, shop-wide, move, fire-prompt, record-sheet, midgame, board, shop-play,
+  end). Sim: 20/20 games end, 0 violations.
+
+## Next
+- Owner playtest on Pages (feel, readability, anything confusing).
+- M3 figure gate: owner review of the two generated figures (`?gallery`) and the size proposal in `30-figures`.
+- M4: utility AI (`40-ai`) in a worker, threat overlay.

@@ -15,7 +15,8 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Use the real GPU where there is one (Windows dev box): software WebGL starves the main thread and slows every timed beat.
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], launchOptions: { args: process.platform === 'win32' ? ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--ignore-gpu-blocklist'] } } }],
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     url: BASE_URL,

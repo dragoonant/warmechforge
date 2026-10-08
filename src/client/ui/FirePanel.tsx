@@ -1,0 +1,164 @@
+import { useEffect, useMemo } from 'react'
+import type { FirePlan, FireShot, Twist } from '../../engine/index'
+import {
+  game, uiActions, useFireDraft, useFirePreview, useLos, usePresentedState, usePresentedUnit, usePrompt, useSettings, useShowRanges, useSheet,
+  useWeaponPreviews, unitName,
+} from '../contract'
+import './hud.css'
+import { useEnterKey } from './useEnter'
+import { buildWeaponRows, checkAllLegal, fireSentence, heatLine, losChips, orderShots, setShotTarget, toggleShot } from './fireView'
+
+const twistLabel = (t: Twist): string => (t < 0 ? '◀ Twist left' : t > 0 ? 'Twist right ▶' : 'Keep forward')
+
+/** Torso twist step: pick left / forward / right (or flip the arms), the board's arcs follow the draft. */
+function TwistStep() {
+  const pd = usePrompt()
+  const unitId = pd?.unitId ?? null
+  const unit = usePresentedUnit(unitId)
+  const draft = useFireDraft()
+  const options = pd?.context.twistOptions ?? [0]
+  const canFlip = pd?.context.canFlip ?? false
+  useEffect(() => { uiActions.setFireDraft({ twist: 0, flip: false, shots: [] }) }, [pd?.id])
+  if (!pd || !unit) return null
+  const pick = (t: Twist) => uiActions.setFireDraft({ twist: t, flip: false })
+  return (
+    <section className="hud-dock hud-card prompt panel panel-twist" data-testid="fire-twist-panel" aria-live="polite">
+      <h2 className="prompt-title">{unit.name}: turn the torso?</h2>
+      <p className="prompt-line">Twisting moves the firing arcs one hexside; the arcs on the board show what each choice covers. You may do this once per turn.</p>
+      <div className="pbtns">
+        {([-1, 0, 1] as Twist[]).map((t) => (
+          <button
+            key={t} type="button" disabled={!options.includes(t)} data-testid={`fire-twist-${t === -1 ? 'left' : t === 0 ? 'centre' : 'right'}`}
+            className={`hud-btn${draft.twist === t && !draft.flip ? ' hud-btn-primary' : ''}`} onClick={() => pick(t)}
+          >
+            <span className="btn-label">{twistLabel(t)}</span>
+          </button>
+        ))}
+        {canFlip && (
+          <button type="button" data-testid="fire-flip" className={`hud-btn${draft.flip ? ' hud-btn-primary' : ''}`} onClick={() => uiActions.setFireDraft({ twist: 0, flip: !draft.flip })}>
+            <span className="btn-label">Flip arms</span><span className="btn-note">arm weapons fire to the rear</span>
+          </button>
+        )}
+      </div>
+      <div className="pbtns">
+        <button type="button" className="hud-btn hud-btn-primary hud-btn-default" data-testid="fire-twist-confirm" onClick={() => game.twist(draft.flip ? 0 : draft.twist, draft.flip)}>
+          <span className="btn-label">Confirm</span>
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function FireStep() {
+  const pd = usePrompt()
+  const state = usePresentedState()
+  const unitId = pd?.unitId ?? null
+  const unit = usePresentedUnit(unitId)
+  const sheet = useSheet(unitId)
+  const draft = useFireDraft()
+  const settings = useSettings()
+  const showRanges = useShowRanges()
+  const targets = pd?.context.targets ?? []
+  const target = draft.targetId && targets.includes(draft.targetId) ? draft.targetId : null
+  const twist = unit?.attacks.twist ?? 0
+  const flip = unit?.attacks.flipped ?? false
+
+  // keep the board's draft in step with what the engine holds, and always have a target when one exists
+  useEffect(() => {
+    if (!pd) return
+    const patch: Partial<typeof draft> = {}
+    if (draft.twist !== twist) patch.twist = twist
+    if (draft.flip !== flip) patch.flip = flip
+    if (!target && targets.length > 0) patch.targetId = targets[0]!
+    const stale = draft.shots.filter((s) => !s.targetId || !targets.includes(s.targetId))
+    if (stale.length) patch.shots = draft.shots.filter((s) => s.targetId && targets.includes(s.targetId))
+    if (Object.keys(patch).length) uiActions.setFireDraft(patch)
+  }, [pd?.id, twist, flip, target, targets.join(','), draft.shots, draft.twist, draft.flip])
+
+  const base = useWeaponPreviews(unitId, target)
+  const plan: FirePlan | null = useMemo(() => (unitId ? {
+    twist, flip, shots: draft.shots.filter((s): s is FireShot & { targetId: string } => !!s.targetId && targets.includes(s.targetId)).map((s) => ({ mountId: s.mountId, targetId: s.targetId, ...(s.binId ? { binId: s.binId } : {}) })),
+  } : null), [unitId, twist, flip, draft.shots, targets.join(',')])
+  const fire = useFirePreview(unitId, plan)
+  const los = useLos(unitId, target)
+  const rows = useMemo(() => (sheet ? buildWeaponRows({ state, sheet, shots: draft.shots, base, plan: fire?.weapons ?? [], oddsMode: settings.odds, primaryId: target }) : []), [state, sheet, draft.shots, base, fire, settings.odds, target])
+  const orderedShots = orderShots(draft.shots.filter((s) => !!s.targetId && targets.includes(s.targetId)), target)
+  useEnterKey(pd && orderedShots.length > 0 ? () => { game.fire(orderedShots) } : null)
+  if (!pd || !unit || !sheet) return null
+  const heat = fire ? heatLine(fire) : null
+  const nameOf = (mountId: string): string => sheet.weapons.find((w) => w.mountId === mountId)?.name ?? mountId
+  const sentence = fire ? fireSentence(state, unit.id, fire, nameOf, settings.odds) : null
+  const ordered = orderedShots
+  const setShots = (shots: FireShot[]) => uiActions.setFireDraft({ shots })
+  const losLine = losChips(los)
+  return (
+    <section className="hud-dock hud-card prompt panel panel-fire" data-testid="fire-panel" aria-live="polite">
+      <h2 className="prompt-title">{unit.name}: ranged attack</h2>
+      {targets.length === 0 ? <p className="prompt-line">Nothing is in reach. You can only hold fire.</p> : (
+        <div className="fire-targets" role="group" aria-label="Target">
+          <span className="hud-dim">Target</span>
+          {targets.map((t) => (
+            <button key={t} type="button" data-testid={`fire-target-${t}`} className={`hud-btn hud-btn-sm${t === target ? ' hud-btn-primary' : ''}`} onClick={() => { uiActions.setFireDraft({ targetId: t, shots: orderShots(draft.shots, t) }); uiActions.select(t) }}>
+              <span className="btn-label">{unitName(state, t)}</span>
+            </button>
+          ))}
+          {losLine.length > 0 && <span className="los-chips">{losLine.map((c) => <span key={c} className="chip">{c}</span>)}</span>}
+        </div>
+      )}
+      {heat && fire && (
+        <div className={`fire-heat heat-risk-${heat.risk}`} data-testid="fire-heat-total" data-end={fire.heat.end}>
+          <b>{heat.text}</b>
+          {heat.effects.length > 0 && <span className="fire-heat-effects">{heat.effects.map((e) => <span key={e} className={`chip${heat.risk === 'danger' ? ' chip-bad' : ''}`}>{e}</span>)}</span>}
+        </div>
+      )}
+      <ul className="fire-rows">
+        {rows.map((r) => (
+          <li key={r.mountId} className={`fire-row${r.checked ? ' fire-row-on' : ''}${r.disabledWhy ? ' fire-row-off' : ''}`}>
+            <label>
+              <input
+                type="checkbox" data-testid={`fire-weapon-${r.mountId}`} checked={r.checked} disabled={!!r.disabledWhy && !r.checked}
+                onChange={() => target && setShots(toggleShot(draft.shots, r.mountId, target, target))}
+              />
+              <span className="fire-line" data-testid={`fire-line-${r.mountId}`}>{r.line}</span>
+            </label>
+            {r.disabledWhy && <span className="fire-why" data-testid={`fire-why-${r.mountId}`}>{r.disabledWhy}</span>}
+            {r.checked && targets.length > 1 && (
+              <select
+                className="fire-pick" data-testid={`fire-shot-target-${r.mountId}`} value={r.targetId ?? ''} aria-label={`Target for ${r.name}`}
+                onChange={(e) => setShots(setShotTarget(draft.shots, r.mountId, e.target.value, target))}
+              >
+                {targets.map((t) => <option key={t} value={t}>{unitName(state, t)}</option>)}
+              </select>
+            )}
+            {r.breakdown.length > 0 && (
+              <details className="fire-why-tn"><summary>why this number</summary><ul>{r.breakdown.map((b, i) => <li key={i}>{b}</li>)}</ul></details>
+            )}
+          </li>
+        ))}
+      </ul>
+      {sentence && <p className="prompt-title fire-sentence" data-testid="fire-sentence">{sentence.text}</p>}
+      {heat?.warning && <p className={`fire-warning heat-risk-${heat.risk}`} data-testid="fire-warning" role="alert">{heat.warning}</p>}
+      <div className="pbtns">
+        <button
+          type="button" className="hud-btn hud-btn-primary hud-btn-default" data-testid="fire-confirm" disabled={ordered.length === 0}
+          onClick={() => game.fire(ordered)}
+        >
+          <span className="btn-label">Fire</span>
+        </button>
+        <button type="button" className="hud-btn" data-testid="fire-hold" onClick={() => game.holdFire()}><span className="btn-label">Hold fire</span></button>
+        <button type="button" className="hud-btn hud-btn-quiet hud-btn-sm" data-testid="fire-all" disabled={!target} onClick={() => target && setShots(orderShots(checkAllLegal(rows, target), target))}>Select all legal</button>
+        <button type="button" className="hud-btn hud-btn-quiet hud-btn-sm" data-testid="fire-clear" disabled={draft.shots.length === 0} onClick={() => setShots([])}>Clear</button>
+        <button type="button" className={`hud-btn hud-btn-quiet hud-btn-sm${showRanges ? ' hud-btn-primary' : ''}`} data-testid="fire-ranges" onClick={() => uiActions.toggleRanges()} title="Show the range bands of the checked weapons (R)">Range rings</button>
+      </div>
+    </section>
+  )
+}
+
+/** Bottom-centre panel for the torso twist and ranged declaration decisions. */
+export function FirePanel() {
+  const pd = usePrompt()
+  if (!pd) return null
+  if (pd.kind === 'torsoTwist') return <TwistStep key={pd.id} />
+  if (pd.kind === 'declareFire') return <FireStep key={pd.id} />
+  return null
+}

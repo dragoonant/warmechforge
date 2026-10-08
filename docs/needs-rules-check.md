@@ -105,3 +105,30 @@ RULING: M2 DFA waiting hex | a DFA jumper's position (pos) is its dfaFrom hex un
 RULING: M2 charge declaration (PHYS-040) | a charge needs the target to have finished moving this turn or to be in ledger.immobileAtStart; the charger needs MP left for the target hex's entry cost | PHYS-040 text; enterCost from movement
 RULING: M2 ammo choice | a declaration needing chooseAmmo is checked whole first (provisional default bin, its profile for ranges); chooseAmmo offers only bins that keep the whole declaration legal | an ammo type can change a weapon's ranges (MML), and validate must agree with step
 RULING: M2 heat-scale query | query.heatEffects(heat).lifeSupportPilotHits reports the hits a damaged life support would take at that heat (the query has no unit) | the unit-level number is in the Heat Phase and query.heatProjection
+RULING: stand-only move heat | a move whose only MP is stand attempts books 0 movement heat, though its attacker modifier still follows the mode | 10 MOVE-042 and 2026 H1 say stand attempts add no heat.
+RULING: a walk/run action that spends 0 MP | recorded as Stand Still, with 0 heat and 0 attacker modifier | nothing moved.
+RULING: MOVE-053 landing-in-water fall levels | levels = water depth (5 damage for a 50 t 'Mech in depth 1), not 0 | the MOVE-053 checklist test requires it, even though PSR-051 says jump-landing falls are 0 levels.
+RULING: terrain costs stack | rough, rubble, woods and water costs add, level change is on top | the cost table is silent on hexes with several features.
+RULING: MOVE-014 minimum movement | applies to the first forward step when nothing else was spent; it forces mode run if the cost exceeds the chosen mode's MP. reachable offers it only under run, for hexes costing more than the run MP | 10 §3.2 gives the example but no wider rule.
+RULING: gyro destroyed for MOVE-043 | two gyro crits | taken from the 2026 crit rule (second crit destroys it).
+RULING: jump over a start hex with the same landing hex | costs 1 MP, heat 3 | MOVE-050.
+RULING: ARC-021 corner ties use the defender-favouring default only | askDefender (a choice decision) is not implemented | keeps decisions few; the result is stored in state.choices.direction.
+RULING: PHYS-066 DFA miss fall | uses psr.fall(levels 2), which rolls a random side instead of the Rear column | fall() has no forced-direction parameter and psr.ts is not mine.
+RULING: PHYS-094 domino | rolled inline in physical.ts (queuePsr, psrTarget, then PsrResolved), not via resolvePsrs | resolvePsrs would make the occupant fall in its own hex; the spec has it displaced first and falls there.
+RULING: PHYS-097 accidental fall from above (P2) is not implemented | a 2+ level displacement onto an occupied hex is treated as a domino.
+RULING: rapid-fire heat | heat is multiplied by rapidShots | the spec is silent.
+RULING: DFA displacement target choice | tie breaks prefer an empty hex, then the first hexside in the order +1, -1 | PHYS-067 leaves the choice to the controller.
+RULING: a voided DFA (target gone or moved) is treated like a voided charge | the jumper may declare another attack | the spec is silent.
+RULING: PHYS-001 punch and kick damage | actuator crits from the current phase are ignored, and a limb destroyed this phase still hits at full strength | follows INIT-012 and uses SlotState.hitPhase.
+RULING: objective victory entries | ignored, no hook registry yet | code-hooks not built; only eliminate and turnLimitBV resolve
+RULING: SCN-020 stalemate draw (neither side can move or hurt the other) | not implemented | lean mode, P2
+RULING: surrender immobility | shutdown, unconscious or dead pilot, both legs gone with no jump, or prone with both legs gone or gyro destroyed | MOVE-008 plus 11 3.4; no movement.ts MP function yet, swap in when it exists
+RULING: gyro destroyed = 2 gyro slot hits | matches crits.ts | standard gyro only
+RULING: heat ammo explosion bin = pickHeatExplosionBin (highest damage per shot, then shots) | AMMO-030, no decision available in the Heat Phase
+RULING: voluntary restart at heat >= 30 refused | would drop again at the next Heat Phase | HEAT-041
+RULING: PSR-053 fall side | kept the code's mapping (1 rear, 2-3 right, 4 front, 5-6 left) and updated the 10 PSR-053 row, the 12 PSR-053 row and 13 GOLD-006 (front side die is now 4, not 3) | changelog O8 only moves the rear result from 4 to 1
+RULING: physical damage groups (PHYS-035, 00 §6) | a punch or kick lands as one group; only charge and DFA use 5-point groups | fixed in phases/physical.ts; GOLD-009 needs it
+RULING: turn limit | when setup.turnLimit is set and the mission has no turnLimitBV entry, end.victory ends the game at the limit using 11 §5 BV scoring | 00 §5.1; the sim uses 30 turns
+RULING: DFA waiting hex | the jumper's pos is its dfaFrom hex until resolution; dfaFrom must be empty; TMM uses the full jump distance | PHYS-061
+RULING: physical torso twist is offered only when an enemy is adjacent; otherwise it auto-resolves to forward | a twist could not change anything then
+RULING: chooseAmmo | the whole declaration is checked first using the default bin (and that bin's profile for ranges); the options are only bins that keep it legal | validate and step must agree (MML ranges change with ammo)

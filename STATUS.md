@@ -38,6 +38,7 @@
 - Sim: `npm run sim -- --games 50 --seed 1`: 50/50 games end (A 32, B 17, draw 1), mean 13.7 turns, ~0.73 s/game,
   0 violations (`tools/invariants.ts`: INV-01/02/03/06-12/14/17, NaN, stall, decision cap, save/load, replay).
 - Tests: 30 files, 281 tests: golden GOLD-001..012 (+2b/2c, 6b/6c) with forced dice, action fuzz, API, hooks.
+- All M2 RULINGs recorded in `docs/needs-rules-check.md` (open items there: PHYS-097, SCN-020, objective hooks, askDefender).
 
 ## Next: M3 playable client
 - Client game screens on Pages: board, units, decision prompts from `describe.*`, numbers from `query.*`,

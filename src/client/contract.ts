@@ -243,24 +243,58 @@ export function groupReach(entries: readonly ReachEntry[]): ReachMap {
   return out
 }
 
+/** MASC chip on (Run mode only): reach sets then use MASC run MP and their actions carry `masc: true` (M8). */
+const mascOf = (d: MoveDraft): boolean => d.masc && d.mode === 'run'
+const useMascOn = (): boolean => useUiStore((s) => mascOf(s.move))
+function rawReachOf(st: GameState, unitId: UnitId, masc: boolean): ReachEntry[] {
+  return memo(st, `rawReach|${unitId}${masc ? '|masc' : ''}`, () => query.reachable(st, unitId, masc ? { masc: true } : undefined)) ?? EMPTY_ARR
+}
+/** Reach set for the move draft. Entries that end with the 'Mech dropping prone are left out (they share mode/hex/facing with a
+ *  plain turn, and picking one silently would knock the 'Mech down); the deliberate route is the separate "Go prone" chip. */
+function reachOf(st: GameState, unitId: UnitId, masc: boolean): ReachEntry[] {
+  return memo(st, `reach|${unitId}${masc ? '|masc' : ''}`, () => {
+    const all = rawReachOf(st, unitId, masc)
+    return st.units[unitId]?.prone ? all : all.filter((e) => !e.endsProne)
+  }) ?? EMPTY_ARR
+}
+/** The cheapest walk entry that ends with the unit dropping prone in its own hex (the "Go prone" chip), or null. */
+export function useProneEntry(unitId: UnitId | null | undefined): ReachEntry | null {
+  return usePresentedStore((s) => {
+    const st = shown(s)
+    const u = st && unitId ? st.units[unitId] : null
+    if (!st || !unitId || !u || u.prone || !u.pos) return null
+    const pos = u.pos
+    return memo(st, `proneEntry|${unitId}`, () => rawReachOf(st, unitId, false)
+      .filter((e) => e.endsProne && !e.physical && e.hex.q === pos.q && e.hex.r === pos.r)
+      .sort((a, b) => a.mpUsed - b.mpUsed)[0] ?? null) ?? null
+  })
+}
+
 /** Every reach entry of a unit (query.reachable), [] when it cannot move. */
 export function useReach(unitId: UnitId | null | undefined): ReachEntry[] {
-  return usePresentedStore((s) => { const st = shown(s); return st && unitId ? memo(st, `reach|${unitId}`, () => query.reachable(st, unitId)) ?? EMPTY_ARR : EMPTY_ARR })
+  const masc = useMascOn()
+  return usePresentedStore((s) => { const st = shown(s); return st && unitId ? reachOf(st, unitId, masc) : EMPTY_ARR })
+}
+/** The Run entries with MASC requested (query.reachable {masc}); [] when MASC cannot be switched on now (off-board, already on, MP spent, none). */
+export function useMascReach(unitId: UnitId | null | undefined): ReachEntry[] {
+  return usePresentedStore((s) => { const st = shown(s); return st && unitId ? reachOf(st, unitId, true) : EMPTY_ARR })
 }
 /** Reach entries for one movement mode. */
 export function useReachForMode(unitId: UnitId | null | undefined, mode: MoveMode): ReachEntry[] {
+  const masc = useMascOn()
   return usePresentedStore((s) => {
     const st = shown(s)
     if (!st || !unitId) return EMPTY_ARR
-    return memo(st, `reachMode|${unitId}|${mode}`, () => (memo(st, `reach|${unitId}`, () => query.reachable(st, unitId)) ?? []).filter((e) => e.mode === mode)) ?? EMPTY_ARR
+    return memo(st, `reachMode|${unitId}|${mode}${masc ? '|masc' : ''}`, () => reachOf(st, unitId, masc).filter((e) => e.mode === mode)) ?? EMPTY_ARR
   })
 }
 /** Reach entries grouped per hex for one mode (overlay colours, facing picker, charge/DFA chips). */
 export function useReachHexes(unitId: UnitId | null | undefined, mode: MoveMode): ReachMap {
+  const masc = useMascOn()
   return usePresentedStore((s) => {
     const st = shown(s)
     if (!st || !unitId) return EMPTY_MAP
-    return memo(st, `reachHex|${unitId}|${mode}`, () => groupReach((memo(st, `reach|${unitId}`, () => query.reachable(st, unitId)) ?? []).filter((e) => e.mode === mode))) ?? EMPTY_MAP
+    return memo(st, `reachHex|${unitId}|${mode}${masc ? '|masc' : ''}`, () => groupReach(reachOf(st, unitId, masc).filter((e) => e.mode === mode))) ?? EMPTY_MAP
   })
 }
 const EMPTY_MAP: ReachMap = new Map()
@@ -270,7 +304,7 @@ export function useMoveModes(unitId: UnitId | null | undefined): MoveMode[] {
     const st = shown(s)
     if (!st || !unitId) return EMPTY_ARR
     return memo(st, `modes|${unitId}`, () => {
-      const set = new Set((memo(st, `reach|${unitId}`, () => query.reachable(st, unitId)) ?? []).map((e) => e.mode))
+      const set = new Set(reachOf(st, unitId, false).map((e) => e.mode))
       return (['standStill', 'walk', 'run', 'jump'] as MoveMode[]).filter((m) => set.has(m))
     }) ?? EMPTY_ARR
   })
@@ -281,7 +315,7 @@ export function useMoveDraftEntry(unitId: UnitId | null | undefined): ReachEntry
   return usePresentedStore((s) => {
     const st = shown(s)
     if (!st || !unitId || !d.hex) return null
-    return memo(st, `draft|${unitId}|${k(d)}`, () => findReachEntry(memo(st, `reach|${unitId}`, () => query.reachable(st, unitId)) ?? [], d))
+    return memo(st, `draft|${unitId}|${k(d)}`, () => findReachEntry(reachOf(st, unitId, mascOf(d)), d))
   })
 }
 /** Pick the entry for a draft from a reach list (exact mode, hex, facing; attack chip picks the physical entry). */
@@ -363,11 +397,12 @@ export function useThreat(hex: Hex | null | undefined): ThreatView | null {
 }
 
 // ---------- non-hook queries on the TRUE state (controllers, keyboard handlers) ----------
-export const queryReach = (unitId: UnitId): ReachEntry[] => { const s = truth(); return s ? memo(s, `reach|${unitId}`, () => query.reachable(s, unitId)) ?? [] : [] }
+export const queryReach = (unitId: UnitId): ReachEntry[] => { const s = truth(); return s ? reachOf(s, unitId, mascOf(useUiStore.getState().move)) : [] }
 export const queryLos = (from: UnitId | Hex, to: UnitId | Hex, opts?: LosOptions): LosVerdict | null => { const s = truth(); return s ? memo(s, `los|${k(from)}|${k(to)}|${k(opts)}`, () => query.los(s, from, to, opts)) : null }
 export const queryArcs = (unitId: UnitId, twist?: Twist): ArcsView | null => { const s = truth(); return s ? memo(s, `arcs|${unitId}|${twist ?? 'cur'}`, () => query.arcs(s, unitId, twist)) : null }
 export const queryAttackPreview = (req: AttackPreviewRequest): AttackPreview | null => { const s = truth(); return s ? memo(s, `atk|${k(req)}`, () => query.attackPreview(s, req)) : null }
 export const queryFirePreview = (unitId: UnitId, plan: FirePlan): FirePreview | null => { const s = truth(); return s ? memo(s, `fire|${unitId}|${k(plan)}`, () => query.firePreview(s, unitId, plan)) : null }
+export const queryPhysicalPreview = (req: PhysicalPreviewRequest): PhysicalPreview | null => { const s = truth(); return s ? memo(s, `physPrev|${k(req)}`, () => query.physicalPreview(s, req)) : null }
 export const queryPhysicalOptions = (attackerId: UnitId, targetId: UnitId): PhysicalPreview[] => { const s = truth(); return s ? memo(s, `phys|${attackerId}|${targetId}`, () => query.physicalOptions(s, attackerId, targetId)) ?? [] : [] }
 export const queryHeatProjection = (unitId: UnitId, plan: HeatPlan): HeatProjection | null => { const s = truth(); return s ? memo(s, `heat|${unitId}|${k(plan)}`, () => query.heatProjection(s, unitId, plan)) : null }
 export const querySheet = (unitId: UnitId): SheetView | null => { const s = truth(); return s ? memo(s, `sheet|${unitId}`, () => query.sheet(s, unitId)) : null }

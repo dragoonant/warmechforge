@@ -23,7 +23,7 @@ export function previewValue(ctx: AiCtx, attackerId: UnitId, pv: PhysicalPreview
   const t = modelOf(ctx, targetId)
   const groups = pv.kind === 'charge' || pv.kind === 'dfa' ? five(pv.damage) : pv.damage > 0 ? [pv.damage] : []
   let v = 0
-  if (groups.length) v += volleyValue(t, direction, [{ pHit: pv.pHit, table: pv.table, partialCover: false, damage: pv.damage, cluster: null, groups }]).dv
+  if (groups.length) v += volleyValue(t, direction, [{ pHit: pv.pHit, table: pv.table, partialCover: false, damage: pv.damage, cluster: null, groups, ...(pv.armorReduction ? { lamellor: true } : {}) }]).dv
   if (pv.targetPsr) v += pv.pHit * (1 - pv.targetPsr.p) * ctx.fallCost(targetId)
   if (pv.attackerPsr) {
     const pRoll = pv.attackerPsr.onHit ? pv.pHit : 1 - pv.pHit
@@ -32,7 +32,7 @@ export function previewValue(ctx: AiCtx, attackerId: UnitId, pv: PhysicalPreview
   if (pv.selfDamage > 0) {
     const self = modelOf(ctx, attackerId)
     const table = pv.kind === 'dfa' ? 'kick' as const : 'standard' as const
-    v -= volleyValue(self, 'front', [{ pHit: pv.pHit, table, partialCover: false, damage: pv.selfDamage, cluster: null, groups: five(pv.selfDamage) }]).dv
+    v -= volleyValue(self, 'front', [{ pHit: pv.pHit, table, partialCover: false, damage: pv.selfDamage, cluster: null, groups: five(pv.selfDamage), ...(pv.selfArmorReduction ? { lamellor: true } : {}) }]).dv
   }
   if (pv.kind === 'dfa') v -= (1 - pv.pHit) * ctx.fallCost(attackerId) // a missed DFA is an automatic fall
   return v

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { game, querySheet, uiActions, usePresentedState, usePrompt, usePromptLegal, useWaitingFor } from '../contract'
+import { game, querySheet, uiActions, usePresentedState, usePrompt, usePromptLegal, useWaitingFor, usePresentationIdle } from '../contract'
 import './hud.css'
 import { FirePanel } from './FirePanel'
 import { MovePanel } from './MovePanel'
@@ -69,6 +69,7 @@ export function PromptDock() {
   const legal = usePromptLegal()
   const state = usePresentedState()
   const waiting = useWaitingFor()
+  const idle = usePresentationIdle()
   const view = useMemo(() => (pd && state && !PANEL_KINDS.has(pd.kind) ? buildPromptView(state, pd, legal, { ammoName, weaponName }) : null), [pd, state, legal])
   if (pd && PANEL_KINDS.has(pd.kind)) {
     if (pd.kind === 'move' || pd.kind === 'standUp' || pd.kind === 'deploy') return <MovePanel />
@@ -77,7 +78,7 @@ export function PromptDock() {
   }
   if (pd && view && pd.kind !== 'gameOver') return <GenericPrompt key={pd.id} view={view} />
   if (waiting && waiting.controller === 'bot') {
-    return <div className="hud-dock hud-dock-wait" data-testid="prompt-waiting" role="status">Opponent is deciding…</div>
+    return <div className="hud-dock hud-dock-wait" data-testid="prompt-waiting" role="status">{idle ? 'Opponent is deciding…' : 'Showing results… (Space to skip)'}</div>
   }
   return null
 }

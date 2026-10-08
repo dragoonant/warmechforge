@@ -57,15 +57,18 @@ export function targetHexes(state: GameState | null, targetId: UnitId | null | u
 }
 
 // ---------- heat ----------
+/** True when a life-support slot of this 'Mech has been hit (the heat scale's pilot-hit rows then apply, HEAT-025). */
+export const lifeSupportDamaged = (u: Pick<UnitState, 'slots'> | undefined): boolean => !!u && Object.values(u.slots).some((l) => l.some((s) => s.token === 'lifeSupport' && s.hit))
 /** Effect chips for a heat level from the engine's HeatEffects (our words). */
-export function heatEffectChips(e: HeatEffects): string[] {
+export function heatEffectChips(e: HeatEffects, lifeSupportDamaged = false): string[] {
   const out: string[] = []
   if (e.mpLoss) out.push(HEAT_EFFECT_LABELS.mp(e.mpLoss))
   if (e.toHitMod) out.push(HEAT_EFFECT_LABELS.toHit(e.toHitMod))
   if (e.autoShutdown) out.push(HEAT_EFFECT_LABELS.autoShutdown())
   else if (e.shutdownTn !== null) out.push(`shutdown avoid ${e.shutdownTn}+`)
   if (e.ammoTn !== null) out.push(`ammo avoid ${e.ammoTn}+`)
-  if (e.lifeSupportPilotHits) out.push('pilot takes 1 hit if life support is damaged')
+  // the pilot hit exists only for a 'Mech whose life support has been hit (HEAT-025): others never see the line
+  if (e.lifeSupportPilotHits && lifeSupportDamaged) out.push(`pilot takes ${e.lifeSupportPilotHits} hit${e.lifeSupportPilotHits === 1 ? '' : 's'} (life support is damaged)`)
   return out
 }
 

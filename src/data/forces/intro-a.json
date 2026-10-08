@@ -3,11 +3,26 @@
   "name": "Eris Lance",
   "color": "#3b6ea8",
   "units": [
-    { "slot": "u1", "mech": "mech.eris.ers-2n", "pilot": "pilot.generic-alpha" },
-    { "slot": "u2", "mech": "mech.uziel.uzl-2s", "pilot": "pilot.generic-bravo" }
+    {
+      "slot": "u1",
+      "mech": "mech.eris.ers-2n",
+      "pilot": "pilot.generic-alpha"
+    },
+    {
+      "slot": "u2",
+      "mech": "mech.uziel.uzl-2s",
+      "pilot": "pilot.generic-bravo"
+    }
   ],
-  "source": { "ref": "ours", "note": "intro mission side a" },
+  "source": {
+    "ref": "ours",
+    "note": "intro mission side a; unchanged by the M7 rebalance. Adjusted BV 2,752 against the Solitaire Lance 2,881 (4.7%). Bench (easy vs easy, 16 games per side order, seed 3): Eris 15 wins, Solitaire 16, 1 draw"
+  },
   "verify": [
-    { "path": "", "note": "intro mission forces not yet read from the booklet", "status": "unconfirmed" }
+    {
+      "path": "",
+      "note": "intro mission forces not yet read from the booklet",
+      "status": "unconfirmed"
+    }
   ]
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { Action, GameState, Loc, UnitId } from '../../src/engine/index'
 import { legalActions, query, validate, view } from '../../src/engine/index'
 import { decideAi, type FireTrace } from '../../src/ai/decider'
+import { TUNE_NORMAL } from '../../src/ai/tune'
 import { flatten, hexOf, patchUnit, place, playUntil } from './helpers'
 
 const LOCS: Loc[] = ['HD', 'CT', 'LT', 'RT', 'LA', 'RA', 'LL', 'RL']
@@ -47,7 +48,7 @@ describe('utility AI, constructed positions', () => {
     }
   })
 
-  it('AI-007 respects the heat cap: with no kill in sight the planned end-of-turn heat stays at 9 or less', () => {
+  it('AI-007 respects the heat cap: with no kill in sight the planned end-of-turn heat stays at the normal cap (13 as built) or less', () => {
     for (const seed of ['heat-1', 'heat-2', 'heat-3']) {
       const { s, me } = fireState(seed)
       const d = decide(s, true)
@@ -55,7 +56,7 @@ describe('utility AI, constructed positions', () => {
       const H = query.heatProjection(s, me, { mounts: a.shots.map((x) => x.mountId) }).end
       const info = d.trace?.top?.[0] as FireTrace
       expect(info.pKill).toBeLessThan(0.5)
-      expect(H).toBeLessThanOrEqual(9)
+      expect(H).toBeLessThanOrEqual(TUNE_NORMAL.heatCap ?? 9) // M6 raised the M4 cap of 9 to 13 (40-ai §11 as built)
       // a heat-free hold is always available, and the AI does fire something here
       expect(a.shots.length).toBeGreaterThan(0)
     }

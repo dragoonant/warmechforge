@@ -95,3 +95,7 @@ html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(-
   .start-foot { display: none; }
   .start-actions button { padding: 7px 22px; font-size: 16px; }
 }
+
+/* M8: skirmish turn limit, forced withdrawal, AI force picker */
+.start-check { flex-direction: row; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.start-check input { width: auto; }

@@ -78,7 +78,7 @@ describe('Core Box roster data (stock variants)', () => {
   })
 
   it('ROSTER-008 the two lance presets are four Mechs each at similar BV, inside the skirmish budget', () => {
-    const total = (id: string): number => b.forces[id]!.units.reduce((s, u) => s + adjustedBv(b.tables, mech(u.mech).bv, 4, 5), 0)
+    const total = (id: string): number => b.forces[id]!.units.reduce((s, u) => s + adjustedBv(b.tables, mech(u.mech).bv, u.skills?.gunnery ?? 4, u.skills?.piloting ?? 5), 0)
     for (const id of ['force.regent-lance', 'force.mad-cat-lance']) {
       expect(b.forces[id]!.units).toHaveLength(4)
       expect(total(id)).toBeLessThanOrEqual(7500)

@@ -34,10 +34,11 @@ export function initiativeStrip(state: GameState): InitiativeStrip | null {
 }
 
 /** "Your decision: Eris Lance" / "Opponent (bot) is deciding" / "Battle over". */
-export function decisionLine(state: GameState, waiting: { player: PlayerId; controller: Controller } | null, humans: number): string {
+export function decisionLine(state: GameState, waiting: { player: PlayerId; controller: Controller } | null, humans: number, showing = false): string {
   if (state.phase === 'ended') return 'Battle over'
   if (!waiting) return ''
   const name = sideName(state, waiting.player)
+  if (showing) return 'Showing results… (Space to skip)'
   if (waiting.controller === 'bot') return `${name} (bot) is deciding`
   return humans > 1 ? `${name}: your decision` : `Your decision: ${name}`
 }

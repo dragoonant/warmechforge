@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react'
 import type { MoveMode } from '../../engine/index'
 import {
-  FACING_LABELS, game, groupReach, hexKey, uiActions, useMoveDraft, useMoveDraftEntry, useMoveModes, usePhysicalPreview, usePresentedState,
-  usePresentedUnit, usePrompt, usePromptLegal, useReach, useSheet, hexName, unitName,
+  FACING_LABELS, game, groupReach, hexKey, uiActions, useMoveDraft, useMoveDraftEntry, useMoveModes, useProneEntry, usePhysicalPreview, usePresentedState,
+  usePresentedUnit, usePrompt, usePromptLegal, useReach, useMascReach, useSheet, hexName, unitName,
 } from '../contract'
 import './hud.css'
 import { attackStrip, facingChoices, modeButtons, psrFlags, resultStrip, standChoices, standSentence } from './moveView'
+import { mascLines, mascOf } from './equipView'
 
 const MODE_ID: Record<MoveMode, string> = { standStill: 'stand', walk: 'walk', run: 'run', jump: 'jump' }
 
@@ -18,7 +19,9 @@ function MovementStep() {
   const draft = useMoveDraft()
   const modes = useMoveModes(unitId)
   const reach = useReach(unitId)
+  const mascReach = useMascReach(unitId)
   const entry = useMoveDraftEntry(unitId)
+  const proneEntry = useProneEntry(unitId)
   const locked = pd?.context.lockedMode
   const shown = useMemo(() => (locked ? modes.filter((m) => m === locked) : modes), [modes, locked])
   const buttons = modeButtons(shown.includes('standStill') ? shown : ['standStill', ...shown], sheet)
@@ -42,8 +45,10 @@ function MovementStep() {
   const standEntry = reach.filter((e) => e.mode === 'standStill' && !e.physical).sort((a, b) => a.mpUsed - b.mpUsed)[0]
   const pickMode = (m: MoveMode) => {
     if (m === 'standStill') { if (standEntry) game.commitMove(standEntry); return }
-    uiActions.setMoveDraft({ mode: m, hex: null, facing: null, attack: false })
+    uiActions.setMoveDraft({ mode: m, hex: null, facing: null, attack: false, ...(m === 'run' ? {} : { masc: false }) })
   }
+  const masc = mascOf(sheet)
+  const mascText = draft.mode === 'run' && masc && sheet ? mascLines(sheet, masc, { available: mascReach.length > 0, entering: unit.status === 'offBoard' }) : null
   const facings = facingChoices(group)
   const strip = entry ? (draft.attack && physical ? attackStrip(state, physical.kind, physical.targetId, physPreview) : resultStrip(state, entry, sheet)) : null
   const flags = entry && !draft.attack ? psrFlags(entry) : []
@@ -61,6 +66,16 @@ function MovementStep() {
           </button>
         ))}
       </div>
+      {mascText && masc && (
+        <div className="move-masc" data-testid="move-masc-box">
+          <button
+            type="button" className={`hud-btn hud-btn-sm hud-btn-toggle${draft.masc ? ' hud-btn-primary' : ''}`} data-testid="move-masc" aria-pressed={draft.masc} disabled={!mascText.available}
+            onClick={() => uiActions.setMoveDraft({ masc: !draft.masc, hex: null, facing: null, attack: false })}
+          >{mascText.label}</button>
+          <span className="move-masc-note" data-testid="move-masc-note">{mascText.note}</span>
+          {draft.masc && mascText.available && <span className="move-masc-risk chip chip-bad" data-testid="move-masc-risk">{mascText.risk}</span>}
+        </div>
+      )}
       {!draft.hex && <p className="prompt-line">Click a highlighted hex on the board: green is walking range, amber needs a run, blue is a jump. Stand still keeps this position.</p>}
       {draft.hex && (
         <>
@@ -89,6 +104,7 @@ function MovementStep() {
       {flags.length > 0 && <ul className="move-flags" data-testid="move-flags">{flags.map((f) => <li key={f} className="chip chip-bad">⚠ {f}</li>)}</ul>}
       <div className="pbtns">
         <button type="button" className="hud-btn hud-btn-primary hud-btn-default" data-testid="move-confirm" disabled={!entry} onClick={() => game.commitMoveDraft()}><span className="btn-label">Confirm move</span></button>
+        {proneEntry && <button type="button" className="hud-btn" data-testid="move-prone" title="Drop prone where you stand (deliberate; you must roll to stand up next turn)" onClick={() => game.commitMove(proneEntry)}><span className="btn-label">Go prone</span></button>}
         <button type="button" className="hud-btn" data-testid="move-reset" disabled={!draft.hex} onClick={() => uiActions.resetMoveDraft()}><span className="btn-label">Reset</span></button>
       </div>
     </section>

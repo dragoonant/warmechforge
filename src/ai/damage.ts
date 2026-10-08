@@ -15,6 +15,9 @@ export interface AttackIn {
   cluster: { rackSize: number; expectedHits: number; perGroup: number } | null
   /** Fixed damage groups for one hit (charge / DFA / fall damage in 5-point groups); overrides damage and cluster. */
   groups?: number[]
+  /** The preview says the target's armor cuts this damage (ferro-lamellor, EQUIP-014): each group that strikes a location
+   *  whose struck armor still stands lands as floor(4/5 x damage), as the engine's damage pipeline does. */
+  lamellor?: boolean
 }
 
 /** One location of a target as the AI sees it: remaining armor on each side, structure, and its values. */
@@ -49,6 +52,7 @@ export function attackFromPreview(pv: AttackPreview, perGroup: number): AttackIn
   return {
     pHit: pv.legal ? pv.pHit : 0, table: pv.table, partialCover: pv.partialCover, damage: pv.damage,
     cluster: pv.cluster ? { rackSize: pv.cluster.rackSize, expectedHits: pv.cluster.expectedHits, perGroup } : null,
+    ...(pv.armorReduction === 'ferroLamellor' ? { lamellor: true } : {}),
   }
 }
 
@@ -120,6 +124,40 @@ function attackOnLoc(a: AttackIn, q: number, cap: number): number[] {
   return out
 }
 
+/** One hit's possible group lists with their probabilities (given the attack hits). */
+function hitOutcomes(a: AttackIn): { p: number; groups: number[] }[] {
+  if (a.groups) return [{ p: 1, groups: a.groups }]
+  if (!a.cluster) return [{ p: 1, groups: [a.damage] }]
+  const dist = clusterDistFor(a.cluster.rackSize, a.cluster.expectedHits)
+  const out: { p: number; groups: number[] }[] = []
+  for (let k = 0; k < dist.length; k++) if (dist[k]) out.push({ p: dist[k]!, groups: groupsFor(k, a.damage, a.cluster.perGroup) })
+  return out
+}
+
+/**
+ * Ferro-lamellor (EQUIP-014) on one location: groups are applied in order to the running damage distribution D, and a group
+ * striking while the location's armor still stands (accumulated damage < armor) lands as floor(4/5 x damage).
+ */
+function applyLamellor(D: number[], a: AttackIn, q: number, cap: number, armor: number): number[] {
+  const out = D.map((p) => p * (1 - a.pHit))
+  for (const o of hitOutcomes(a)) {
+    let G = D.slice()
+    for (const dmg of o.groups) {
+      const next = new Array<number>(cap + 1).fill(0)
+      for (let d = 0; d < G.length; d++) {
+        const g = G[d]!
+        if (!g) continue
+        next[d]! += g * (1 - q)
+        const amt = d < armor ? Math.floor((dmg * 4) / 5) : dmg
+        next[Math.min(cap, d + amt)]! += g * q
+      }
+      G = next
+    }
+    for (let d = 0; d < G.length; d++) out[d] = (out[d] ?? 0) + a.pHit * o.p * G[d]!
+  }
+  return out
+}
+
 export interface VolleyValue {
   dv: number
   pKill: number
@@ -164,7 +202,7 @@ export function volleyValue(t: TargetModel, direction: AttackDirection, attacks:
       const q = qFor(a)[l] ?? 0
       if (!q) continue
       any = true
-      D = conv(D, attackOnLoc(a, q, R), R)
+      D = a.lamellor ? applyLamellor(D, a, q, R, armor) : conv(D, attackOnLoc(a, q, R), R)
     }
     if (!any) continue
     let eArmor = 0, eStruct = 0, pPen = 0, eDmg = 0

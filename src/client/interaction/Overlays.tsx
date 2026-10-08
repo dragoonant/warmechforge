@@ -84,7 +84,7 @@ export function PathPreview(): ReactElement | null {
   const entry = useMemo(() => {
     if (!unitId || mode !== 'move') return null
     if (draft.hex) return findReachEntry(entries, draft)
-    if (hover) return findReachEntry(entries, { mode: draft.mode, hex: hover, facing: null, attack: false })
+    if (hover) return findReachEntry(entries, { mode: draft.mode, hex: hover, facing: null, attack: false, masc: draft.masc })
     return null
   }, [unitId, mode, entries, draft, hover])
   const view = useMemo(() => (entry ? pathView(entry) : null), [entry])

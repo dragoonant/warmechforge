@@ -1,6 +1,7 @@
 import { useForceColour, usePresentedUnit, useSheet, useSideName } from '../../contract'
 import { AmmoBins } from './AmmoBins'
 import { CritSlots } from './CritSlots'
+import { EquipmentBlock } from './EquipmentBlock'
 import { MpBlock, PilotBox } from './MpAndPilot'
 import { PaperDoll } from './PaperDoll'
 import { sheetHeader, sinkText, statusChips } from './sheetView'
@@ -26,6 +27,7 @@ export function RecordSheet({ unitId }: { unitId: string }) {
       <PaperDoll sheet={sheet} unitId={unitId} />
       <div className="sheet-sinks hud-dim" data-testid="sheet-sinks">Heat sinks: {sinkText(sheet)}</div>
       <details open><summary className="hud-h2">Weapons</summary><WeaponsTable sheet={sheet} /></details>
+      <EquipmentBlock sheet={sheet} />
       <details><summary className="hud-h2">Critical slots</summary><CritSlots sheet={sheet} /></details>
       <details open><summary className="hud-h2">Ammunition</summary><AmmoBins sheet={sheet} /></details>
       <details open><summary className="hud-h2">Pilot</summary><PilotBox sheet={sheet} unit={unit} /></details>

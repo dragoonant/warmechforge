@@ -11,6 +11,7 @@ import {
 } from './equipment'
 import { artemisClusterMod, expectedClusterHits } from './cluster'
 import { damagePer, TRANSFER, weaponDamageBonus } from './damage'
+import { expectedLanded, lamellorTarget, rangedOutcomes } from './expect'
 import {
   ammoAvoidTn, baseDissipation, dissipation, waterBonus, hookDissipation, heatMpLoss, heatToHitMod, hitCount, lifeSupportHits, projectHeat, shutdownAvoidTn,
 } from './heat'
@@ -133,17 +134,29 @@ export function attackPreviewQuery(state: GameState, req: AttackPreviewRequest):
   const rapid = req.rapidShots ?? 1
   const heat = (prof?.heat ?? 0) * rapid
   let cluster: AttackPreview['cluster'] = null
+  let clusterRoll: { rackSize: number; perGroup: number; mod: number; streak: boolean } | null = null
   const rack = prof?.cluster?.rackSize ?? (rapid > 1 ? rapid : 0)
   if (prof && rack > 0) {
     const streak = hasFlag(prof, 'streak')
     const mod = (prof.clusterMod ?? 0) + (a ? artemisClusterMod(data, a, req.mountId, ev.ammoId, { state: s, targetHex: tPos }) : 0)
     cluster = { rackSize: rack, expectedHits: streak ? rack : expectedClusterHits(rack, mod) }
+    clusterRoll = { rackSize: rack, perGroup: prof.cluster?.groupSize ?? 1, mod, streak }
   }
-  const perHit = cluster ? cluster.expectedHits * damage : damage
+  // what the pipeline lands per hit (damage.ts resolveAttack: groups, location, cover, aimed shot, ferro-lamellor)
+  let perHit = cluster ? cluster.expectedHits * damage : damage
+  let reduction: { stopped: number } | null = null
+  if (t && prof && damage > 0) {
+    // partial cover absorbs leg hits; an aimed shot re-rolls them instead (TOHIT-036), which landingOdds models
+    const spec = { direction, table: 'standard' as const, partialCover: los.partialCover, aimedAt: req.aimedAt ?? null }
+    const e = expectedLanded(data, t, spec, rangedOutcomes(damage, clusterRoll))
+    perHit = e.landed
+    if (lamellorTarget(data, t)) reduction = { stopped: e.stopped }
+  }
   const out: AttackPreview = {
     legal, mountId: req.mountId, targetId: req.targetId, distance: dist, band, tn, mods, pHit, direction, table: 'standard',
-    partialCover: los.partialCover, los, heat, damage, cluster, expectedDamage: pHit * perHit,
+    partialCover: los.partialCover, los, heat, damage, cluster, expectedDamage: pHit * perHit, expectedPerHit: perHit,
   }
+  if (reduction) { out.armorReduction = 'ferroLamellor'; out.expectedStopped = reduction.stopped }
   if (rejection) { out.reason = rejection.code; out.why = rejection.message }
   return out
 }

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { FAN_NOTICE, game, settings, useSettings, type NewGameOptions } from '../../contract'
 import { openHelp } from '../help/HelpGuide'
 import {
-  OPPONENTS, SPEED_CHOICES, buildStartOptions, catalogue, defaultForm, evenBv, evenSide, fixedForce, forceHeading, forceView, formatBv, isSkirmish,
+  OPPONENTS, SPEED_CHOICES, TURN_LIMITS, aiPickForce, buildStartOptions, catalogue, defaultForm, evenBv, evenSide, fixedForce, forceHeading, forceView, formatBv, isSkirmish,
   mapChoices, mapLabel, mechTitle, sideOrder, swapSides, withControl, withForce, withMission, continueSummary, type Side, type StartForm,
 } from './startOptions'
 import { SkirmishPicker } from './SkirmishPicker'
@@ -146,6 +146,24 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
                 </select>
               </label>
               <button type="button" className="start-swap" data-testid="start-swap" onClick={() => patch(swapSides(form))}>Swap sides</button>
+              {skirmish && (
+                <label>Turn limit
+                  <select data-testid="start-turn-limit" value={form.turnLimit === null ? 'none' : String(form.turnLimit)}
+                    onChange={(e) => patch({ ...form, turnLimit: e.target.value === 'none' ? null : Number(e.target.value) })}>
+                    {TURN_LIMITS.map((t) => <option key={t.label} value={t.value === null ? 'none' : String(t.value)}>{t.label}</option>)}
+                  </select>
+                </label>
+              )}
+              {skirmish && (
+                <label className="start-check" title="Optional rule: a 'Mech that is crippled has to turn for its home edge and leave the map. Both sides follow it.">
+                  <input type="checkbox" data-testid="start-withdrawal" checked={form.forcedWithdrawal} onChange={(e) => patch({ ...form, forcedWithdrawal: e.target.checked })} />
+                  Forced withdrawal
+                </label>
+              )}
+              {skirmish && (
+                <button type="button" className="start-swap" data-testid="pick-ai-force" title={`Fills ${forceHeading(form, evenSide(form)).toLowerCase()} with 'Mechs from the whole roster, within 10% of the other side's BV. The same seed gives the same force.`}
+                  onClick={() => patch(aiPickForce(form, cat))}>AI picks a force</button>
+              )}
               {skirmish && (
                 <button type="button" className="start-swap" data-testid="pick-even-bv" title={`Changes the pilot skills of ${forceHeading(form, evenSide(form)).toLowerCase()} to bring its BV close to the other side`}
                   onClick={() => patch(evenBv(form, cat))}>Even BV</button>

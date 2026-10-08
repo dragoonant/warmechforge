@@ -5,12 +5,15 @@
 // Plays each pair on the intro mission with sides alternated (the first tier plays side A in even games, side B in odd
 // games). Prints wins by cause, mean turns, mean and p95 ms per AI decision, rejections, stalls and fallbacks, and writes
 // tools/out/bench-<date>.json. Exit 1 when any game has a rejection, stall, decision-cap hit, fallback or unhandled kind.
+// It also audits every AI move for the two M7 playtest majors (M8): a move that ends with no shot at anything while a reachable
+// hex had one, and a move that leaves its rear to a live enemy (already moved, with a legal shot) while a helpless enemy (prone
+// with a leg gone, crippled or unconscious) is on the board.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadBundle } from '../src/data/index'
-import type { Action, GameState, PlayerId, StepResult } from '../src/engine/index'
-import { createGame, deriveSeedString, legalActions, step, view } from '../src/engine/index'
+import type { Action, GameState, PlayerId, ReachEntry, StepResult, Twist, UnitId } from '../src/engine/index'
+import { createGame, deriveSeedString, legalActions, query, step, view } from '../src/engine/index'
 import { decideAi } from '../src/ai/decider'
 import { decideRandom } from '../src/ai/random'
 import { customSetup, randomForces } from './sim'
@@ -34,6 +37,51 @@ interface GameOut {
   index: number; seed: string; tierA: Tier; tierB: Tier; winnerTier: Tier | 'draw' | null; winner: PlayerId | null; reason: string; turns: number
   decisions: number; rejections: number; stall: boolean; engineErrors: string[]; capHit: boolean; fallbacks: string[]; unhandled: string[]
   ms: number[]; msByKind: Record<string, number[]>; shutdowns: Record<PlayerId, number>; ammoExplosions: Record<PlayerId, number>
+  /** M7 majors audit, per tier: AI moves checked, no-shot moves, rear left to a live threat beside a helpless enemy. */
+  audit: Record<string, { moves: number; noShot: number; cooling: number; backToThreat: number }>
+}
+
+const onBoard = (s: GameState, id: UnitId): boolean => { const u = s.units[id]!; return !!u.pos && (u.status === 'active' || u.status === 'withdrawing') }
+const helpless = (s: GameState, id: UnitId): boolean => {
+  const u = s.units[id]!
+  return !u.pilot.conscious || u.crippled || (u.prone && (u.locs.LL.destroyed || u.locs.RL.destroyed))
+}
+function hasShot(s: GameState, me: UnitId, e: ReachEntry, enemies: UnitId[]): boolean {
+  for (const tw of [0, -1, 1] as Twist[]) {
+    for (const mountId of Object.keys(s.units[me]!.mounts)) {
+      for (const t of enemies) {
+        const pv = query.attackPreview(s, { attackerId: me, mountId, targetId: t, attackerAt: { hex: e.hex, facing: e.facing, mode: e.mode, hexesMoved: e.hexesMoved, jumped: e.mode === 'jump', twist: tw } })
+        if (pv.legal && pv.pHit > 0) return true
+      }
+    }
+  }
+  return false
+}
+/** Checks one AI move against the two M7 majors (outside the timed decision). */
+function auditMove(s: GameState, me: UnitId, action: Action, a: { moves: number; noShot: number; cooling: number; backToThreat: number }): void {
+  if (action.type !== 'move') return
+  const u = s.units[me]!
+  if (u.status === 'withdrawing') return
+  const key = JSON.stringify(action)
+  let reach: ReachEntry[] = []
+  try { reach = query.reachable(s, me) } catch { return }
+  let e = reach.find((x) => JSON.stringify(x.action) === key)
+  if (!e) { try { e = query.reachable(s, me, { masc: true }).find((x) => JSON.stringify(x.action) === key) } catch { /* none */ } }
+  if (!e || e.physical || e.endsProne) return
+  a.moves++
+  const enemies = s.unitOrder.filter((id) => s.units[id]!.owner !== u.owner && onBoard(s, id))
+  if (!hasShot(s, me, e, enemies) && reach.some((x) => !x.physical && !x.endsProne && hasShot(s, me, x, enemies))) {
+    a.noShot++
+    if (u.heat >= 10) a.cooling++ // a hot unit breaking contact to cool down (its affordable shots are small)
+  }
+  if (!enemies.some((id) => helpless(s, id))) return
+  for (const id of enemies) {
+    if (helpless(s, id) || !s.units[id]!.move.done) continue
+    for (const mountId of Object.keys(s.units[id]!.mounts)) {
+      const pv = query.attackPreview(s, { attackerId: id, mountId, targetId: me, targetAt: { hex: e.hex, facing: e.facing, hexesMoved: e.hexesMoved, jumped: e.mode === 'jump' } })
+      if (pv.legal && pv.direction === 'rear') { a.backToThreat++; return }
+    }
+  }
 }
 
 function playOne(bundle: ReturnType<typeof loadBundle>, args: Args, tiers: Record<PlayerId, Tier>, seed: string, index: number): GameOut {
@@ -43,6 +91,7 @@ function playOne(bundle: ReturnType<typeof loadBundle>, args: Args, tiers: Recor
   const out: GameOut = {
     index, seed, tierA: tiers.A, tierB: tiers.B, winnerTier: null, winner: null, reason: 'unfinished', turns: 0, decisions: 0, rejections: 0,
     stall: false, capHit: false, engineErrors: [], fallbacks: [], unhandled: [], ms: [], msByKind: {}, shutdowns: { A: 0, B: 0 }, ammoExplosions: { A: 0, B: 0 },
+    audit: {},
   }
   let r: StepResult = createGame(setup, seed, bundle)
   let s: GameState = r.state
@@ -64,6 +113,7 @@ function playOne(bundle: ReturnType<typeof loadBundle>, args: Args, tiers: Recor
       const dt = performance.now() - t0
       out.ms.push(dt)
       ;(out.msByKind[p.kind] ??= []).push(dt)
+      if (p.kind === 'move' && p.unitId) auditMove(s, p.unitId, action, (out.audit[tier] ??= { moves: 0, noShot: 0, cooling: 0, backToThreat: 0 }))
     }
     const next = step(s, action)
     out.decisions++
@@ -172,6 +222,8 @@ function runCell(bundle: ReturnType<typeof loadBundle>, args: Args, label: strin
       `  mean turns ${mean(pairGames.map((g) => g.turns)).toFixed(1)}; AI ms/decision mean ${mean(ms).toFixed(1)} p95 ${pct(ms, 0.95).toFixed(1)} max ${pct(ms, 1).toFixed(1)} (${ms.length} decisions)`,
       `  rejections ${rej}, stalls ${stalls}, fallbacks ${fb}, unhandled ${un}, engine errors ${engineErr}; ${x} heat shutdowns ${shut}, heat ammo explosions ${boom}`,
     )
+    const aud = pairGames.reduce((n, g) => { const v = g.audit[x]; if (v) { n.moves += v.moves; n.noShot += v.noShot; n.cooling += v.cooling; n.backToThreat += v.backToThreat } return n }, { moves: 0, noShot: 0, cooling: 0, backToThreat: 0 })
+    if (x !== 'random') summary.push(`  M7 majors audit (${x}): ${aud.moves} moves, no-shot moves ${aud.noShot} (${aud.cooling} by units at heat 10+), rear to a live threat beside a helpless enemy ${aud.backToThreat}`)
     for (const g of pairGames) for (const f of [...g.engineErrors, ...g.fallbacks, ...g.unhandled].slice(0, 3)) summary.push(`    game ${g.index}: ${f}`)
     const kinds = [...new Set(pairGames.flatMap((g) => Object.keys(g.msByKind)))].sort()
     summary.push(`  ms by kind (p50/p95/max): ${kinds.map((k) => { const xs = pairGames.flatMap((g) => g.msByKind[k] ?? []); return `${k} ${pct(xs, 0.5).toFixed(0)}/${pct(xs, 0.95).toFixed(0)}/${pct(xs, 1).toFixed(0)}` }).join(', ')}`)

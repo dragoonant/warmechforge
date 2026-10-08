@@ -68,7 +68,18 @@ export interface StartForm {
   map: string | null
   /** Skirmish any-vs-any picks per side [A, B], 1-4 each. */
   picks: [MechPick[], MechPick[]]
+  /** Skirmish turn limit (11 §7): null = none, else one of TURN_LIMITS. */
+  turnLimit: number | null
+  /** Skirmish forced withdrawal (11 §3): crippled 'Mechs must leave by their home edge. */
+  forcedWithdrawal: boolean
+  /** How many times "AI picks a force" was pressed; with the seed it decides the pick, so the same seed gives the same force. */
+  pickRoll: number
 }
+
+/** Skirmish turn-limit choices (11 §7): none / 8 / 12 / 16. */
+export const TURN_LIMITS: readonly { value: number | null; label: string }[] = [
+  { value: null, label: 'No limit' }, { value: 8, label: '8 turns' }, { value: 12, label: '12 turns' }, { value: 16, label: '16 turns' },
+]
 
 /** The variants of one chassis, cheapest first. */
 export interface ChassisGroup { chassis: string; variants: MechInfo[] }
@@ -185,6 +196,54 @@ export function evenBv(form: StartForm, cat: StartCatalogue): StartForm {
   return withPicks(form, side, picks)
 }
 
+// ---------- AI picks a force ----------
+function seededRng(text: string): () => number {
+  let h = 2166136261
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619) }
+  let a = h >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+/** Within this share of the other side's BV counts as a fair fight (11 §7, 40-ai force picker). */
+export const FORCE_PICK_TOLERANCE = 0.1
+
+/**
+ * "AI picks a force": fills the enemy side (evenSide) from every 'Mech in the data so its adjusted BV lands within 10% of the other
+ * side's, 4/5 pilots. Every lance of 1-4 'Mechs is considered; ones with about as many 'Mechs as your side are preferred. The choice
+ * is deterministic in (seed, press count, your side), so the same seed gives the same force. When nothing lands within 10% the
+ * closest lance is taken and its pilot skills are nudged (Even BV).
+ */
+export function aiPickForce(form: StartForm, cat: StartCatalogue): StartForm {
+  const side = evenSide(form)
+  const mine = form.picks[sideIx(side === 'A' ? 'B' : 'A')]
+  const target = sideTotal(cat, mine).bv
+  const pool = [...cat.mechs].sort((a, b) => a.id.localeCompare(b.id)).map((m) => ({ pick: { mech: m.id, ...DEFAULT_SKILLS } as MechPick, bv: pickBv(cat, { mech: m.id, ...DEFAULT_SKILLS }) }))
+  const found: { picks: MechPick[]; bv: number }[] = []
+  const walk = (start: number, chosen: number[], bv: number): void => {
+    if (chosen.length > 0) found.push({ picks: chosen.map((i) => ({ ...pool[i]!.pick })), bv })
+    if (chosen.length >= MAX_PICKS) return
+    for (let i = start; i < pool.length; i++) walk(i, [...chosen, i], bv + pool[i]!.bv)
+  }
+  walk(0, [], 0)
+  const fair = found.filter((f) => Math.abs(f.bv - target) <= target * FORCE_PICK_TOLERANCE)
+  const near = fair.filter((f) => Math.abs(f.picks.length - mine.length) <= 1)
+  const from = near.length > 0 ? near : fair
+  const rng = seededRng(`${form.seed.trim()}|${form.pickRoll}|${mine.map((p) => p.mech).join(',')}`)
+  let picks: MechPick[]
+  if (from.length > 0) picks = from[Math.floor(rng() * from.length)]!.picks
+  else {
+    const closest = [...found].sort((a, b) => Math.abs(a.bv - target) - Math.abs(b.bv - target) || a.picks.length - b.picks.length)[0]
+    picks = closest ? closest.picks : [{ ...pool[0]!.pick }]
+  }
+  const next = { ...withPicks(form, side, picks), pickRoll: form.pickRoll + 1 }
+  return from.length > 0 ? next : evenBv(next, cat)
+}
+
 /** Force id a mission fixes for side index i, or null when the player picks. */
 export function fixedForce(m: MissionInfo | undefined, i: 0 | 1): string | null {
   const f = m?.sides[i]?.force
@@ -204,14 +263,14 @@ export function defaultForm(cat: StartCatalogue, missionId?: string): StartForm 
   const m = cat.missions.find((x) => x.id === missionId) ?? cat.missions.find((x) => x.ready) ?? cat.missions[0]
   const mission = m?.id ?? ''
   const controllers: Record<Side, Controller> = mission ? defaultControllers(mission) : { A: 'human', B: 'bot' }
-  return { mission, forces: defaultForces(m, cat.forces), controllers, opponent: 'normal', seed: '', map: null, picks: defaultPicks(cat) }
+  return { mission, forces: defaultForces(m, cat.forces), controllers, opponent: 'normal', seed: '', map: null, picks: defaultPicks(cat), turnLimit: null, forcedWithdrawal: false, pickRoll: 0 }
 }
 
 /** Switch mission: forces, sides and map reset to that mission's; seed and opponent are kept. */
 export function withMission(form: StartForm, cat: StartCatalogue, id: string): StartForm {
   const m = cat.missions.find((x) => x.id === id)
   if (!m || !m.ready) return form
-  return { ...defaultForm(cat, id), seed: form.seed, opponent: form.opponent, picks: form.picks }
+  return { ...defaultForm(cat, id), seed: form.seed, opponent: form.opponent, picks: form.picks, turnLimit: form.turnLimit, forcedWithdrawal: form.forcedWithdrawal, pickRoll: form.pickRoll }
 }
 
 /** Maps a mission lets the player choose from (empty = fixed by the mission). */
@@ -275,6 +334,7 @@ export function buildStartOptions(form: StartForm, cat?: StartCatalogue): NewGam
   return {
     mission: form.mission,
     ...(skirmish ? { lineups } : { forces: [form.forces[0], form.forces[1]] as [string, string] }),
+    ...(skirmish ? { turnLimit: form.turnLimit, forcedWithdrawal: form.forcedWithdrawal } : {}),
     ...(form.map ? { map: form.map } : {}),
     controllers: { A: form.controllers.A, B: form.controllers.B },
     bot: { tier: form.opponent },

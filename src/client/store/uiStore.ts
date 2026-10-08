@@ -15,7 +15,7 @@ import type { DecisionKind, Facing, FireShot, Hex, MoveMode, PhaseId, Twist, Uni
 export type UiMode = 'select' | 'move' | 'fire' | 'physical' | 'measure' | 'los'
 
 /** Movement plan (50 §6). `hex` locked by a click; `facing` picked on the FacingPicker; `attack` = the charge/DFA chip. */
-export interface MoveDraft { mode: MoveMode; hex: Hex | null; facing: Facing | null; attack: boolean }
+export interface MoveDraft { mode: MoveMode; hex: Hex | null; facing: Facing | null; attack: boolean; /** MASC chip (Run only): the reach set and the committed move use MASC run MP. */ masc: boolean }
 /** Ranged plan (50 §7). shots[0]'s target is the primary target; `twist`/`flip` preview the torsoTwist decision. */
 export interface FireDraft { twist: Twist; flip: boolean; targetId: UnitId | null; shots: FireShot[] }
 /** Physical plan (50 §7.6): the chosen target; the options come from query.physicalOptions. */
@@ -40,7 +40,7 @@ export interface UiState {
   panel: string | null
 }
 
-export const EMPTY_MOVE: MoveDraft = { mode: 'walk', hex: null, facing: null, attack: false }
+export const EMPTY_MOVE: MoveDraft = { mode: 'walk', hex: null, facing: null, attack: false, masc: false }
 export const EMPTY_FIRE: FireDraft = { twist: 0, flip: false, targetId: null, shots: [] }
 export const EMPTY_PHYSICAL: PhysicalDraft = { targetId: null }
 

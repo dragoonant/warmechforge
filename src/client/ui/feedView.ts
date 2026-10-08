@@ -26,6 +26,9 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
   const n = (id: UnitId | null | undefined): string => unitName(state, id)
   const rolls = new Map<string, DiceRolled>() // attackId -> its to-hit roll
   let open: Open | null = null
+  // the attack row stays the home of its damage groups until AttackEnded, even after a crit check took over `open`
+  let atk: Open | null = null
+  const droppedProne = new Set<UnitId>()
   // where each unit stood, from the events themselves: a past row must never be rebuilt from the unit's current position
   const places = new Map<UnitId, { hex: Hex; facing: Facing }>()
   const failedStand = new Set<UnitId>()
@@ -34,12 +37,12 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
   const placeOf = (id: UnitId): { hex: Hex; facing: Facing } | undefined => places.get(id)
   const push = (row: FeedRow): FeedRow => { rows.push(row); return row }
   const refresh = (o: Open): void => { o.row.text = o.parts.length ? `${o.head} · ${o.parts.join(' · ')}` : o.head }
-  const close = (): void => { open = null }
+  const close = (): void => { open = null; atk = null }
 
   for (const { seq, event: ev, turn } of feed) {
     const t = turn !== undefined ? { turn } : {}
     switch (ev.type) {
-      case 'UnitStepped': case 'UnitJumped': places.set(ev.unitId, { hex: ev.to, facing: ev.facing }); failedStand.delete(ev.unitId); break
+      case 'UnitStepped': case 'UnitJumped': if (ev.type === 'UnitStepped' && ev.op === 'dropProne') droppedProne.add(ev.unitId); places.set(ev.unitId, { hex: ev.to, facing: ev.facing }); failedStand.delete(ev.unitId); break
       default: break
     }
     switch (ev.type) {
@@ -65,6 +68,7 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
         if (ev.roll !== null) detail.push(`Rolled ${roll ? dice(roll) : ev.roll} against ${ev.tn}: ${ev.hit ? 'hit' : 'miss'}`)
         const row = push({ seq, tone: ev.hit ? 'hit' : 'miss', text: head, detail, ...t })
         open = { kind: 'attack', row, head, parts: [], unitId: ev.attackerId, attackId: ev.attackId }
+        atk = open
         break
       }
       case 'AimedShotResolved':
@@ -95,11 +99,14 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
         const xfer = ev.transferredTo ? `${ev.structureAfter === 0 ? `${locName(ev.location)} destroyed, ` : ''}${ev.transferred} transfers to ${locName(ev.transferredTo)}` : null
         if (destroyed.has(ev.unitId)) {
           // damage to a 'Mech that is already out is one short note, not a chain of transfers
-          const o = open as Open | null
+          const o = (open?.kind === 'attack' ? open : atk) as Open | null
           if (o && o.kind === 'attack') { o.row.detail.push(line); if (!o.noEffect) { o.noEffect = true; o.parts.push('(no effect: already destroyed)'); refresh(o) } } else push({ seq, tone: 'damage', text: `${n(ev.unitId)} takes ${ev.damage} more (no effect: already destroyed)`, detail: [line], ...t })
           break
         }
-        const target = open && ((open.kind === 'attack' && (ev.source === 'weapon' || ev.source === 'physical')) || (open.kind === 'crit' && (ev.source === 'ammoExplosion' || ev.source === 'componentExplosion')) || (open.kind === 'psr' && (ev.source === 'fall' || ev.source === 'fallFromAbove'))) ? open : null
+        let target = open && ((open.kind === 'attack' && (ev.source === 'weapon' || ev.source === 'physical')) || (open.kind === 'crit' && (ev.source === 'ammoExplosion' || ev.source === 'componentExplosion')) || (open.kind === 'psr' && (ev.source === 'fall' || ev.source === 'fallFromAbove'))) ? open : null
+        // a crit check took over `open`: later damage groups of the same cluster still belong to the attack row
+        if (!target && atk && (ev.source === 'weapon' || ev.source === 'physical')) target = atk
+        if (ev.reduced) bits.push(`ferro-lamellor stopped ${ev.reduced}`)
         if (target) {
           target.row.detail.push(line)
           if (xfer) target.row.detail.push(xfer)
@@ -107,7 +114,7 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
           if (target.kind === 'attack') target.row.tone = 'damage'
           refresh(target)
         } else {
-          push({ seq, tone: 'damage', text: `${n(ev.unitId)} takes ${ev.damage}: ${[...bits, ...(xfer ? [xfer] : [])].join(' · ') || 'no armor or internal lost'}`, detail: [line, ...(xfer ? [xfer] : [])], ...t })
+          push({ seq, tone: 'damage', text: `${n(ev.unitId)} takes ${ev.damage}: ${[...bits, ...(xfer ? [xfer] : [])].join(' · ') || 'armor held, nothing lost'}`, detail: [line, ...(xfer ? [xfer] : [])], ...t })
         }
         break
       }
@@ -159,7 +166,8 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
         break
       }
       case 'AttackEnded':
-        if (open?.kind === 'attack' && open.attackId === ev.attackId) { open.row.detail.push(`Damage dealt: ${ev.damageDealt}`); close() }
+        if (atk && atk.attackId === ev.attackId) { atk.row.detail.push(`Damage dealt: ${ev.damageDealt}`) }
+        close()
         break
       case 'PsrResolved': {
         const mods = modPhrases(ev.mods)
@@ -199,7 +207,9 @@ export function buildFeed(state: GameState | null, feed: readonly (FeedEntryLike
         const at = placeOf(ev.unitId)
         const stayedDown = failedStand.has(ev.unitId) && ev.hexesMoved === 0
         failedStand.delete(ev.unitId)
-        const text = narrate(state, ev, { ...(at ? { hex: at.hex, facing: at.facing } : {}), stayedDown })
+        const dropped = droppedProne.has(ev.unitId)
+        droppedProne.delete(ev.unitId)
+        const text = narrate(state, ev, { ...(at ? { hex: at.hex, facing: at.facing } : {}), stayedDown, droppedProne: dropped })
         push({ seq, tone: 'flow', text: text ?? `${n(ev.unitId)} moved`, detail: [`${ev.hexesMoved} hexes moved, ${ev.mpSpent} MP spent`, `Attackers aiming at it get ${ev.tmm >= 0 ? '+' : '−'}${Math.abs(ev.tmm)}; its own shots get ${ev.attackerMod >= 0 ? '+' : '−'}${Math.abs(ev.attackerMod)}`], ...t })
         break
       }

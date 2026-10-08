@@ -164,7 +164,7 @@ export function rollVerdict(ev: DiceRolled): string | null {
 
 // ---------- narration (one line per notable event; numbers from the event) ----------
 /** Where a unit was when the event happened, tracked by the caller from earlier events (never read from live unit state). */
-export interface NarrateAt { hex?: Hex; facing?: Facing; stayedDown?: boolean }
+export interface NarrateAt { hex?: Hex; facing?: Facing; stayedDown?: boolean; droppedProne?: boolean }
 export function narrate(state: GameState | null, ev: GameEvent, at: NarrateAt = {}): string | null {
   const n = (id: UnitId | null | undefined) => unitName(state, id)
   switch (ev.type) {
@@ -180,6 +180,7 @@ export function narrate(state: GameState | null, ev: GameEvent, at: NarrateAt = 
       const hex = at.hex ?? u?.pos
       const facing = at.facing ?? u?.facing
       if (at.stayedDown) return `${n(ev.unitId)} stays down in ${hexName(state, hex)} (${ev.mpSpent} MP spent trying to stand).`
+      if (at.droppedProne) return `${n(ev.unitId)} drops prone in ${hexName(state, hex)} (${ev.mpSpent} MP).`
       const verb = ev.mode === 'jump' ? 'jumps' : ev.mode === 'run' ? 'runs' : 'walks'
       return `${n(ev.unitId)} ${verb} to ${hexName(state, hex)} (${ev.mpSpent} MP), facing ${facing !== undefined ? FACING_LABELS[facing] : '?'}.`
     }
@@ -187,7 +188,10 @@ export function narrate(state: GameState | null, ev: GameEvent, at: NarrateAt = 
     case 'StandAttempted': return ev.success ? `${n(ev.unitId)} gets back up.` : `${n(ev.unitId)} fails to stand.`
     case 'TorsoTwisted': return ev.flipped ? `${n(ev.unitId)} flips its arms.` : ev.twist === 0 ? null : `${n(ev.unitId)} twists ${ev.twist < 0 ? 'left' : 'right'}.`
     case 'FireDeclared': return ev.shots.length ? `${n(ev.unitId)} fires ${ev.shots.length} weapon${ev.shots.length > 1 ? 's' : ''}.` : `${n(ev.unitId)} holds fire.`
-    case 'PhysicalDeclared': return `${n(ev.unitId)} readies a ${ev.kind} on ${n(ev.targetId)} (TN ${ev.tn}).`
+    case 'PhysicalDeclared': {
+      const limb = ev.limb ? (ev.kind === 'punch' ? { LA: 'left arm ', RA: 'right arm ', LL: 'left leg ', RL: 'right leg ' }[ev.limb as string] ?? '' : ev.kind === 'kick' ? { LL: 'left leg ', RL: 'right leg ' }[ev.limb as string] ?? '' : '') : ''
+      return `${n(ev.unitId)} readies a ${limb}${ev.kind} on ${n(ev.targetId)} (TN ${ev.tn}).`
+    }
     case 'AttackRolled': return `${n(ev.attackerId)} → ${n(ev.targetId)}: ${ev.auto ? `automatic ${ev.auto}` : `${ev.tn > 0 ? `TN ${ev.tn}, ` : ''}rolled ${ev.roll}`} ${ev.hit ? 'HIT' : 'MISS'}.`
     case 'ClusterResolved': return `${ev.hits} of ${ev.rackSize} hit.`
     case 'DamageApplied': {

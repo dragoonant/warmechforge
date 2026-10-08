@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import {
   useFireDraftPreview, useHeatProjection, useHeatScale, useMoveDraft, useMoveDraftEntry, usePrompt, usePresentedUnit, useSelectedId,
 } from '../contract'
-import { heatTotalText, heatParts, heatEffectChips, heatRisk } from './format'
+import { heatTotalText, heatParts, heatEffectChips, heatRisk, lifeSupportDamaged as lifeSupportHit } from './format'
 import { buildSegments, buildThresholds, thresholdTip } from './heatView'
 import { tipProps } from './Tip'
 
@@ -28,7 +28,7 @@ export function HeatScale() {
   const projected = proj ? proj.end : null
   const maxLevel = scale.length ? scale[scale.length - 1]!.level : 30
   const segs = useMemo(() => buildSegments(maxLevel, now, projected), [maxLevel, now, projected])
-  const lifeSupportDamaged = !!unit && Object.values(unit.slots).some((l) => l.some((s) => s.token === 'lifeSupport' && s.hit))
+  const lifeSupportDamaged = lifeSupportHit(unit)
   const thr = useMemo(() => buildThresholds(scale, now, projected, lifeSupportDamaged), [scale, now, projected, lifeSupportDamaged])
   if (!unit) return null
   const parts = proj ? heatParts(proj) : null
@@ -48,8 +48,8 @@ export function HeatScale() {
             {projected !== null && <span className="heat-proj" title="Heat at the end of this turn if you do this">→ {projected}</span>}
           </div>
           {parts && <div className="heat-sum hud-dim" data-testid="heat-sum">{heatTotalText(parts)}</div>}
-          {proj && heatEffectChips(proj.effects).length > 0 && (
-            <div className="chips" data-testid="heat-projected-effects">{heatEffectChips(proj.effects).map((c) => <span key={c} className={`chip${risk === 'danger' ? ' chip-bad' : ''}`}>{c}</span>)}</div>
+          {proj && heatEffectChips(proj.effects, lifeSupportDamaged).length > 0 && (
+            <div className="chips" data-testid="heat-projected-effects">{heatEffectChips(proj.effects, lifeSupportDamaged).map((c) => <span key={c} className={`chip${risk === 'danger' ? ' chip-bad' : ''}`}>{c}</span>)}</div>
           )}
           <ul className="heat-thr">
             {thr.map((t, i) => (

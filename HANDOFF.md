@@ -23,6 +23,7 @@ Questions:
 
 Content: all 8 chassis (stock variants), the 4 Core Box maps, Skirmish any-vs-any
 M7: the roster's special equipment works by the rules (AI uses it; player controls still to come), press T for the threat overlay, and the end screen shows per-'Mech damage with Play again / Rematch / Back to setup.
+M8a: you can now use that equipment yourself (Ultra AC "2 shots", PPC "Charge", "Vent coolant pod", MASC in Run mode), Skirmish has turn limit / forced withdrawal / "AI picks a force", damage previews account for ferro-lamellor, and the lance presets are rebalanced.
 
 ## Current state
 - Engine: `src/engine/` (rules, queries, text). M5 added ferro-lamellor (EQUIP-014), the Clan targeting computer (EQUIP-001) and
@@ -31,34 +32,40 @@ M7: the roster's special equipment works by the rules (AI uses it; player contro
   Clan MASC (`MoveAction.masc`, `query.reachable(..., {masc})`, escalating failure EQUIP-020/021), RAC jam / unjam (EQUIP-022),
   partial wing via the heat and movement hooks (EQUIP-018), Beagle probe no-op (EQUIP-023). Events `EquipmentUsed`,
   `WeaponJamChanged`; `SheetView.equipment` carries capacitor / pod / MASC / jam state. Involuntary stacking reports
-  `UnitDisplaced.cause: 'stacking'`.
+  `UnitDisplaced.cause: 'stacking'`. M8a: `expect.ts` makes `attackPreview` / `firePreview` / `physicalPreview` expect what the
+  pipeline lands (ferro-lamellor per group, partial-cover leg hits absorbed; new optional fields `expectedPerHit`,
+  `armorReduction`, `expectedStopped`, logged in 00 §14).
 - Data: 16 'Mechs (two variants per Core Box chassis; unknown box variants are public stock stand-ins labelled "(stock)"), the 4
-  Core Box maps plus the dev map Test Canyons; the intro plays on Scorched Oasis with a new briefing. Presets: Regent Lance, Mad Cat Lance.
-  All 8 chassis have generated GLB figures (`public/assets/models/`).
+  Core Box maps plus the dev map Test Canyons; the intro plays on Scorched Oasis with a new briefing. Presets: Regent Lance, Mad Cat
+  Lance; M8a rebalanced the Solitaire Lance (intro side B) and the Mad Cat Lance to within 5 % BV of their pairs (bench notes in each
+  force file). All 8 chassis have generated GLB figures (`public/assets/models/`).
 - AI: `src/ai/` utility decider, tiers random / easy / normal, in a Web Worker (3 s timeout, random-bot fallback). M7: roster-wide
   play (LB-X / MML ammo choice, explosion risk, ECM vs Artemis, jumpers, woods and elevation), capacitor charge, coolant pod, MASC
-  run entries priced by failure risk, Ultra AC double tap, forced-withdrawal exit preference.
+  run entries priced by failure risk, Ultra AC double tap, forced-withdrawal exit preference. M8a: the damage model applies
+  ferro-lamellor; movement always re-scores the best hexes with a shot and ranks them first (`SHOOTERS_KEPT` in `moves.ts`);
+  tests AI-029..032 (`tests/ai/majors.test.ts`, `lamellor.test.ts`).
 - Client: Skirmish any-vs-any picker (M5). M7: threat overlay (`interaction/ThreatOverlay.tsx`, T key or the Threat button), AI trace
-  panel (`ui/AiTrace.tsx`), Settings > Follow action (camera frames bot moves and attacks, hands the view back on your turn), end
-  screen with mini sheets per 'Mech (`ui/MiniSheet.tsx`), kills and heat peaks, Play again / Rematch, same forces / Back to setup;
-  How to Play equipment + Skirmish sections; record-sheet hover tips (`ui/Tip.tsx`); softer water seams; Low graphics audit.
+  panel (`ui/AiTrace.tsx`), Settings > Follow action, end screen with mini sheets (`ui/MiniSheet.tsx`), Play again / Rematch / Back
+  to setup; How to Play equipment + Skirmish sections; record-sheet hover tips. M8a: equipment controls (`ui/equipView.ts`): Fire
+  panel "2 shots", "Charge", "Vent coolant pod" with the engine's heat; Move panel MASC chip in Run mode; record-sheet equipment
+  block (`ui/sheet/EquipmentBlock.tsx`); Skirmish turn limit, forced withdrawal and "AI picks a force" (`ui/start/startOptions.ts`);
+  playtest fixes (no accidental prone on your own hex, twist notes count legal shots, feed attribution, top bar playback note).
 - Tools: `npm run sim` and `npm run bench:ai` take `--map <id>` and `--forces`; the bench also sweeps `--map a,b|all`,
-  `--forces "A,B;C,D"` and `--withdrawal`.
-- Checks: `npm run typecheck`, `npm test` (50 files, 470 tests), `npm run validate:data`, `npm run sim -- --games 30 --seed 7`
-  (30/30, 0 violations), `npm run bench:ai -- --games 20 --seed 1` (normal vs random 19/20, vs easy 16/20, 0 rejections / stalls /
-  fallbacks), `PW_PORT=4183 npx playwright test` (play, skirmish, polish specs; `e2e-out/polish-*.png`).
+  `--forces "A,B;C,D"` and `--withdrawal`, and audits every normal-tier move for no-shot and back-to-threat moves.
+- Checks: `npm run typecheck`, `npm test` (58 files, 508 tests), `npm run validate:data`, `npm run sim -- --games 30 --seed 8`
+  (30/30, 0 violations), `npm run bench:ai -- --games 20 --seed 1` (normal vs random 16/20, vs easy 15/20, 0 rejections / stalls /
+  fallbacks; the M7 intro forces give 19/20 and 18/20 with the same AI), `PW_PORT=4183 npx playwright test` (12/12: play,
+  skirmish, polish, m8, m9; `e2e-out/m8-*.png`).
 
 ## Next
-1. Owner playtest on Pages: Skirmish vs the normal AI; try the threat overlay (T), Follow action and the new end screen.
-2. Player controls for the new equipment: "2 shots" for Ultra ACs, Charge for capacitor PPCs, Vent coolant pod, MASC in Run mode
-   (engine and AI already support them). List: `tools/out/m7-followups.md`.
-3. Ferro-lamellor in `attackPreview` / `firePreview` and the AI damage model; skirmish turn-limit and withdrawal options.
-4. M8: smoke and hidden units (Beagle probe effects), 40-ai §4.5 Monte Carlo, figure-gate follow-ups, audio when a key arrives.
+1. Owner playtest on Pages: Skirmish with turn limit 8, forced withdrawal and "AI picks a force"; use 2 shots, Charge, Vent, MASC
+   (Regent A: Charge + Vent; Solitaire 2: MASC; Vulture Mk IV A: 2 shots).
+2. Re-baseline the AI bench on the now-even intro (or bench a fixed mirror); 40-ai §4.5 Monte Carlo. List: `tools/out/m8-followups.md`.
+3. M8b: smoke and hidden units (Beagle probe effects), figure-gate follow-ups, music once the owner OKs the spend.
 
 ## Known gaps
-- The player cannot charge a capacitor, vent a coolant pod, use MASC or double-tap an Ultra AC; only the AI does.
-- Previews and the AI damage model ignore ferro-lamellor (about 20 % high against a Vulture Mk IV).
-- Skirmish turn-limit and withdrawal choices are not on the start screen; no AI force picker.
+- Previews do not model crit chains inside one attack (an ammo explosion emptying a location mid-cluster).
+- The Mad Cat Lance shares its three supporting variants with the Regent Lance (balanced, but little variety).
 - Water pools still show the sea-bed steps faintly at low camera angles.
 - Beagle probe has no effect yet; Guardian ECM only cancels hostile Artemis; RAC tested only with a fixture weapon.
 - `choice` decisions (askDefender) are never raised (defaults decide).

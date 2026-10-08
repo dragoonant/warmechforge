@@ -117,8 +117,22 @@
   human game and a bot-vs-bot game (weapons, impacts, crits, footsteps, falls, narrator all fire).
 - Not yet: music (about 12k credits, needs owner OK; when generated, drop `pending` from those manifest rows).
 
+## M8a done (equipment controls, Skirmish options, ferro-lamellor previews, lance balance)
+- Client: Fire panel "2 shots" for Ultra ACs, "Charge" for capacitor PPCs (held for +5 next turn), "Vent coolant pod" with the
+  engine's before/after heat; Move panel MASC chip in Run mode (avoid number, extra MP, risk note); record-sheet equipment block
+  (capacitor, pod, MASC, jams; `ui/equipView.ts`, `ui/sheet/EquipmentBlock.tsx`). Skirmish: turn limit (none / 8 / 12 / 16),
+  forced withdrawal, "AI picks a force" (within 10 % BV, by seed). Playtest fixes: no accidental drop prone on your own hex,
+  twist notes count legal shots, feed attribution and wording, top bar says when results are playing.
+- Engine: `src/engine/expect.ts`; attack, fire and physical previews apply ferro-lamellor per group and absorb partial-cover leg
+  hits, so `expectedDamage` is what the pipeline lands (00 §14; 2000-seed Monte Carlo tests in `tests/engine/expect.test.ts`).
+- AI: the damage model applies the cut (AI-032); movement always re-scores the best hexes with a shot and ranks shooting hexes
+  first (AI-029..031, `tests/ai/majors.test.ts`); the bench audits no-shot and back-to-threat moves. 40-ai tier table as built.
+- Data: Solitaire Lance (Prime + Rakshasa MDG-1B, 4/6) and Mad Cat Lance rebalanced to within 5 % BV of their pairs.
+- Gates: typecheck; 58 test files (508 tests); validate:data 0 errors; sim 30/30 (seed 8), 0 violations; bench normal vs random
+  16/20, vs easy 15/20, 0 rejections / stalls / fallbacks (the now-even intro matchup; the M7 intro forces give 19/20 and 18/20);
+  Playwright 12/12. Follow-ups: `tools/out/m8-followups.md`.
+
 ## Next
-- Owner playtest on Pages: Skirmish vs the normal AI with the threat overlay (T) and the new end screen.
-- Fire-panel and move-panel controls for PPC capacitor, coolant pod, MASC and Ultra AC double tap.
-- Ferro-lamellor in previews and the AI damage model; skirmish turn-limit / withdrawal options; 40-ai §4.5 Monte Carlo.
-- M8: smoke / hidden units (Beagle probe effects), figure gate follow-ups, music once the owner OKs the spend.
+- Owner playtest on Pages: Skirmish with turn limit, forced withdrawal and "AI picks a force"; try 2 shots, Charge, Vent, MASC.
+- Re-baseline the AI bench on the rebalanced intro (or a fixed mirror); 40-ai §4.5 Monte Carlo.
+- M8b: smoke / hidden units (Beagle probe effects), figure gate follow-ups, music once the owner OKs the spend.

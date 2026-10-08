@@ -183,7 +183,15 @@ export interface AttackPreview {
   heat: number
   damage: number // per hit (per missile/pellet for cluster weapons)
   cluster: { rackSize: number; expectedHits: number } | null
+  /** pHit x expectedPerHit: what the damage pipeline is expected to land (after partial cover and ferro-lamellor). */
   expectedDamage: number
+  /** Expected damage landed when the attack hits: cluster hits split into groups, each group through the hit table, partial
+   *  cover, aimed shot, transfer and armor reduction exactly as the damage pipeline does (M8, additive). */
+  expectedPerHit?: number
+  /** Present when the target's armor cuts this attack's damage (EQUIP-014 ferro-lamellor; M8, additive). */
+  armorReduction?: 'ferroLamellor'
+  /** Expected points that armor reduction stops when the attack hits (M8, additive; present with armorReduction). */
+  expectedStopped?: number
 }
 export interface HeatEffects {
   heat: number
@@ -240,6 +248,12 @@ export interface PhysicalPreview {
   targetPsr: { reason: PsrReason; tn: number; p: number } | null
   displacement: Hex | null
   choice: PhysicalChoice | null // ready answer for declarePhysical, when legal and declarable now
+  /** pHit x expected damage landed on the target (hit table, groups of 5 for charge / DFA, ferro-lamellor; M8, additive). */
+  expectedDamage?: number
+  /** Present when the target's armor cuts this attack's damage (EQUIP-014 ferro-lamellor; M8, additive). */
+  armorReduction?: 'ferroLamellor'
+  /** Present when the attacker's own armor cuts its charge / DFA self-damage (EQUIP-014; M8, additive). */
+  selfArmorReduction?: 'ferroLamellor'
 }
 export interface HitTableView { probs: Partial<Record<Loc, number>>; tac: Loc | null; pTac: number }
 export interface FallPreview { damage: number; groups: number[]; locations: Partial<Record<Loc, number>>; seatbeltTn: number; pPilotHit: number }

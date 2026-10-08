@@ -27,6 +27,10 @@ export interface MoveScore {
 }
 
 const stableKey = (a: Action): string => JSON.stringify(a)
+/** Hexes with a shot that always reach the stage-2 shortlist (they replace the weakest of the fast top). */
+const SHOOTERS_KEPT = 6
+/** Stage-2 candidates re-scored even past the decision's hard stop (a loaded machine must not fall back to fast scores). */
+const MIN_RESCORED = 6
 
 export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { action: Action; top: MoveScore[] } {
   const legalByKey = new Map(legal.map((a) => [stableKey(a), a]))
@@ -183,9 +187,19 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
 
   // stage 2 (normal): sampled threat, exact DV and twist options for the best candidates
   if (t.fullScoreTop > 0 && t.wT > 0) {
-    const top = scores.slice(0, t.fullScoreTop)
-    for (const s of top) {
-      if (ctx.timeLeft() < 0) break // hard stop only (deterministic in practice: the work per decision is bounded)
+    // the shortlist always holds the best hexes with a shot (M7 major: every one of the fast top could be a hiding hex, whose
+    // fast threat assumes unmoved enemies stay put; the sampled threat below is what shows hiding does not stop their fire)
+    const hasShot = (s: MoveScore): boolean => s.dealt > 0.01 || s.physical > 0
+    const shooters = maxDealt > 0.01 && !withdrawing ? scores.filter(hasShot).slice(0, SHOOTERS_KEPT) : []
+    const top = scores.slice(0, t.fullScoreTop - shooters.filter((s) => scores.indexOf(s) >= t.fullScoreTop).length)
+    for (const s of shooters) if (!top.includes(s)) top.push(s)
+    // re-score order: the fast best few, then the shooters, then the rest, so a hard stop under load still compares both kinds
+    const head = top.slice(0, 4)
+    const order = [...head, ...shooters.filter((s) => !head.includes(s)), ...top.filter((s) => !head.includes(s) && !shooters.includes(s))]
+    const done: MoveScore[] = []
+    for (const s of order) {
+      // hard stop only (deterministic in practice: the work per decision is bounded); a few are always re-scored
+      if (done.length >= MIN_RESCORED && ctx.timeLeft() < 0) break
       const e = s.entry
       const usAt: UnitAt & { hex: ReachEntry['hex'] } = { hex: e.hex, facing: e.facing, hexesMoved: e.hexesMoved, jumped: e.mode === 'jump', prone: e.endsProne }
       const th = threatAt(ctx, unitId, usAt, own, { fast: false, sample: t.sampleEnemies, lambda: T.lambda ?? t.lambda })
@@ -203,14 +217,18 @@ export function decideMove(ctx: AiCtx, unitId: UnitId, legal: Action[]): { actio
         }
       }
       s.total = total(s)
+      done.push(s)
     }
     // pick only among the re-scored candidates: their Taken is on the full model, the rest still carry the fast one
     scores.length = 0
-    scores.push(...top)
+    scores.push(...done)
   }
   // noise (easy plays loose; normal only breaks ties) and a stable tie-break
   if (t.noise > 0) for (const s of scores.slice(0, 40)) s.total += t.noise * Math.max(1, Math.abs(s.total)) * (ctx.rng() * 2 - 1)
-  scores.sort((a, b) => b.total - a.total || (stableKey(a.action) < stableKey(b.action) ? -1 : 1))
+  // a hex with a shot outranks every hex without one whenever any reachable hex has a shot (M8 playtest: a 60-point exposure
+  // price could still beat the no-shot term and the unit ran to a hiding hex and held fire); only the score orders within a class
+  const shoots = (s: MoveScore): number => (maxDealt > 0.01 && !withdrawing && (s.dealt > 0.01 || s.physical > 0) ? 1 : 0)
+  scores.sort((a, b) => shoots(b) - shoots(a) || b.total - a.total || (stableKey(a.action) < stableKey(b.action) ? -1 : 1))
   // a MASC move must pass validate (it is not a member of the legal list); otherwise take the best plain move
   const pick = scores.findIndex((s) => !mascRisk.has(stableKey(s.action)) || validate(ctx.state, s.action) === null)
   if (pick < 0) return { action: legal[0]!, top: [] }

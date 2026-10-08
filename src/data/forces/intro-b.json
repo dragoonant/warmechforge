@@ -3,14 +3,33 @@
   "name": "Solitaire Lance",
   "color": "#a83b3b",
   "units": [
-    { "slot": "u1", "mech": "mech.solitaire.prime", "pilot": "pilot.generic-charlie" },
-    { "slot": "u2", "mech": "mech.rakshasa.mdg-1a", "pilot": "pilot.generic-delta" }
+    {
+      "slot": "u1",
+      "mech": "mech.solitaire.prime",
+      "pilot": "pilot.generic-alpha",
+      "skills": {
+        "gunnery": 4,
+        "piloting": 6
+      }
+    },
+    {
+      "slot": "u2",
+      "mech": "mech.rakshasa.mdg-1b",
+      "pilot": "pilot.generic-bravo",
+      "skills": {
+        "gunnery": 4,
+        "piloting": 6
+      }
+    }
   ],
-  "source": { "ref": "ours", "note": "intro mission side b; stock stand-ins for the box variants" },
+  "source": {
+    "ref": "ours",
+    "note": "intro mission side b; stock stand-ins for the box variants; rebalanced in M7: Solitaire Prime and Rakshasa MDG-1B both piloted 4/6, adjusted BV 2,881 against the Eris Lance 2,752 (4.7%). Bench (easy vs easy, 16 games per side order, seed 3): Solitaire 16 wins, Eris 15, 1 draw"
+  },
   "verify": [
     {
       "path": "",
-      "note": "uses stock Solitaire Prime and Rakshasa MDG-1A in place of the box variants",
+      "note": "uses stock Solitaire Prime and Rakshasa MDG-1B in place of the box variants",
       "status": "standIn"
     }
   ]

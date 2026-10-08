@@ -15,6 +15,9 @@ import { attackerMoveMod, tmmForHexes } from './tohit'
 import { floorLevel, hexAt, isSubmerged } from './terrain'
 import { beginWork, endWork } from './dice'
 import { destroyUnitW } from './damage'
+import { bundleFor } from './bundles'
+import { splitGroups } from './cluster'
+import { expectedLanded, lamellorTarget } from './expect'
 import type {
   ArmLoc, AttackDirection, DataBundle, Displacement, Facing, GameState, Hex, HitTable, LegLoc, Loc, Mod, PhysicalKind,
   RejectionCode, UnitId, UnitState,
@@ -285,6 +288,19 @@ export function physicalPreview(state: GameState, req: PhysicalPreviewRequest, o
   if (kind === 'punch') res.choice = { kind: 'punch', arms: [{ arm: req.limb as ArmLoc, targetId: t.id }] }
   else if (kind === 'kick') res.choice = { kind: 'kick', leg: req.limb as LegLoc, targetId: t.id }
   else if (kind === 'push') res.choice = { kind: 'push', targetId: t.id }
+  // expected landed damage (phases/physical.ts resolveOne: punch / kick one hit, charge / DFA in groups of 5, ferro-lamellor)
+  if (res.damage > 0) {
+    const tAt: UnitState = { ...t, pos: tPos, facing: T.facing ?? t.facing, prone: tProne }
+    const sDir = { ...state, units: { ...state.units, [t.id]: tAt } }
+    let direction: AttackDirection = directionFor(sDir, a.id, t.id, aPos).direction
+    if (kind === 'dfa' && tProne) direction = 'rear'
+    const groups = kind === 'punch' || kind === 'kick' ? [res.damage] : splitGroups(res.damage, 5)
+    const data = bundleFor(state)
+    const e = expectedLanded(data, tAt, { direction, table }, [{ p: 1, groups }])
+    res.expectedDamage = res.pHit * e.landed
+    if (lamellorTarget(data, tAt)) res.armorReduction = 'ferroLamellor'
+    if (selfDamage > 0 && lamellorTarget(data, a)) res.selfArmorReduction = 'ferroLamellor'
+  } else res.expectedDamage = 0
   if (tn >= 13 && !opts.committed) return { ...res, legal: false, reason: 'E_TN_TOO_HIGH', why: 'target number is above 12' }
   return res
 }

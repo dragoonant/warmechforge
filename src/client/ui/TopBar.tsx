@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import {
   settings, uiActions, useBanner, useControllers, usePresentedState, usePrompt, useSettings, useShowRanges, useShowThreat, useUiMode, useWaitingFor,
+  usePresentationIdle,
 } from '../contract'
 import './hud.css'
 import { SettingsButton } from './SettingsPopover'
@@ -23,6 +24,7 @@ export function TopBar({ extra }: { extra?: ReactNode }) {
   const waiting = useWaitingFor()
   const controllers = useControllers()
   const prompt = usePrompt()
+  const idle = usePresentationIdle()
   const mode = useUiMode()
   const showRanges = useShowRanges()
   const showThreat = useShowThreat()
@@ -53,7 +55,7 @@ export function TopBar({ extra }: { extra?: ReactNode }) {
             <span className="init-sum hud-dim">{strip.summary}</span>
           </div>
         )}
-        <div className="top-decision" data-testid="topbar-decision" data-player={waiting?.player ?? ''} data-controller={waiting?.controller ?? ''}>{decisionLine(state, waiting, humans)}</div>
+        <div className="top-decision" data-testid="topbar-decision" data-player={waiting?.player ?? ''} data-controller={waiting?.controller ?? ''}>{decisionLine(state, waiting, humans, !idle)}</div>
         <div className="top-tools">
           <button type="button" data-testid="topbar-ruler" className={`hud-btn hud-btn-sm${mode === 'measure' ? ' hud-btn-primary' : ''}`} title="Ruler (M)" onClick={() => uiActions.toggleTool('measure', fallback)}>Ruler</button>
           <button type="button" data-testid="topbar-los" className={`hud-btn hud-btn-sm${mode === 'los' ? ' hud-btn-primary' : ''}`} title="Line of sight (L)" onClick={() => uiActions.toggleTool('los', fallback)}>Line of sight</button>
